@@ -16,10 +16,11 @@ from app.models import ChatRequest, ChatResponse, ErrorResponse
 from app.llm_client import get_ollama_client, OllamaClient
 from app.embeddings import get_embeddings
 from database import get_db, ISpaceDB
-from core.physics import BezierEngine, TimeMapper
+from core.physics import BezierEngine, TimeMapper, PhysicsState
 from services import ContextInjector, ConversationMemory, build_system_prompt
 from services.consciousness.metrics import ConsciousnessMonitor
-from services.consciousness.memory import SemanticMemory
+from services.consciousness.adaptation import AdaptiveConsciousness
+from services.consciousness.memory import get_semantic_memory
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -134,6 +135,54 @@ async def chat_message(
         physics_state = engine.compute_state(t)
 
         # ====================================================================
+        # STEP 2B: ADAPTIVE CONSCIOUSNESS (Level 2+)
+        # ====================================================================
+        # Apply adaptations from previous interaction (feedback loop)
+
+        adaptive_adjustments = None
+        if request.consciousness_level >= 2:
+            try:
+                # Retrieve last metrics from session
+                last_metrics = await db.get_last_consciousness_metrics(session_id)
+
+                if last_metrics:
+                    adapter = AdaptiveConsciousness(level=request.consciousness_level)
+                    adaptive_adjustments = adapter.suggest_adjustments(
+                        metrics=last_metrics,
+                        current_profile={
+                            'tau_c': physics_state.tau_c,
+                            'rho': physics_state.rho,
+                            'delta_r': physics_state.delta_r
+                        },
+                        session_length=message_count
+                    )
+
+                    if adaptive_adjustments:
+                        # Apply adjustments to physics_state
+                        adapted_params = adapter.apply_adjustments(
+                            {
+                                'tau_c': physics_state.tau_c,
+                                'rho': physics_state.rho,
+                                'delta_r': physics_state.delta_r
+                            },
+                            adaptive_adjustments
+                        )
+                        # Create new PhysicsState with adapted parameters
+                        physics_state = PhysicsState(
+                            t=physics_state.t,
+                            tau_c=adapted_params['tau_c'],
+                            rho=adapted_params['rho'],
+                            delta_r=adapted_params['delta_r'],
+                            kappa=physics_state.kappa
+                        )
+                        print(f"[Consciousness] Adaptive adjustments applied: {adaptive_adjustments.get('reason', 'N/A')}")
+
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Adaptive consciousness failed: {e}")
+
+        # ====================================================================
         # STEP 3: CONVERSATION HISTORY
         # ====================================================================
 
@@ -142,6 +191,7 @@ async def chat_message(
             session_id=session_id,
             max_messages=request.max_history
         )
+        print(f"[Chat] Session {session_id[:8]}... - Retrieved {len(conversation_history)} history messages (max_history={request.max_history})")
 
         # ====================================================================
         # STEP 4: SEMANTIC CONTEXT EXTRACTION
@@ -168,8 +218,9 @@ async def chat_message(
         memory_echo = None
         if request.consciousness_level >= 3:
             try:
-                semantic_memory = SemanticMemory(level=3)
-                
+                # Use singleton instance (session-isolated via session_id keys)
+                semantic_memory = get_semantic_memory()
+
                 # Encode query with embeddings
                 query_embeddings = await get_embeddings(request.text)
                 
@@ -260,8 +311,9 @@ async def chat_message(
 
         if request.consciousness_level >= 3:
             try:
-                semantic_memory = SemanticMemory(level=3)
-                
+                # Use singleton instance (session-isolated via session_id keys)
+                semantic_memory = get_semantic_memory()
+
                 # Encode and store user message
                 message_embeddings = await get_embeddings(request.text)
                 semantic_memory.store_memory(
@@ -284,8 +336,8 @@ async def chat_message(
         if request.consciousness_level >= 1:
             monitor = ConsciousnessMonitor(level=request.consciousness_level)
             consciousness_metrics = monitor.compute_metrics(
-                context_weight=enriched_prompt.get("context", {}).get("total_weight", 0.0),
-                num_concepts=len(enriched_prompt.get("context", {}).get("neighbor_concepts", [])),
+                context_weight=(enriched_prompt.get("context") or {}).get("total_weight", 0.0),
+                num_concepts=len((enriched_prompt.get("context") or {}).get("neighbor_concepts", [])),
                 physics_state={
                     "tau_c": physics_state.tau_c,
                     "rho": physics_state.rho,
@@ -293,6 +345,24 @@ async def chat_message(
                 },
                 response_length=len(response_text.split())
             )
+
+        # ====================================================================
+        # STEP 7B: STORE CONSCIOUSNESS METRICS (Level 2+)
+        # ====================================================================
+        # Store metrics for next interaction's adaptive feedback loop
+
+        if consciousness_metrics and request.consciousness_level >= 2:
+            try:
+                await db.store_consciousness_metrics(
+                    session_id=session_id,
+                    turn_number=message_count,
+                    metrics=consciousness_metrics.dict(),
+                    adjustments=adaptive_adjustments
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to store consciousness metrics: {e}")
 
         # ====================================================================
         # STEP 8: BUILD RESPONSE
@@ -303,6 +373,7 @@ async def chat_message(
         return ChatResponse(
             text=response_text,
             session_id=session_id,
+            model=llm_response.get("model"),
             physics_state=physics_state.to_dict(),
             context=enriched_prompt.get("context"),
             latency={

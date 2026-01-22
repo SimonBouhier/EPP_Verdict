@@ -3,12 +3,14 @@ LYRA CLEAN - SESSIONS & PROFILES API
 ====================================
 
 Endpoints for session management and Bezier profile configuration.
+Includes save/load functionality with model-based organization.
 """
 from __future__ import annotations
 
+import os
 import uuid
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
 
 from app.models import (
     SessionCreateRequest,
@@ -20,6 +22,7 @@ from app.models import (
 )
 from database import get_db, ISpaceDB
 from core.physics import BezierEngine
+from services.session_storage import get_session_storage, SessionStorage
 
 
 router = APIRouter(tags=["sessions"])
@@ -32,6 +35,11 @@ router = APIRouter(tags=["sessions"])
 async def get_database() -> ISpaceDB:
     """Dependency: Database instance."""
     return await get_db()
+
+
+def get_storage() -> SessionStorage:
+    """Dependency: Session storage instance."""
+    return get_session_storage()
 
 
 # ============================================================================
@@ -329,3 +337,203 @@ async def get_profile(
         is_default=bool(profile.get("is_default", False)),
         preview=preview
     )
+
+
+# ============================================================================
+# SESSION SAVE/LOAD ENDPOINTS
+# ============================================================================
+
+@router.post("/sessions/{session_id}/save")
+async def save_session(
+    session_id: str,
+    model: str = Query(..., description="Model name used for this session (e.g., 'mistral:latest')"),
+    db: ISpaceDB = Depends(get_database),
+    storage: SessionStorage = Depends(get_storage)
+):
+    """
+    Save session to file, organized by model.
+
+    The session is exported to: saves/{model_name}/{timestamp}_{session_id}.json
+
+    Args:
+        session_id: Session UUID to save
+        model: Model name (used for folder organization)
+
+    Example:
+        POST /sessions/abc-123/save?model=mistral:latest
+
+    Returns:
+        {
+            "success": true,
+            "filepath": "saves/mistral_latest/20250118_143052_abc123.json",
+            "message_count": 15,
+            "exported_at": "2025-01-18T14:30:52"
+        }
+    """
+    try:
+        result = await storage.export_session(db, session_id, model)
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@router.post("/sessions/load")
+async def load_session(
+    filepath: str = Query(..., description="Path to the saved session file"),
+    new_session_id: Optional[str] = Query(None, description="Optional new session ID"),
+    db: ISpaceDB = Depends(get_database),
+    storage: SessionStorage = Depends(get_storage)
+):
+    """
+    Load session from a saved file.
+
+    Creates a new session with the imported data.
+
+    Args:
+        filepath: Path to the .json save file
+        new_session_id: Optional custom ID for the new session
+
+    Example:
+        POST /sessions/load?filepath=saves/mistral_latest/20250118_143052_abc123.json
+
+    Returns:
+        {
+            "success": true,
+            "session_id": "new-uuid-456",
+            "original_session_id": "abc-123",
+            "original_model": "mistral:latest",
+            "messages_imported": 15
+        }
+    """
+    import json
+    from pathlib import Path
+
+    try:
+        # Read file to get messages for UI display
+        path = Path(filepath)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Import into database
+        result = await storage.import_session(db, filepath, new_session_id)
+
+        # Extract messages for UI (role + content only)
+        messages = [
+            {"role": msg.get("role"), "content": msg.get("content")}
+            for msg in data.get("messages", [])
+            if msg.get("role") and msg.get("content")
+        ]
+
+        # Return enriched response for UI
+        return {
+            "success": True,
+            "session_id": result["session_id"],
+            "original_session_id": result.get("original_session_id"),
+            "model": data.get("model", "unknown"),
+            "messages": messages,
+            "message_count": len(messages),
+            "imported_at": result.get("imported_at")
+        }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
+
+@router.get("/saves")
+async def list_saves(
+    model: Optional[str] = Query(None, description="Filter by model name"),
+    storage: SessionStorage = Depends(get_storage)
+):
+    """
+    List all saved sessions.
+
+    Args:
+        model: Optional model name filter
+
+    Example:
+        GET /saves
+        GET /saves?model=mistral:latest
+
+    Returns:
+        {
+            "saves": [
+                {
+                    "filename": "20250118_143052_abc123.json",
+                    "filepath": "saves/mistral_latest/20250118_143052_abc123.json",
+                    "model": "mistral_latest",
+                    "timestamp": "2025-01-18T14:30:52",
+                    "size_kb": 12.5
+                }
+            ],
+            "total": 1
+        }
+    """
+    saves = storage.list_saves(model)
+
+    return {
+        "saves": saves,
+        "total": len(saves)
+    }
+
+
+@router.get("/saves/models")
+async def list_save_models(
+    storage: SessionStorage = Depends(get_storage)
+):
+    """
+    List models with saved sessions.
+
+    Example:
+        GET /saves/models
+
+    Returns:
+        {
+            "models": [
+                {"model": "mistral_latest", "save_count": 5},
+                {"model": "llama3.1_8b", "save_count": 3}
+            ]
+        }
+    """
+    models = storage.list_models()
+
+    return {
+        "models": models
+    }
+
+
+@router.delete("/saves")
+async def delete_save(
+    filepath: str = Query(..., description="Path to the save file to delete"),
+    storage: SessionStorage = Depends(get_storage)
+):
+    """
+    Delete a saved session file.
+
+    Args:
+        filepath: Path to the save file
+
+    Example:
+        DELETE /saves?filepath=saves/mistral_latest/20250118_143052_abc123.json
+
+    Returns:
+        {"success": true, "deleted": "..."}
+    """
+    result = storage.delete_save(filepath)
+
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result.get("error", "Delete failed"))
+
+    return result

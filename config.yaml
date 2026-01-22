@@ -25,11 +25,20 @@ database:
 # ============================================================================
 # LLM (Ollama)
 # ============================================================================
+# Note: Ollama supporte jusqu'à 128k-256k tokens selon le modèle
+# Ajustez num_ctx selon votre mémoire GPU/RAM disponible
+# ============================================================================
 llm:
   base_url: "http://localhost:11434"
-  model: "gpt-oss:20b"          # Default model
-  timeout: 120.0                # Request timeout (seconds)
+  model: "gpt-oss:20b"          # Default model (override via LYRA_MODEL env var)
+  timeout: 180.0                # Request timeout (seconds) - increased for large contexts
   max_retries: 3                # Retry attempts on failure
+  num_ctx: 8192                 # Context window size (tokens). Recommended options:
+                                #   - 4096:  Fast, low memory (~4GB GPU)
+                                #   - 8192:  Balanced, standard usage (~8GB GPU)
+                                #   - 16384: Long conversations (~16GB GPU)
+                                #   - 32768: Extended context (~24GB+ GPU)
+                                #   - 131072: Maximum (128k) - requires lots of RAM
 
 # ============================================================================
 # PHYSICS ENGINE
@@ -52,9 +61,13 @@ context:
 # ============================================================================
 # SESSION MANAGEMENT
 # ============================================================================
+# Note: max_history_messages controls how many messages are sent to the LLM
+# max_token_budget is a soft limit to avoid exceeding num_ctx
+# To use large contexts, increase both in coherence with num_ctx
+# ============================================================================
 sessions:
-  max_history_messages: 20      # Max conversation history per request
-  max_token_budget: 4000        # Approximate token budget for history
+  max_history_messages: 50      # Max conversation history per request (was 20)
+  max_token_budget: 6000        # Approximate token budget for history (was 4000)
   auto_cleanup_days: 30         # Delete sessions inactive > N days
 
 # ============================================================================
@@ -81,6 +94,8 @@ logging:
 cors:
   enabled: true
   origins:                      # Allowed origins (["*"] = all)
+    - "http://localhost:8000"
+    - "http://127.0.0.1:8000"
     - "http://localhost:3000"
     - "http://localhost:8080"
   # Production: Restrict to your frontend domain

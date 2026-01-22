@@ -34,7 +34,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session UUID (auto-created if None)")
     profile: str = Field("balanced", description="Bezier profile name")
     enable_context: bool = Field(True, description="Enable semantic context injection")
-    max_history: int = Field(20, ge=0, le=100, description="Max conversation history messages")
+    max_history: int = Field(50, ge=0, le=500, description="Max conversation history messages")
     consciousness_level: int = Field(0, ge=0, le=3, description="Consciousness level: 0=off, 1=passive, 2=adaptive, 3=full")
 
     model_config = ConfigDict(frozen=False)  # Allow mutation for backward compat
@@ -63,6 +63,7 @@ class ChatResponse(BaseModel):
     """
     text: str = Field(..., description="LLM generated response")
     session_id: str = Field(..., description="Session UUID")
+    model: Optional[str] = Field(None, description="LLM model name used for generation")
 
     # Physics state at generation time
     physics_state: Dict[str, float] = Field(..., description="τc, ρ, δr, κ at time t")
@@ -272,6 +273,261 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error code")
     message: str = Field(..., description="Human-readable message")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
+# MULTI-MODEL MODELS (Lyra-ACE)
+# ============================================================================
+
+class MultiModelRequest(BaseModel):
+    """
+    Requête de génération multi-modèles.
+
+    Example:
+        {
+            "text": "Explain quantum entanglement",
+            "models": ["llama3.1:8b", "mistral"],
+            "session_id": "abc-123",
+            "profile": "analytical",
+            "stop_on_first_success": false
+        }
+    """
+    text: str = Field(..., min_length=1, max_length=10000)
+    models: List[str] = Field(..., min_length=1, max_length=5)
+    session_id: Optional[str] = None
+    profile: str = Field("balanced")
+    stop_on_first_success: bool = Field(False)
+
+    model_config = ConfigDict(frozen=False)
+
+
+class MultiModelResponseItem(BaseModel):
+    """Réponse d'un modèle individuel."""
+    model: str
+    text: str
+    latency_ms: float
+    tokens: Dict[str, int]
+    success: bool
+    error: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ConsensusMetricsModel(BaseModel):
+    """Métriques de consensus."""
+    num_models: int
+    num_successful: int
+    response_lengths: List[int]
+    length_variance: float
+    avg_latency_ms: float
+    model_weights: Dict[str, float]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class MultiModelResponse(BaseModel):
+    """
+    Réponse agrégée multi-modèles.
+
+    Example:
+        {
+            "best_response": "Quantum entanglement is...",
+            "best_model": "llama3.1:8b",
+            "responses": {...},
+            "consensus": {...},
+            "session_id": "abc-123"
+        }
+    """
+    best_response: str
+    best_model: str
+    responses: Dict[str, MultiModelResponseItem]
+    consensus: ConsensusMetricsModel
+    session_id: str
+    physics_state: Dict[str, float]
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
+# GRAPH DELTA MODELS (Lyra-ACE)
+# ============================================================================
+
+class GraphDeltaRequest(BaseModel):
+    """
+    Requête d'application d'un delta.
+
+    Example:
+        {
+            "operation": "add_edge",
+            "source": "entropy",
+            "target": "information",
+            "weight": 0.85,
+            "confidence": 0.9,
+            "reason": "Strong semantic relationship"
+        }
+    """
+    operation: str = Field(..., pattern="^(add_node|add_edge|update_edge|delete_edge|delete_node)$")
+    source: str = Field(..., min_length=1)
+    target: Optional[str] = None
+    weight: Optional[float] = Field(None, ge=0.0, le=1.0)
+    confidence: float = Field(1.0, ge=0.0, le=1.0)
+    model_source: str = Field("api")
+    reason: Optional[str] = None
+
+    model_config = ConfigDict(frozen=False)
+
+
+class GraphDeltaResponse(BaseModel):
+    """Réponse après application d'un delta."""
+    delta_id: int
+    operation: str
+    source: str
+    target: Optional[str]
+    old_weight: Optional[float]
+    new_weight: Optional[float]
+    old_kappa: Optional[float]
+    new_kappa: Optional[float]
+    applied_at: float
+
+    model_config = ConfigDict(frozen=True)
+
+
+class KappaResponse(BaseModel):
+    """Réponse du calcul de κ."""
+    source: str
+    target: str
+    kappa_ollivier: float
+    kappa_jaccard: float
+    kappa_hybrid: float
+    alpha: float
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
+# ESMM PHASE 1 MODELS
+# ============================================================================
+
+class PopulateRequest(BaseModel):
+    """
+    Requête de population du graphe depuis topics.txt.
+
+    Example:
+        {
+            "source_file": "data/topics.txt",
+            "generate_embeddings": true,
+            "batch_size": 50,
+            "skip_existing": true
+        }
+    """
+    source_file: str = Field("data/topics.txt", description="Chemin vers le fichier topics")
+    generate_embeddings: bool = Field(True, description="Générer les embeddings via Ollama")
+    batch_size: int = Field(50, ge=1, le=200, description="Taille du batch pour les embeddings")
+    skip_existing: bool = Field(True, description="Ignorer les concepts déjà existants")
+
+    model_config = ConfigDict(frozen=False)
+
+
+class PopulateResponse(BaseModel):
+    """Réponse de population du graphe."""
+    concepts_loaded: int
+    concepts_skipped: int
+    embeddings_generated: int
+    embeddings_failed: int
+    duplicates_found: int
+    duration_ms: float
+    errors: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class GenerateRelationsRequest(BaseModel):
+    """
+    Requête de génération de relations par similarité.
+
+    Example:
+        {
+            "similarity_threshold": 0.6,
+            "confidence": 0.7,
+            "max_neighbors": 20,
+            "limit_concepts": null
+        }
+    """
+    similarity_threshold: float = Field(0.6, ge=0.3, le=0.95, description="Seuil de similarité [0.3, 0.95]")
+    confidence: float = Field(0.7, ge=0.1, le=1.0, description="Confiance des relations auto-générées")
+    max_neighbors: int = Field(20, ge=1, le=100, description="Nombre max de voisins par concept")
+    limit_concepts: Optional[int] = Field(None, ge=1, description="Limite de concepts à traiter")
+
+    model_config = ConfigDict(frozen=False)
+
+
+class GenerateRelationsResponse(BaseModel):
+    """Réponse de génération de relations."""
+    relations_created: int
+    relations_skipped: int
+    concepts_processed: int
+    average_similarity: float
+    duration_ms: float
+    errors: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class InjectSeedRequest(BaseModel):
+    """
+    Requête d'injection de la graine ESMM.
+
+    Example:
+        {
+            "seed_type": "standard",
+            "generate_embeddings": true,
+            "skip_existing_concepts": true
+        }
+    """
+    seed_type: str = Field("standard", pattern="^(minimal|standard|extended)$", description="Type de graine")
+    generate_embeddings: bool = Field(True, description="Générer les embeddings pour nouveaux concepts")
+    skip_existing_concepts: bool = Field(True, description="Ne pas écraser les concepts existants")
+
+    model_config = ConfigDict(frozen=False)
+
+
+class InjectSeedResponse(BaseModel):
+    """Réponse d'injection de la graine."""
+    concepts_created: int
+    relations_created: int
+    concepts_existed: int
+    duration_ms: float
+    seed_type: str
+    errors: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class SimilarConceptsRequest(BaseModel):
+    """Requête de recherche de concepts similaires."""
+    concept_id: str = Field(..., min_length=1, description="ID du concept source")
+    top_k: int = Field(10, ge=1, le=100, description="Nombre de résultats")
+    min_similarity: float = Field(0.5, ge=0.0, le=1.0, description="Similarité minimum")
+
+    model_config = ConfigDict(frozen=False)
+
+
+class SimilarConceptsResponse(BaseModel):
+    """Réponse de recherche de concepts similaires."""
+    concept_id: str
+    similar_concepts: List[Dict[str, Any]]
+    count: int
+
+    model_config = ConfigDict(frozen=True)
+
+
+class Phase1StatsResponse(BaseModel):
+    """Statistiques complètes de la Phase 1."""
+    population: Dict[str, Any] = Field(..., description="Stats de population")
+    relations: Dict[str, Any] = Field(..., description="Stats de relations")
+    seed: Dict[str, Any] = Field(..., description="Stats de la graine")
 
     model_config = ConfigDict(frozen=True)
 

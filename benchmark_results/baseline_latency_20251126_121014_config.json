@@ -1,4 +1,0 @@
-{
-  "benchmark": "latency_basic",
-  "n_requests": 50
-}
