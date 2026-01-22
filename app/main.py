@@ -24,9 +24,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat, sessions
+from app.api import chat, sessions, graph, multimodel
 from app.models import HealthResponse, StatsResponse, ErrorResponse
-from app.llm_client import get_ollama_client, close_ollama_client
+from app.llm_client import get_ollama_client, close_ollama_client, get_multi_model_client, close_multi_model_client
 from database import get_db, close_db
 
 
@@ -78,6 +78,12 @@ async def lifespan(app: FastAPI):
         else:
             print(f"[Startup] ⚠️  Ollama not connected: {health.get('error', 'Unknown error')}")
 
+        # Initialize MultiModel client
+        print("[Startup] Initializing MultiModel client...")
+        multi_client = await get_multi_model_client()
+        models = await multi_client.list_available_models()
+        print(f"[Startup] MultiModel ready: {len(models)} models available")
+
         print("="*80)
         print(" LYRA CLEAN - READY")
         print(" API Documentation: http://localhost:8000/docs")
@@ -108,6 +114,12 @@ async def lifespan(app: FastAPI):
             await close_ollama_client()
         except Exception as e:
             print(f"[Shutdown Error] Ollama: {e}")
+
+        try:
+            print("[Shutdown] Closing MultiModel client...")
+            await close_multi_model_client()
+        except Exception as e:
+            print(f"[Shutdown Error] MultiModel: {e}")
 
         print("[Shutdown] Cleanup complete")
         print("="*80)
@@ -194,6 +206,8 @@ async def internal_error_handler(request: Request, exc):
 # Include API routers
 app.include_router(chat.router)
 app.include_router(sessions.router)
+app.include_router(graph.router)      # Lyra-ACE: Graph mutations
+app.include_router(multimodel.router)  # Lyra-ACE: Multi-model generation
 
 
 # ============================================================================

@@ -278,3 +278,54 @@ class SemanticMemory(AdaptiveConsciousness):
     def dict(self):
         """Conversion dict pour JSON - hérité de parent"""
         return super().dict()
+
+
+# ============================================================================
+# SINGLETON INSTANCE
+# ============================================================================
+
+_memory_instance: SemanticMemory | None = None
+
+
+def get_semantic_memory(
+    level: int = 3,
+    max_memory_entries: int = 50,
+    decay_rate: float = 0.01,
+    similarity_threshold: float = 0.6
+) -> SemanticMemory:
+    """
+    Get or create SemanticMemory singleton instance.
+
+    The memory is shared across all requests but sessions are isolated
+    via session_id keys in the internal dictionary.
+
+    Usage:
+        memory = get_semantic_memory()
+        memory.store_memory(session_id, content, embeddings, turn)
+        recalled = memory.recall_memory(session_id, query_emb, current_turn)
+
+    Returns:
+        SemanticMemory: Singleton instance with session-isolated memory
+    """
+    global _memory_instance
+
+    if _memory_instance is None:
+        _memory_instance = SemanticMemory(
+            level=level,
+            max_memory_entries=max_memory_entries,
+            decay_rate=decay_rate,
+            similarity_threshold=similarity_threshold
+        )
+
+    return _memory_instance
+
+
+def clear_semantic_memory() -> None:
+    """
+    Clear the singleton instance (useful for testing or reset).
+    """
+    global _memory_instance
+
+    if _memory_instance is not None:
+        _memory_instance.memory.clear()
+        _memory_instance = None

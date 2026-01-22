@@ -1,177 +1,11 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lyra Lite UI</title>
-  <style>
-    :root{
-      --bg:#0b0f12; --panel:#0f1417; --muted:#7f8c8d; --accent:#00ff99; --danger:#ff4d4d;
-      --glass: rgba(255,255,255,0.02);
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#050607 0%, #0b0f12 100%);color:#e6eef3;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace}
-    .app{max-width:980px;margin:28px auto;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 30px rgba(0,0,0,0.6);display:grid;grid-template-columns:1fr;gap:12px;padding:16px;border-radius:8px}
-    header{display:flex;align-items:center;gap:12px}
-    .logo{width:44px;height:44px;border-radius:6px;background:linear-gradient(135deg,#091016,#092022);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03)}
-    .title{font-size:18px;font-weight:700}
-    .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
-    select,button.toggle,button.send,input[type=text]{background:var(--panel);border:1px solid rgba(255,255,255,0.04);color:var(--accent);padding:8px;border-radius:6px}
-    .toggle.on{box-shadow:0 0 8px rgba(0,255,153,0.12);}
-    main{display:flex;gap:12px}
-    .chat{flex:1;display:flex;flex-direction:column;gap:12px}
-    .messages{background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:12px;border-radius:6px;height:520px;overflow:auto;border:1px solid rgba(255,255,255,0.02)}
-    .msg{margin:10px 0;max-width:85%;padding:10px;border-radius:8px;position:relative}
-    .msg.user{margin-left:auto;background:linear-gradient(180deg,#062018,#073026);border:1px solid rgba(0,255,153,0.06);color:#c8ffe6}
-    .msg.bot{margin-right:auto;background:linear-gradient(180deg,#0b0f12,#0d1316);border:1px solid rgba(255,255,255,0.02);color:#e6eef3}
-    .meta{font-size:11px;color:var(--muted);margin-top:6px}
-    footer{display:flex;gap:8px;align-items:center}
-    .left-controls{display:flex;gap:8px;align-items:center}
-    .profile{min-width:180px}
-    .send{background:linear-gradient(90deg,#00ff99,#00c27a);border:none;color:#001414;padding:10px 14px;border-radius:6px;font-weight:700}
-    .small{font-size:12px;color:var(--muted)}
-    .status{font-size:12px;color:var(--muted);margin-left:8px}
-    .chip{padding:6px 8px;border-radius:6px;background:var(--glass);border:1px solid rgba(255,255,255,0.02);}
-  </style>
-</head>
-<body>
-  <div class="app">
-    <header>
-      <div class="logo">LY</div>
-      <div>
-        <div class="title">Lyra Lite UI</div>
-        <div class="small">Interface minimale — dark / hacker theme</div>
-      </div>
-
-      <div class="controls">
-        <div class="chip small">Session: <span id="sessionLabel">—</span></div>
-      </div>
-    </header>
-
-    <main>
-      <section class="chat">
-        <div class="messages" id="messages" aria-live="polite"></div>
-
-        <footer>
-          <div class="left-controls">
-            <select id="profile" class="profile" title="Profil Physique">
-              <option value="creative">Creative</option>
-              <option value="safe">Safe</option>
-              <option value="analytic">Analytic</option>
-              <option value="concise">Concise</option>
-              <option value="explorer">Explorer</option>
-            </select>
-
-            <button id="contextToggle" class="toggle" title="Toggle injection graph">Context: <span id="ctxState">ON</span></button>
-          </div>
-
-          <div style="flex:1"></div>
-
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="prompt" type="text" placeholder="Écrire un message..." style="min-width:360px" />
-            <button id="sendBtn" class="send">Send</button>
-          </div>
-        </footer>
-      </section>
-    </main>
-  </div>
-
-  <script>
-    // Utilities
-    function uuidv4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);return v.toString(16);});}
-
-    const SESSION_KEY = 'lyra_session_id';
-    let sessionId = localStorage.getItem(SESSION_KEY);
-    if(!sessionId){sessionId = uuidv4(); localStorage.setItem(SESSION_KEY, sessionId);} 
-    document.getElementById('sessionLabel').textContent = sessionId.slice(0,8);
-
-    // Elements
-    const messagesEl = document.getElementById('messages');
-    const profileEl = document.getElementById('profile');
-    const ctxBtn = document.getElementById('contextToggle');
-    const ctxState = document.getElementById('ctxState');
-    const promptEl = document.getElementById('prompt');
-    const sendBtn = document.getElementById('sendBtn');
-
-    let enableContext = true;
-    ctxBtn.addEventListener('click',()=>{
-      enableContext = !enableContext;
-      ctxState.textContent = enableContext ? 'ON' : 'OFF';
-      ctxBtn.classList.toggle('on', enableContext);
-    });
-
-    function appendMessage(role, text, latency){
-      const div = document.createElement('div');
-      div.className = 'msg ' + (role==='user' ? 'user' : 'bot');
-      div.innerHTML = `<div class="body">${escapeHtml(text)}</div>`;
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const who = role==='user' ? 'You' : 'Lyra';
-      meta.textContent = who + (latency ? ` — ${latency} ms` : '');
-      div.appendChild(meta);
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function escapeHtml(s){return s.replace(/[&<>"]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-
-    async function sendMessage(){
-      const text = promptEl.value.trim();
-      if(!text) return;
-      const profile = profileEl.value;
-
-      appendMessage('user', text);
-      promptEl.value = '';
-
-      const payload = {
-        session_id: sessionId,
-        profile: profile,
-        enable_context: enableContext,
-        text: text
-      };
-
-      const start = performance.now();
-      try{
-        const res = await fetch('/chat/message', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload)
-        });
-
-        const took = Math.round(performance.now() - start);
-
-        if(!res.ok){
-          const err = await res.text();
-          appendMessage('bot', `Error: ${res.status} ${err}`);
-          return;
-        }
-
-        const data = await res.json();
-
-        // API may return latency; prefer that, otherwise use measured ms
-        const latency = data.latency_ms ?? data.latency ?? took;
-
-        const replyText = data.text ?? data.reply ?? data.message ?? JSON.stringify(data);
-        appendMessage('bot', replyText, latency);
-      }catch(e){
-        appendMessage('bot', 'Network error: '+e.message);
-      }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    promptEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } });
-
-    // Welcome message
-    appendMessage('bot', 'Bienvenue dans Lyra Lite — choisissez un profil et dites bonjour !');
-
-  </script>
-</body>
-</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lyra Clean - AI Chat Interface</title>
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -267,6 +101,159 @@
             font-size: 0.75rem;
             color: var(--text-muted);
             font-family: 'Courier New', monospace;
+        }
+
+        .new-session-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .new-session-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .modal-close:hover {
+            color: var(--error-color);
+        }
+
+        .modal-body {
+            padding: 1rem 1.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .saves-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .save-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .save-item:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .save-item.selected {
+            border-color: var(--accent-primary);
+            background: rgba(0, 212, 170, 0.1);
+        }
+
+        .save-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .save-item-model {
+            font-weight: 600;
+            color: var(--accent-secondary);
+            font-size: 0.85rem;
+        }
+
+        .save-item-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .save-item-filename {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .save-item-size {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .model-filter {
+            margin-bottom: 1rem;
+        }
+
+        .model-filter select {
+            width: 100%;
+        }
+
+        .no-saves {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
         }
 
         /* Controls Panel */
@@ -464,6 +451,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
+            min-width: 0;
         }
 
         .message-header {
@@ -496,11 +484,24 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             line-height: 1.6;
+            overflow-x: auto;
         }
 
         .message.user .message-text {
             background: var(--bg-tertiary);
         }
+
+        /* Markdown Styling */
+        .message-text h1, .message-text h2, .message-text h3,
+        .message-text h4, .message-text h5, .message-text h6 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        .message-text h1 { font-size: 1.5rem; }
+        .message-text h2 { font-size: 1.3rem; }
+        .message-text h3 { font-size: 1.15rem; }
 
         .message-text p {
             margin-bottom: 0.75rem;
@@ -508,6 +509,15 @@
 
         .message-text p:last-child {
             margin-bottom: 0;
+        }
+
+        .message-text ul, .message-text ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .message-text li {
+            margin-bottom: 0.25rem;
         }
 
         .message-text code {
@@ -530,14 +540,60 @@
         .message-text pre code {
             background: none;
             padding: 0;
+            color: var(--text-primary);
         }
 
+        .message-text blockquote {
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 1rem;
+            margin: 0.75rem 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Table Styling */
+        .message-text table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0;
+            font-size: 0.9rem;
+        }
+
+        .message-text th, .message-text td {
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+        }
+
+        .message-text th {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .message-text tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .message-text tr:hover {
+            background: rgba(0, 212, 170, 0.05);
+        }
+
+        /* Horizontal rule */
+        .message-text hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 1rem 0;
+        }
+
+        /* Message Metadata */
         .message-metadata {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
             font-size: 0.75rem;
             color: var(--text-muted);
+            margin-top: 0.5rem;
         }
 
         .metadata-item {
@@ -574,6 +630,67 @@
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-family: 'Courier New', monospace;
+        }
+
+        /* Consciousness metrics */
+        .consciousness-metrics {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-secondary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .consciousness-title {
+            font-size: 0.8rem;
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .consciousness-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .consciousness-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .consciousness-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .consciousness-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        /* Memory echo */
+        .memory-echo {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid var(--accent-secondary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .memory-echo-title {
+            font-size: 0.8rem;
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .memory-echo-content {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
         }
 
         /* Input Area */
@@ -692,7 +809,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
-            max-width: 800px;
+            max-width: 900px;
             margin-top: 2rem;
         }
 
@@ -717,26 +834,6 @@
         .feature-description {
             font-size: 0.85rem;
             color: var(--text-secondary);
-        }
-
-        /* Error/Loading States */
-        .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error-color);
-            border-radius: 8px;
-            padding: 1rem;
-            color: var(--error-color);
-            margin: 1rem 0;
-        }
-
-        .loading-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
         }
 
         /* Responsive Design */
@@ -779,7 +876,7 @@
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <div class="logo">⚡ LYRA CLEAN</div>
+                <div class="logo">LYRA CLEAN</div>
                 <div class="status-indicator">
                     <span class="status-dot"></span>
                     <span id="statusText">Connected</span>
@@ -789,6 +886,15 @@
                 <div class="session-info">
                     <span>Session: </span><span id="sessionId">Loading...</span>
                 </div>
+                <button class="new-session-btn" id="saveSessionBtn" title="Save current session">
+                    Save
+                </button>
+                <button class="new-session-btn" id="loadSessionBtn" title="Load a saved session">
+                    Load
+                </button>
+                <button class="new-session-btn" id="newSessionBtn" title="Start a new session">
+                    New Session
+                </button>
             </div>
         </div>
 
@@ -798,10 +904,22 @@
                 <label class="control-label" for="profileSelect">Physics Profile:</label>
                 <div class="select-wrapper">
                     <select id="profileSelect">
-                        <option value="balanced">⚖️ Balanced</option>
-                        <option value="creative">🎨 Creative</option>
-                        <option value="safe">🛡️ Safe</option>
-                        <option value="analytical">🔬 Analytical</option>
+                        <option value="balanced">Balanced</option>
+                        <option value="creative">Creative</option>
+                        <option value="safe">Safe</option>
+                        <option value="analytical">Analytical</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label" for="consciousnessLevel">Consciousness:</label>
+                <div class="select-wrapper">
+                    <select id="consciousnessLevel">
+                        <option value="0">Level 0 - Passive</option>
+                        <option value="1">Level 1 - Observer</option>
+                        <option value="2">Level 2 - Adaptive</option>
+                        <option value="3">Level 3 - Memory</option>
                     </select>
                 </div>
             </div>
@@ -815,17 +933,6 @@
                 <span class="toggle-label" id="contextLabel">Enabled</span>
             </div>
 
-            <div class="control-group">
-                <label class="control-label" for="historyLimit">History:</label>
-                <div class="select-wrapper">
-                    <select id="historyLimit">
-                        <option value="10">10 messages</option>
-                        <option value="20" selected>20 messages</option>
-                        <option value="30">30 messages</option>
-                        <option value="50">50 messages</option>
-                    </select>
-                </div>
-            </div>
         </div>
 
         <!-- Chat Container -->
@@ -834,7 +941,7 @@
                 <!-- Welcome screen (shown when no messages) -->
                 <div class="welcome" id="welcomeScreen">
                     <div class="welcome-title">Welcome to Lyra Clean</div>
-                    <div class="welcome-subtitle">Physics-driven semantic AI chat system</div>
+                    <div class="welcome-subtitle">Physics-driven semantic AI chat system with consciousness levels</div>
 
                     <div class="welcome-features">
                         <div class="feature-card">
@@ -843,19 +950,19 @@
                             <div class="feature-description">Deterministic parameter trajectories for consistent behavior</div>
                         </div>
                         <div class="feature-card">
+                            <div class="feature-icon">🧠</div>
+                            <div class="feature-title">Consciousness Levels</div>
+                            <div class="feature-description">From passive (0) to semantic memory (3) - choose your depth</div>
+                        </div>
+                        <div class="feature-card">
                             <div class="feature-icon">🕸️</div>
                             <div class="feature-title">Semantic Context</div>
                             <div class="feature-description">Graph-based context injection with O(log N) queries</div>
                         </div>
                         <div class="feature-card">
-                            <div class="feature-icon">⚡</div>
-                            <div class="feature-title">Low Latency</div>
-                            <div class="feature-description">Context extraction in &lt;50ms, optimized SQL queries</div>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🔒</div>
-                            <div class="feature-title">Immutable State</div>
-                            <div class="feature-description">Zero mutation bugs, fully predictable responses</div>
+                            <div class="feature-icon">💾</div>
+                            <div class="feature-title">Session Memory</div>
+                            <div class="feature-description">Each session has isolated memory - no cross-contamination</div>
                         </div>
                     </div>
                 </div>
@@ -879,7 +986,45 @@
         </div>
     </div>
 
+    <!-- Load Session Modal -->
+    <div class="modal-overlay" id="loadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Load Session</div>
+                <button class="modal-close" id="closeLoadModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="model-filter">
+                    <label class="control-label">Filter by model:</label>
+                    <div class="select-wrapper">
+                        <select id="modelFilter">
+                            <option value="">All models</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="saves-list" id="savesList">
+                    <div class="no-saves">Loading saves...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="new-session-btn" id="cancelLoadBtn">Cancel</button>
+                <button class="send-button" id="confirmLoadBtn" disabled>Load Selected</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ========================================================================
+        // MARKED.JS CONFIGURATION
+        // ========================================================================
+
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+
         // ========================================================================
         // STATE MANAGEMENT
         // ========================================================================
@@ -889,8 +1034,12 @@
             messages: [],
             isLoading: false,
             profile: 'balanced',
+            consciousnessLevel: 0,
             enableContext: true,
-            maxHistory: 20
+            maxHistory: 50,
+            currentModel: localStorage.getItem('lyra_model') || 'unknown',
+            saves: [],
+            selectedSave: null
         };
 
         // ========================================================================
@@ -904,11 +1053,20 @@
             sendButton: document.getElementById('sendButton'),
             sendButtonText: document.getElementById('sendButtonText'),
             profileSelect: document.getElementById('profileSelect'),
+            consciousnessLevel: document.getElementById('consciousnessLevel'),
             contextToggle: document.getElementById('contextToggle'),
             contextLabel: document.getElementById('contextLabel'),
-            historyLimit: document.getElementById('historyLimit'),
             sessionIdDisplay: document.getElementById('sessionId'),
-            statusText: document.getElementById('statusText')
+            statusText: document.getElementById('statusText'),
+            newSessionBtn: document.getElementById('newSessionBtn'),
+            saveSessionBtn: document.getElementById('saveSessionBtn'),
+            loadSessionBtn: document.getElementById('loadSessionBtn'),
+            loadModal: document.getElementById('loadModal'),
+            closeLoadModal: document.getElementById('closeLoadModal'),
+            modelFilter: document.getElementById('modelFilter'),
+            savesList: document.getElementById('savesList'),
+            cancelLoadBtn: document.getElementById('cancelLoadBtn'),
+            confirmLoadBtn: document.getElementById('confirmLoadBtn')
         };
 
         // ========================================================================
@@ -916,12 +1074,22 @@
         // ========================================================================
 
         function initialize() {
-            // Load or create session ID
-            state.sessionId = localStorage.getItem('lyra_session_id');
-            if (!state.sessionId) {
+            // Check if we're continuing a loaded session (survives page reload)
+            const continueSession = sessionStorage.getItem('lyra_continue_session');
+
+            if (continueSession) {
+                // Continue a session that was explicitly loaded via Load button
+                state.sessionId = continueSession;
+                sessionStorage.removeItem('lyra_continue_session');
+                console.log('[Lyra] Continuing loaded session:', state.sessionId);
+            } else {
+                // ALWAYS create a new session on page load
+                // Old sessions are accessible via the Load button
                 state.sessionId = generateUUID();
-                localStorage.setItem('lyra_session_id', state.sessionId);
+                console.log('[Lyra] New session created:', state.sessionId);
             }
+
+            localStorage.setItem('lyra_session_id', state.sessionId);
             updateSessionDisplay();
 
             // Load saved preferences
@@ -929,6 +1097,12 @@
             if (savedProfile) {
                 state.profile = savedProfile;
                 elements.profileSelect.value = savedProfile;
+            }
+
+            const savedConsciousness = localStorage.getItem('lyra_consciousness_level');
+            if (savedConsciousness !== null) {
+                state.consciousnessLevel = parseInt(savedConsciousness);
+                elements.consciousnessLevel.value = savedConsciousness;
             }
 
             const savedContext = localStorage.getItem('lyra_enable_context');
@@ -941,15 +1115,23 @@
             const savedHistory = localStorage.getItem('lyra_max_history');
             if (savedHistory) {
                 state.maxHistory = parseInt(savedHistory);
-                elements.historyLimit.value = savedHistory;
             }
 
             // Event listeners
             elements.sendButton.addEventListener('click', sendMessage);
             elements.messageInput.addEventListener('keydown', handleInputKeydown);
             elements.profileSelect.addEventListener('change', handleProfileChange);
+            elements.consciousnessLevel.addEventListener('change', handleConsciousnessChange);
             elements.contextToggle.addEventListener('change', handleContextToggle);
-            elements.historyLimit.addEventListener('change', handleHistoryChange);
+            elements.newSessionBtn.addEventListener('click', handleNewSession);
+
+            // Save/Load session event listeners
+            elements.saveSessionBtn.addEventListener('click', handleSaveSession);
+            elements.loadSessionBtn.addEventListener('click', openLoadModal);
+            elements.closeLoadModal.addEventListener('click', closeLoadModal);
+            elements.cancelLoadBtn.addEventListener('click', closeLoadModal);
+            elements.confirmLoadBtn.addEventListener('click', confirmLoadSession);
+            elements.modelFilter.addEventListener('change', handleModelFilterChange);
 
             // Auto-resize textarea
             elements.messageInput.addEventListener('input', autoResizeTextarea);
@@ -1001,6 +1183,12 @@
             elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
         }
 
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // ========================================================================
         // MESSAGE RENDERING
         // ========================================================================
@@ -1031,10 +1219,17 @@
             header.appendChild(role);
             header.appendChild(time);
 
-            // Message text
+            // Message text with markdown rendering
             const text = document.createElement('div');
             text.className = 'message-text';
-            text.innerHTML = formatMessageText(message.text);
+
+            if (message.role === 'assistant') {
+                // Parse markdown for assistant messages
+                text.innerHTML = marked.parse(message.text);
+            } else {
+                // Escape HTML for user messages
+                text.innerHTML = '<p>' + escapeHtml(message.text).replace(/\n/g, '<br>') + '</p>';
+            }
 
             content.appendChild(header);
             content.appendChild(text);
@@ -1051,7 +1246,7 @@
 
                     metadata.innerHTML += `
                         <div class="metadata-item">
-                            <span class="metadata-label">⚡ Total:</span>
+                            <span class="metadata-label">Total:</span>
                             <span class="latency ${latencyClass}">${(totalLatency / 1000).toFixed(2)}s</span>
                         </div>
                     `;
@@ -1059,7 +1254,7 @@
                     if (message.metadata.latency.context_extraction !== undefined) {
                         metadata.innerHTML += `
                             <div class="metadata-item">
-                                <span class="metadata-label">🕸️ Context:</span>
+                                <span class="metadata-label">Context:</span>
                                 <span class="latency">${message.metadata.latency.context_extraction.toFixed(1)}ms</span>
                             </div>
                         `;
@@ -1068,7 +1263,7 @@
                     if (message.metadata.latency.llm_generation !== undefined) {
                         metadata.innerHTML += `
                             <div class="metadata-item">
-                                <span class="metadata-label">🤖 LLM:</span>
+                                <span class="metadata-label">LLM:</span>
                                 <span class="latency">${(message.metadata.latency.llm_generation / 1000).toFixed(2)}s</span>
                             </div>
                         `;
@@ -1079,8 +1274,8 @@
                 if (message.metadata.tokens) {
                     metadata.innerHTML += `
                         <div class="metadata-item">
-                            <span class="metadata-label">📊 Tokens:</span>
-                            <span>${message.metadata.tokens.prompt} → ${message.metadata.tokens.completion} (${message.metadata.tokens.total})</span>
+                            <span class="metadata-label">Tokens:</span>
+                            <span>${message.metadata.tokens.prompt} / ${message.metadata.tokens.completion} (${message.metadata.tokens.total})</span>
                         </div>
                     `;
                 }
@@ -1090,40 +1285,64 @@
                     const ps = message.metadata.physics_state;
                     metadata.innerHTML += `
                         <div class="metadata-item">
-                            <span class="metadata-label">🎯 Physics:</span>
+                            <span class="metadata-label">Physics:</span>
                             <div class="physics-state">
                                 <span class="physics-param">t=${ps.t.toFixed(2)}</span>
-                                <span class="physics-param">τc=${ps.tau_c.toFixed(2)}</span>
-                                <span class="physics-param">ρ=${ps.rho.toFixed(2)}</span>
-                                <span class="physics-param">δr=${ps.delta_r.toFixed(2)}</span>
+                                <span class="physics-param">tc=${ps.tau_c.toFixed(2)}</span>
+                                <span class="physics-param">r=${ps.rho.toFixed(2)}</span>
+                                <span class="physics-param">dr=${ps.delta_r.toFixed(2)}</span>
                             </div>
                         </div>
                     `;
                 }
 
                 content.appendChild(metadata);
+
+                // Consciousness metrics (if level >= 1)
+                if (message.metadata.consciousness) {
+                    const cm = message.metadata.consciousness;
+                    const consciousnessDiv = document.createElement('div');
+                    consciousnessDiv.className = 'consciousness-metrics';
+                    consciousnessDiv.innerHTML = `
+                        <div class="consciousness-title">Consciousness Metrics (Level ${state.consciousnessLevel})</div>
+                        <div class="consciousness-grid">
+                            <div class="consciousness-item">
+                                <span class="consciousness-label">Coherence</span>
+                                <span class="consciousness-value">${(cm.coherence || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="consciousness-item">
+                                <span class="consciousness-label">Tension</span>
+                                <span class="consciousness-value">${(cm.tension || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="consciousness-item">
+                                <span class="consciousness-label">Fit</span>
+                                <span class="consciousness-value">${(cm.fit || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="consciousness-item">
+                                <span class="consciousness-label">Stability</span>
+                                <span class="consciousness-value">${(cm.stability_score || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                    content.appendChild(consciousnessDiv);
+                }
+
+                // Memory echo (if level 3)
+                if (message.metadata.memory_echo) {
+                    const memoryDiv = document.createElement('div');
+                    memoryDiv.className = 'memory-echo';
+                    memoryDiv.innerHTML = `
+                        <div class="memory-echo-title">Memory Echo</div>
+                        <div class="memory-echo-content">${escapeHtml(message.metadata.memory_echo)}</div>
+                    `;
+                    content.appendChild(memoryDiv);
+                }
             }
 
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(content);
 
             return messageDiv;
-        }
-
-        function formatMessageText(text) {
-            // Simple markdown-like formatting
-            // Convert **bold** to <strong>
-            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-            // Convert `code` to <code>
-            text = text.replace(/`(.+?)`/g, '<code>$1</code>');
-
-            // Convert newlines to <br> (but preserve paragraphs)
-            text = text.split('\n\n').map(para => {
-                return '<p>' + para.replace(/\n/g, '<br>') + '</p>';
-            }).join('');
-
-            return text;
         }
 
         function addMessage(role, text, metadata = null) {
@@ -1175,6 +1394,7 @@
                         text: text,
                         session_id: state.sessionId,
                         profile: state.profile,
+                        consciousness_level: state.consciousnessLevel,
                         enable_context: state.enableContext,
                         max_history: state.maxHistory
                     })
@@ -1192,8 +1412,17 @@
                     latency: data.latency,
                     tokens: data.tokens,
                     physics_state: data.physics_state,
-                    context: data.context
+                    context: data.context,
+                    consciousness: data.consciousness,
+                    memory_echo: data.memory_echo
                 });
+
+                // Update current model from response
+                if (data.model) {
+                    state.currentModel = data.model;
+                    localStorage.setItem('lyra_model', data.model);
+                    console.log('[Lyra] Model:', data.model);
+                }
 
                 // Update session ID if it changed
                 if (data.session_id && data.session_id !== state.sessionId) {
@@ -1204,7 +1433,7 @@
 
             } catch (error) {
                 console.error('[Lyra] Error:', error);
-                addMessage('assistant', `❌ Error: ${error.message}. Please try again.`);
+                addMessage('assistant', `Error: ${error.message}. Please try again.`);
                 elements.statusText.textContent = 'Connection Error';
             } finally {
                 setLoading(false);
@@ -1241,6 +1470,12 @@
             console.log('[Lyra] Profile changed to:', state.profile);
         }
 
+        function handleConsciousnessChange(e) {
+            state.consciousnessLevel = parseInt(e.target.value);
+            localStorage.setItem('lyra_consciousness_level', state.consciousnessLevel);
+            console.log('[Lyra] Consciousness level changed to:', state.consciousnessLevel);
+        }
+
         function handleContextToggle(e) {
             state.enableContext = e.target.checked;
             localStorage.setItem('lyra_enable_context', state.enableContext);
@@ -1248,10 +1483,258 @@
             console.log('[Lyra] Context injection:', state.enableContext ? 'enabled' : 'disabled');
         }
 
-        function handleHistoryChange(e) {
-            state.maxHistory = parseInt(e.target.value);
-            localStorage.setItem('lyra_max_history', state.maxHistory);
-            console.log('[Lyra] History limit changed to:', state.maxHistory);
+
+        function handleNewSession() {
+            // Generate new session ID
+            state.sessionId = generateUUID();
+            localStorage.setItem('lyra_session_id', state.sessionId);
+            updateSessionDisplay();
+
+            // Clear messages
+            state.messages = [];
+            elements.messagesContainer.innerHTML = '';
+
+            // Show welcome screen again
+            elements.messagesContainer.innerHTML = `
+                <div class="welcome" id="welcomeScreen">
+                    <div class="welcome-title">Welcome to Lyra Clean</div>
+                    <div class="welcome-subtitle">Physics-driven semantic AI chat system with consciousness levels</div>
+                    <div class="welcome-features">
+                        <div class="feature-card">
+                            <div class="feature-icon">🎯</div>
+                            <div class="feature-title">Bezier Physics</div>
+                            <div class="feature-description">Deterministic parameter trajectories for consistent behavior</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🧠</div>
+                            <div class="feature-title">Consciousness Levels</div>
+                            <div class="feature-description">From passive (0) to semantic memory (3) - choose your depth</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🕸️</div>
+                            <div class="feature-title">Semantic Context</div>
+                            <div class="feature-description">Graph-based context injection with O(log N) queries</div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">💾</div>
+                            <div class="feature-title">Session Memory</div>
+                            <div class="feature-description">Each session has isolated memory - no cross-contamination</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            elements.welcomeScreen = document.getElementById('welcomeScreen');
+
+            console.log('[Lyra] New session created:', state.sessionId);
+            elements.messageInput.focus();
+        }
+
+        // ========================================================================
+        // SAVE/LOAD SESSION HANDLERS
+        // ========================================================================
+
+        async function handleSaveSession() {
+            if (state.messages.length === 0) {
+                alert('No messages to save. Start a conversation first.');
+                return;
+            }
+
+            try {
+                // Get current model from server or use stored value
+                const model = state.currentModel || 'unknown';
+
+                const response = await fetch(`/sessions/${state.sessionId}/save?model=${encodeURIComponent(model)}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to save session');
+                }
+
+                const data = await response.json();
+                alert(`Session saved successfully!\n\nFile: ${data.filename}\nMessages: ${data.message_count}`);
+                console.log('[Lyra] Session saved:', data);
+
+            } catch (error) {
+                console.error('[Lyra] Save error:', error);
+                alert(`Failed to save session: ${error.message}`);
+            }
+        }
+
+        async function openLoadModal() {
+            // Show modal
+            elements.loadModal.classList.add('active');
+
+            // Reset state
+            state.selectedSave = null;
+            elements.confirmLoadBtn.disabled = true;
+
+            // Load models list and saves
+            await loadSavesData();
+        }
+
+        function closeLoadModal() {
+            elements.loadModal.classList.remove('active');
+            state.selectedSave = null;
+        }
+
+        async function loadSavesData() {
+            try {
+                // Load models list
+                const modelsResponse = await fetch('/saves/models');
+                if (modelsResponse.ok) {
+                    const modelsData = await modelsResponse.json();
+                    populateModelFilter(modelsData.models);
+                }
+
+                // Load saves (optionally filtered)
+                await loadSavesList();
+
+            } catch (error) {
+                console.error('[Lyra] Failed to load saves data:', error);
+                elements.savesList.innerHTML = '<div class="no-saves">Failed to load saves</div>';
+            }
+        }
+
+        function populateModelFilter(models) {
+            elements.modelFilter.innerHTML = '<option value="">All models</option>';
+            models.forEach(modelInfo => {
+                const option = document.createElement('option');
+                // modelInfo is an object with {model, save_count, path}
+                const modelName = typeof modelInfo === 'string' ? modelInfo : modelInfo.model;
+                option.value = modelName;
+                option.textContent = `${modelName} (${modelInfo.save_count || 0})`;
+                elements.modelFilter.appendChild(option);
+            });
+        }
+
+        async function loadSavesList() {
+            const modelFilter = elements.modelFilter.value;
+            const url = modelFilter ? `/saves?model=${encodeURIComponent(modelFilter)}` : '/saves';
+
+            try {
+                elements.savesList.innerHTML = '<div class="no-saves">Loading...</div>';
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Failed to load saves');
+                }
+
+                const data = await response.json();
+                state.saves = data.saves;
+
+                renderSavesList();
+
+            } catch (error) {
+                console.error('[Lyra] Failed to load saves:', error);
+                elements.savesList.innerHTML = '<div class="no-saves">Failed to load saves</div>';
+            }
+        }
+
+        function renderSavesList() {
+            if (state.saves.length === 0) {
+                elements.savesList.innerHTML = '<div class="no-saves">No saved sessions found</div>';
+                return;
+            }
+
+            elements.savesList.innerHTML = '';
+
+            state.saves.forEach(save => {
+                const item = document.createElement('div');
+                item.className = 'save-item';
+                item.dataset.filepath = save.filepath;
+
+                // Format date
+                const date = new Date(save.timestamp);
+                const formattedDate = date.toLocaleString();
+
+                // Format file size
+                const sizeKB = (save.size_bytes / 1024).toFixed(1);
+
+                item.innerHTML = `
+                    <div class="save-item-header">
+                        <span class="save-item-model">${escapeHtml(save.model)}</span>
+                        <span class="save-item-date">${formattedDate}</span>
+                    </div>
+                    <div class="save-item-filename">${escapeHtml(save.filename)}</div>
+                    <div class="save-item-size">${sizeKB} KB</div>
+                `;
+
+                item.addEventListener('click', () => selectSave(save, item));
+                elements.savesList.appendChild(item);
+            });
+        }
+
+        function selectSave(save, element) {
+            // Deselect all
+            document.querySelectorAll('.save-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Select this one
+            element.classList.add('selected');
+            state.selectedSave = save;
+            elements.confirmLoadBtn.disabled = false;
+        }
+
+        function handleModelFilterChange() {
+            loadSavesList();
+        }
+
+        async function confirmLoadSession() {
+            if (!state.selectedSave) {
+                return;
+            }
+
+            try {
+                const filepath = state.selectedSave.filepath;
+
+                const response = await fetch(`/sessions/load?filepath=${encodeURIComponent(filepath)}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to load session');
+                }
+
+                const data = await response.json();
+
+                // Update session ID
+                state.sessionId = data.session_id;
+                localStorage.setItem('lyra_session_id', state.sessionId);
+                // Mark this session for continuation (survives page reload)
+                sessionStorage.setItem('lyra_continue_session', state.sessionId);
+                updateSessionDisplay();
+
+                // Update current model
+                state.currentModel = data.model;
+                localStorage.setItem('lyra_model', data.model);
+
+                // Clear and rebuild messages
+                state.messages = [];
+                elements.messagesContainer.innerHTML = '';
+
+                // Add loaded messages to UI
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                } else {
+                    // Show welcome screen if no messages
+                    handleNewSession();
+                }
+
+                closeLoadModal();
+
+                console.log('[Lyra] Session loaded:', data.session_id, 'with', data.message_count, 'messages');
+                alert(`Session loaded successfully!\n\nModel: ${data.model}\nMessages: ${data.message_count}`);
+
+            } catch (error) {
+                console.error('[Lyra] Load error:', error);
+                alert(`Failed to load session: ${error.message}`);
+            }
         }
 
         // ========================================================================

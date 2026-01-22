@@ -1,0 +1,67 @@
+{
+  "session_id": "95b89ef3-ff83-4df2-b803-6e5f26c90ece",
+  "model": "gpt-oss:20b",
+  "profile": "balanced",
+  "created_at": "2026-01-19T10:24:52.725947",
+  "exported_at": "2026-01-19T10:25:36.301927",
+  "message_count": 2,
+  "total_tokens": 0,
+  "messages": [
+    {
+      "event_id": 1005,
+      "event_type": "user_message",
+      "role": "user",
+      "content": "Bonjour, nous sommes en test, je ne te nourri pas beaucoup pour le moment, ça viendra...",
+      "injected_concepts": [
+        "beaucoup",
+        "bonjour",
+        "viendra",
+        "sommes",
+        "nourri"
+      ],
+      "graph_weight": 0.0,
+      "timestamp": 1768814705.3049572,
+      "latency_ms": null
+    },
+    {
+      "event_id": 1006,
+      "event_type": "assistant_message",
+      "role": "assistant",
+      "content": "Bonjour !  \n\nJe suis ravi d’être à votre disposition, même avec un minimum d’informations pour l’instant. Voici comment nous pouvons avancer :\n\n| **Ce que vous pouvez me donner** | **Ce que je peux faire** |\n|----------------------------------|--------------------------|\n| Un sujet général (ex : « développement web ») | Vous proposer des ressources, des exemples de code, ou un plan d’action. |\n| Un problème précis (ex : « erreur 404 sur mon site ») | Diagnostiquer l’erreur, suggérer des solutions, et vous guider pas à pas. |\n| Une idée de projet (ex : « une application de suivi de tâches ») | Brainstormer les fonctionnalités, choisir les technologies, et créer un roadmap. |\n| Vos préférences (ex : « préférez‑vous Python ou JavaScript ») | Adapter les réponses à votre stack technologique préférée. |\n\n### Prochaine étape\n\n1. **Donnez-moi un peu plus de contexte** : quel est votre domaine d’intérêt ou votre projet actuel ?  \n2. **Posez une question ou un défi précis** : je pourrai alors vous fournir une réponse ciblée et structurée.  \n3. **Si vous avez besoin d’explorer des idées** : dites‑moi quel type d’exploration vous intéresse (créativité, optimisation, sécurité, etc.) et je vous proposerai des pistes.\n\n---\n\n#### Quelques questions pour démarrer :\n\n- Quel est votre niveau actuel (débutant, intermédiaire, avancé) ?  \n- Y a-t-il des technologies ou des langages que vous utilisez déjà ?  \n- Avez‑vous un objectif ou une échéance particulière en tête ?  \n\nJe suis prêt à m’adapter à vos besoins, alors n’hésitez pas à me dire comment je peux vous aider !",
+      "injected_concepts": null,
+      "graph_weight": 0.0,
+      "timestamp": 1768814705.3137126,
+      "latency_ms": 10904.750108718872
+    }
+  ],
+  "trajectories": [
+    {
+      "trajectory_id": 503,
+      "t": 0.0,
+      "tau_c": 1.0,
+      "rho": 0.0,
+      "delta_r": 0.0,
+      "kappa": 0.5,
+      "timestamp": 1768814705.3197422
+    }
+  ],
+  "consciousness_adjustments": [
+    {
+      "id": 50,
+      "turn_number": 0,
+      "metrics": {
+        "coherence": 0.0,
+        "tension": 0.61,
+        "fit": 0.26,
+        "pressure": 0.35,
+        "stability_score": 0.0
+      },
+      "adjustments": {},
+      "timestamp": 1768814705.608882
+    }
+  ],
+  "metadata": {
+    "lyra_version": "1.0.0",
+    "export_format": "v1"
+  }
+}
