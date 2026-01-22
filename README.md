@@ -1,6 +1,6 @@
-# Lyra Clean
+# Lyra ACE
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: CC BY-NC-ND 4.0](https://licensebuttons.net/l/by-nc-nd/4.0/88x31.png)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
 
@@ -12,7 +12,7 @@
 
 ### Vue d'ensemble
 
-**Lyra Clean** est un système conversationnel LLM innovant qui utilise des **trajectoires de Bézier** pour contrôler de manière déterministe les paramètres de génération (température, pénalités) plutôt que des boucles de feedback réactives.
+**Lyra ACE** est un système conversationnel LLM innovant qui utilise des **trajectoires de Bézier** pour contrôler de manière déterministe les paramètres de génération (température, pénalités) et qui a pour objectif de "chercher le 0-cochain" des systèmes cognitifs augmentés à travers la construction d'un RAG partagé et pondéré par plusieurs moteurs.
 
 **Philosophie de conception :**
 - 🎯 **Trajectoires balistiques** : Comportement prévisible et ajustable
@@ -62,17 +62,7 @@
 #### Installation
 
 ```bash
-# Cloner le dépôt
-git clone https://github.com/yourusername/lyra_clean_bis.git
-cd lyra_clean_bis
 
-# Créer un environnement virtuel
-python -m venv .venv
-.venv\Scripts\activate  # Linux: source .venv/bin/activate
-
-# Installer les dépendances
-pip install -r requirements.txt
-```
 
 #### Lancement
 
@@ -188,7 +178,7 @@ MIT License - voir [LICENSE](LICENSE)
 
 ### Overview
 
-**Lyra Clean** is an innovative LLM conversational system that uses **Bézier trajectories** to deterministically control generation parameters (temperature, penalties) rather than reactive feedback loops.
+**Lyra ACE** is an innovative LLM conversational system that uses **Bézier trajectories** to deterministically control generation parameters (temperature, penalties) rather than reactive feedback loops.
 
 **Design philosophy:**
 - 🎯 **Ballistic trajectories**: Predictable and tunable behavior
@@ -324,13 +314,13 @@ Contributions welcome! See [contribution guide](docs/en/DEVELOPER_GUIDE.md#contr
 
 ### License
 
-MIT License - see [LICENSE](LICENSE)
+CC-BY NC 4.0 License - see [LICENSE](LICENSE)
 
 ---
 
 ## Credits
 
-**Author**: Simon ([GitHub Profile](https://github.com/yourusername))
+**Author**: Simon ([GitHub Profile](https://github.com/SimonBouhier))
 
 **Acknowledgments**:
 - Ollama team for the inference engine
@@ -340,5 +330,5 @@ MIT License - see [LICENSE](LICENSE)
 ## Support
 
 - 📖 Documentation: [docs/](docs/)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/lyra_clean_bis/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/lyra_clean_bis/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/SimonBouhier/Lyra_ACE/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/SimonBouhier/Lyra_ACE/discussions)

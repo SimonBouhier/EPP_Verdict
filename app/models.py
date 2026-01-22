@@ -351,6 +351,96 @@ class MultiModelResponse(BaseModel):
 
 
 # ============================================================================
+# BATCH MULTI-MODEL MODELS (VRAM-Optimized)
+# ============================================================================
+
+class BatchMultiModelRequest(BaseModel):
+    """
+    Requête de génération batch multi-modèles avec batching séquentiel.
+
+    STRATÉGIE VRAM:
+    - Charge modèle 1 → traite TOUTES les questions → décharge
+    - Charge modèle 2 → traite TOUTES les questions → décharge
+    - etc.
+
+    Example:
+        {
+            "questions": [
+                "What is entropy?",
+                "Explain photosynthesis",
+                "What is gravity?"
+            ],
+            "models": ["llama3.1:8b", "mistral:7b"],
+            "profile": "analytical",
+            "system_prompt": "You are a science teacher."
+        }
+    """
+    questions: List[str] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of questions to process"
+    )
+    models: List[str] = Field(
+        ...,
+        min_length=1,
+        max_length=10,
+        description="List of models to use"
+    )
+    session_id: Optional[str] = None
+    profile: str = Field("balanced", description="Bézier profile name")
+    system_prompt: Optional[str] = Field(
+        None,
+        max_length=5000,
+        description="Optional system prompt for all questions"
+    )
+
+    model_config = ConfigDict(frozen=False)
+
+
+class BatchModelResponseItem(BaseModel):
+    """Réponse d'une question pour un modèle."""
+    question_index: int
+    text: str
+    latency_ms: float
+    tokens: Dict[str, int]
+    success: bool
+    error: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BatchMultiModelResponse(BaseModel):
+    """
+    Réponse du batch multi-modèles.
+
+    Les réponses sont organisées par modèle, chaque modèle ayant
+    une liste de réponses correspondant aux questions d'entrée.
+
+    Example:
+        {
+            "responses": {
+                "llama3.1:8b": [...],
+                "mistral:7b": [...]
+            },
+            "models_processed": 2,
+            "questions_processed": 3,
+            "total_duration_ms": 15000.0,
+            "vram_managed": true
+        }
+    """
+    responses: Dict[str, List[BatchModelResponseItem]]
+    models_processed: int
+    questions_processed: int
+    total_duration_ms: float
+    vram_managed: bool
+    session_id: str
+    physics_state: Dict[str, float]
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
 # GRAPH DELTA MODELS (Lyra-ACE)
 # ============================================================================
 

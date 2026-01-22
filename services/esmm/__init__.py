@@ -20,7 +20,14 @@ Version: 1.1
 from .populate_graph import GraphPopulator
 from .relation_generator import RelationGenerator
 from .seed_injector import SeedInjector
-from .model_rotator import ModelRotator, get_model_rotator, close_model_rotator
+from .model_rotator import (
+    ModelRotator,
+    get_model_rotator,
+    close_model_rotator,
+    RotatedResponse,
+    RotationResult,
+    BatchModelResult
+)
 from .prompts import (
     CANONICAL_RELATIONS,
     get_triplet_extraction_prompt,
@@ -47,6 +54,9 @@ __all__ = [
     "ModelRotator",
     "get_model_rotator",
     "close_model_rotator",
+    "RotatedResponse",
+    "RotationResult",
+    "BatchModelResult",
     # Prompts
     "CANONICAL_RELATIONS",
     "get_triplet_extraction_prompt",

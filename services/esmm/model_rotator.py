@@ -56,6 +56,16 @@ class RotationResult:
     vram_managed: bool
 
 
+@dataclass
+class BatchModelResult:
+    """Result of batch sequential multi-model processing."""
+    results: Dict[str, List[RotatedResponse]]  # model -> [responses]
+    total_duration_ms: float
+    models_processed: int
+    questions_per_model: int
+    vram_managed: bool
+
+
 class ModelRotator:
     """
     Manages sequential model rotation with explicit VRAM control.
@@ -404,6 +414,83 @@ class ModelRotator:
             responses.append(response)
 
         return responses
+
+    async def batch_sequential_models(
+        self,
+        models: List[str],
+        questions: List[str],
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7
+    ) -> BatchModelResult:
+        """
+        Process multiple questions with multiple models, one model at a time.
+
+        VRAM-OPTIMAL STRATEGY:
+        1. For each model:
+           a. Preload the model (keep_alive="5m")
+           b. Process ALL questions (model stays in VRAM)
+           c. Unload the model (keep_alive=0)
+        2. Move to next model
+
+        This minimizes VRAM usage and model switching overhead.
+
+        Args:
+            models: List of models to use
+            questions: List of questions to process
+            system_prompt: Optional system prompt
+            temperature: Generation temperature
+
+        Returns:
+            BatchModelResult with all responses organized by model
+        """
+        start_time = time.time()
+        results: Dict[str, List[RotatedResponse]] = {}
+
+        logger.info(
+            f"[ModelRotator] Batch sequential: {len(models)} models × "
+            f"{len(questions)} questions"
+        )
+
+        for model_idx, model in enumerate(models):
+            logger.info(
+                f"[ModelRotator] Loading model {model_idx+1}/{len(models)}: {model}"
+            )
+
+            # Preload the model BEFORE processing the batch
+            await self.preload_model(model)
+
+            # Process ALL questions with this model
+            # unload_when_done=True frees VRAM after the complete batch
+            model_responses = await self.batch_process(
+                model=model,
+                questions=questions,
+                system_prompt=system_prompt,
+                temperature=temperature,
+                unload_when_done=True  # Unload after this batch
+            )
+
+            results[model] = model_responses
+
+            logger.info(
+                f"[ModelRotator] Model {model} done: "
+                f"{len(model_responses)} responses, VRAM freed"
+            )
+
+        total_duration_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            f"[ModelRotator] Batch sequential complete: "
+            f"{len(models)} models × {len(questions)} questions "
+            f"in {total_duration_ms:.0f}ms"
+        )
+
+        return BatchModelResult(
+            results=results,
+            total_duration_ms=total_duration_ms,
+            models_processed=len(models),
+            questions_per_model=len(questions),
+            vram_managed=True
+        )
 
 
 # Singleton instance
