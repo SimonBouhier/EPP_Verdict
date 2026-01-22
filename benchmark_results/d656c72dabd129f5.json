@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_archived_20251203_214119",
+  "turn": 19,
+  "level": 1,
+  "query": "What is your name?",
+  "response": "Response to 'What is your name?...': This is a comprehensive answer that addresses the key points. This is a comprehensive answer that addresses the k",
+  "latency_ms": 0.006600006599910557,
+  "tokens": {
+    "prompt": 4,
+    "response": 30,
+    "total": 34
+  },
+  "timestamp": "2025-12-03T21:41:20.367980"
+}

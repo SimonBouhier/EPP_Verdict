@@ -1,0 +1,13 @@
+{
+  "timestamp": "20251203_203827",
+  "prompts_count": 10,
+  "levels_tested": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "total_requests": 40,
+  "successful_requests": 40,
+  "api_base": "http://localhost:8000"
+}

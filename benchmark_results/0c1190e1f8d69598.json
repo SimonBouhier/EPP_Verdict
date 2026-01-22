@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_archived_20251203_214119",
+  "turn": 1,
+  "level": 1,
+  "query": "Hello, how are you?",
+  "response": "Response to 'Hello, how are you?...': This is a comprehensive answer that addresses the key points. ",
+  "latency_ms": 0.007700000423938036,
+  "tokens": {
+    "prompt": 4,
+    "response": 20,
+    "total": 24
+  },
+  "timestamp": "2025-12-03T21:41:19.183575"
+}

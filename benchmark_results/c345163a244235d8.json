@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_archived_20251203_214130",
+  "turn": 12,
+  "level": 1,
+  "query": "Explain quantum mechanics briefly",
+  "response": "Response to 'Explain quantum mechanics brie...': This is a comprehensive answer that addresses the key points. This is a comprehen",
+  "latency_ms": 0.010399991879239678,
+  "tokens": {
+    "prompt": 4,
+    "response": 26,
+    "total": 30
+  },
+  "timestamp": "2025-12-03T21:41:31.666500"
+}

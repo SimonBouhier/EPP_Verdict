@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_simple_20251203_222357",
+  "turn": 3,
+  "level": 1,
+  "query": "What is AI? (20 words max)",
+  "response": "Artificial Intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems, to perform tasks.",
+  "latency_ms": 3742.4823000037577,
+  "tokens": {
+    "prompt": 76,
+    "completion": 184,
+    "total": 260
+  },
+  "timestamp": "2025-12-03T22:24:10.134683"
+}

@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_simple_20251203_222357",
+  "turn": 1,
+  "level": 1,
+  "query": "What is machine learning? (answer in 20 words max)",
+  "response": "Machine learning is a field of artificial intelligence where computational models improve automatically from data, learning patterns and making predictions.",
+  "latency_ms": 3551.420700008748,
+  "tokens": {
+    "prompt": 80,
+    "completion": 140,
+    "total": 220
+  },
+  "timestamp": "2025-12-03T22:24:01.101775"
+}

@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-12-03T21:28:02.372538",
+  "prompts": 10,
+  "rounds": 3,
+  "level1": "ConsciousnessMonitor (Passif)",
+  "level2": "AdaptiveConsciousness (Adaptatif)",
+  "avg_overhead_ms": 0.0009666666666666671,
+  "max_overhead_ms": 0.005,
+  "adjustments_triggered": 9,
+  "target_overhead_ms": 5.0,
+  "result": "PASS"
+}

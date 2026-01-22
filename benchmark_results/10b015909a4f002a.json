@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_archived_20251203_214119",
+  "turn": 20,
+  "level": 1,
+  "query": "How does photosynthesis work?",
+  "response": "Response to 'How does photosynthesis work?...': This is a comprehensive answer that addres",
+  "latency_ms": 0.008199989679269493,
+  "tokens": {
+    "prompt": 4,
+    "response": 18,
+    "total": 22
+  },
+  "timestamp": "2025-12-03T21:41:20.445135"
+}

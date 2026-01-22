@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_simple_20251203_222436",
+  "turn": 2,
+  "level": 1,
+  "query": "Explain Python briefly (20 words max)",
+  "response": "Python: high‑level, interpreted language, known for readability, dynamic typing, extensive libraries, used in web, AI, scripting.",
+  "latency_ms": 3775.800299990806,
+  "tokens": {
+    "prompt": 75,
+    "completion": 198,
+    "total": 273
+  },
+  "timestamp": "2025-12-03T22:24:44.827414"
+}

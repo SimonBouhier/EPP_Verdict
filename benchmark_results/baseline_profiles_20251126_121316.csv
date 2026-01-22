@@ -1,0 +1,13 @@
+profile,prompt,latency_ms,response_length,tau_c,rho,delta_r
+balanced,Explain entropy,8707.681894302368,735,1.0,0.0,0.0
+balanced,What is consciousness?,8911.886215209961,757,1.0,0.0,0.0
+balanced,Describe evolution,8856.707572937012,762,1.0,0.0,0.0
+creative,Explain entropy,12510.646104812622,977,1.3,0.5,0.2
+creative,What is consciousness?,10546.970129013062,1016,1.3,0.5,0.2
+creative,Describe evolution,11521.263360977173,945,1.3,0.5,0.2
+safe,Explain entropy,8263.936758041382,711,0.7,-0.3,-0.2
+safe,What is consciousness?,6298.439502716064,597,0.7,-0.3,-0.2
+safe,Describe evolution,5389.3609046936035,439,0.7,-0.3,-0.2
+analytical,Explain entropy,6837.442398071289,445,0.6,-0.5,-0.3
+analytical,What is consciousness?,6556.64324760437,598,0.6,-0.5,-0.3
+analytical,Describe evolution,6809.255599975586,455,0.6,-0.5,-0.3

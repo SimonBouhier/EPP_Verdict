@@ -1,0 +1,14 @@
+{
+  "run_id": "phase2_simple_20251203_222436",
+  "turn": 1,
+  "level": 1,
+  "query": "What is machine learning? (answer in 20 words max)",
+  "response": "Machine learning trains models to learn patterns from data, enabling autonomous decision‑making without explicit programming.",
+  "latency_ms": 4069.922700000461,
+  "tokens": {
+    "prompt": 80,
+    "completion": 213,
+    "total": 293
+  },
+  "timestamp": "2025-12-03T22:24:40.997449"
+}
