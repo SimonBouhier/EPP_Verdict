@@ -21,6 +21,7 @@ aiosqlite>=0.19.0           # Async SQLite (replaces pandas+CSV)
 # PERFORMANCE & CACHING
 # ============================================================================
 cachetools>=5.3.0           # LRU/TTL cache for concepts
+tenacity>=8.2.0             # Retry logic for LLM API calls
 
 # ============================================================================
 # LOGGING & OBSERVABILITY

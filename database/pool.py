@@ -162,7 +162,7 @@ class SQLiteConnectionPool:
             self._pool.append(PooledConnection(connection=conn))
 
         self._initialized = True
-        self._logger.info("pool_initialized", size=self.pool_size, path=str(self.db_path))
+        self._logger.info(f"Pool initialized: size={self.pool_size}, path={self.db_path}")
 
     async def _create_connection(self) -> aiosqlite.Connection:
         """Cree une nouvelle connexion avec les pragmas."""
@@ -202,14 +202,14 @@ class SQLiteConnectionPool:
                     pooled_conn = PooledConnection(connection=conn, in_use=True)
                     self._pool.append(pooled_conn)
                     self._overflow_count += 1
-                    self._logger.debug("overflow_connection_created", overflow_count=self._overflow_count)
+                    self._logger.debug(f"Overflow connection created: count={self._overflow_count}")
 
             if pooled_conn:
                 break
 
             # Verifier timeout
             if time.time() - start_time > self.connection_timeout:
-                self._logger.error("connection_timeout", waited=time.time() - start_time)
+                self._logger.error(f"Connection timeout: waited={time.time() - start_time:.2f}s")
                 raise asyncio.TimeoutError("Could not acquire connection from pool")
 
             # Attendre un peu avant de reessayer
@@ -234,7 +234,7 @@ class SQLiteConnectionPool:
             self._overflow_count = 0
             self._initialized = False
 
-        self._logger.info("pool_closed")
+        self._logger.info("Pool closed")
 
     async def cleanup_idle(self) -> int:
         """
@@ -263,7 +263,7 @@ class SQLiteConnectionPool:
                 closed += 1
 
         if closed > 0:
-            self._logger.info("idle_connections_closed", count=closed)
+            self._logger.info(f"Idle connections closed: count={closed}")
 
         return closed
 
@@ -309,7 +309,7 @@ class ConceptCache:
             # Fallback: dict simple sans TTL (moins optimal)
             self._cache: Dict[str, Any] = {}
             self._maxsize = maxsize
-            self._logger.warning("cachetools_not_available", fallback="simple_dict")
+            self._logger.warning("cachetools not available, using simple dict fallback")
 
         self._hits = 0
         self._misses = 0
@@ -341,7 +341,7 @@ class ConceptCache:
     def clear(self) -> None:
         """Vide le cache."""
         self._cache.clear()
-        self._logger.info("cache_cleared")
+        self._logger.info("Cache cleared")
 
     def invalidate_pattern(self, pattern: str) -> int:
         """
@@ -412,7 +412,7 @@ class ConcurrencyLimiter:
                 self._total += 1
         except asyncio.TimeoutError:
             self._timeouts += 1
-            self._logger.warning("concurrency_timeout", active=self._active)
+            self._logger.warning(f"Concurrency timeout: active={self._active}")
             raise
 
         try:

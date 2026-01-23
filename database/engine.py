@@ -71,6 +71,24 @@ class ISpaceDB:
 
         # Create database and apply schema
         async with aiosqlite.connect(self.db_path) as db:
+            # Migrations AVANT le schema (pour colonnes manquantes sur DB existantes)
+            # Doit s'executer avant executescript car le schema contient des CREATE INDEX
+            # sur ces colonnes qui echoueraient sinon
+            migrations = [
+                "ALTER TABLE concepts ADD COLUMN domain TEXT DEFAULT 'general'",
+                "ALTER TABLE concepts ADD COLUMN is_active INTEGER DEFAULT 1",
+                "ALTER TABLE concept_aliases ADD COLUMN is_active INTEGER DEFAULT 1",
+                "ALTER TABLE relations ADD COLUMN is_active INTEGER DEFAULT 1",
+                "ALTER TABLE knowledge_gaps ADD COLUMN suggested_question TEXT",
+            ]
+            for migration in migrations:
+                try:
+                    await db.execute(migration)
+                except Exception:
+                    pass  # Table inexistante ou colonne deja presente
+            await db.commit()
+
+            # Maintenant appliquer le schema complet (tables + index)
             await db.executescript(schema_sql)
 
             # Performance optimizations
@@ -109,6 +127,42 @@ class ISpaceDB:
                 conn.row_factory = aiosqlite.Row
                 await conn.execute("PRAGMA busy_timeout=30000")
                 yield conn
+
+    # ========================================================================
+    # QUERY HELPERS
+    # ========================================================================
+
+    async def execute_scalar(self, sql: str, params: tuple = ()) -> Any:
+        """
+        Execute query and return single scalar value.
+
+        Args:
+            sql: SQL query (should return single value)
+            params: Query parameters
+
+        Returns:
+            First column of first row, or None
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(sql, params)
+            row = await cursor.fetchone()
+            return row[0] if row else None
+
+    async def execute_query(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
+        """
+        Execute query and return all rows as dicts.
+
+        Args:
+            sql: SQL query
+            params: Query parameters
+
+        Returns:
+            List of row dicts
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(sql, params)
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
 
     # ========================================================================
     # CONCEPT QUERIES (replaces graph_loader.py)
@@ -384,6 +438,98 @@ class ISpaceDB:
                 (source, target, kappa_ollivier, kappa_jaccard, kappa_hybrid, alpha, time.time())
             )
             await conn.commit()
+
+    async def upsert_relations_batch(
+        self,
+        relations: List[Dict[str, Any]]
+    ) -> Dict[str, int]:
+        """
+        Insere ou met a jour un lot de relations en une transaction.
+
+        Optimise pour les insertions massives (ESMM extraction).
+        Utilise INSERT ... ON CONFLICT DO UPDATE.
+
+        Args:
+            relations: Liste de dicts avec:
+                - source: Concept source (required)
+                - target: Concept cible (required)
+                - weight: Poids PPMI (default: 0.5)
+                - kappa: Courbure (default: 0.5)
+                - relation_type: Type de relation (default: 'semantic')
+                - confidence: Score de confiance (default: weight)
+                - model_source: Modele ayant extrait (optional)
+
+        Returns:
+            Dict avec:
+                - inserted: Nombre de nouvelles relations
+                - updated: Nombre de relations mises a jour
+                - errors: Nombre d'erreurs
+
+        Example:
+            result = await db.upsert_relations_batch([
+                {"source": "A", "target": "B", "weight": 0.8},
+                {"source": "C", "target": "D", "weight": 0.6, "relation_type": "causes"}
+            ])
+        """
+        if not relations:
+            return {"inserted": 0, "updated": 0, "errors": 0}
+
+        inserted = 0
+        updated = 0
+        errors = 0
+        now = time.time()
+
+        async with self.connection() as conn:
+            for rel in relations:
+                try:
+                    source = rel.get("source")
+                    target = rel.get("target")
+                    if not source or not target:
+                        errors += 1
+                        continue
+
+                    weight = rel.get("weight", 0.5)
+                    kappa = rel.get("kappa", 0.5)
+                    relation_type = rel.get("relation_type", "semantic")
+                    confidence = rel.get("confidence", weight)
+                    model_source = rel.get("model_source")
+
+                    # Verifier si existe deja
+                    cursor = await conn.execute(
+                        "SELECT 1 FROM relations WHERE source = ? AND target = ?",
+                        (source, target)
+                    )
+                    exists = await cursor.fetchone()
+
+                    await conn.execute(
+                        """
+                        INSERT INTO relations (
+                            source, target, weight, kappa, relation_type,
+                            confidence, model_source, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(source, target) DO UPDATE SET
+                            weight = (relations.weight + excluded.weight) / 2,
+                            kappa = excluded.kappa,
+                            confidence = (relations.confidence + excluded.confidence) / 2,
+                            extraction_count = relations.extraction_count + 1,
+                            updated_at = excluded.updated_at
+                        """,
+                        (source, target, weight, kappa, relation_type,
+                         confidence, model_source, now, now)
+                    )
+
+                    if exists:
+                        updated += 1
+                    else:
+                        inserted += 1
+
+                except Exception:
+                    errors += 1
+
+            await conn.commit()
+
+        return {"inserted": inserted, "updated": updated, "errors": errors}
 
     # ========================================================================
     # SESSION MANAGEMENT (replaces memory_store.py)

@@ -711,6 +711,134 @@ Vous pouvez la personnaliser selon vos besoins.
 
 ---
 
+## ESMM - Exploration Semantique Multi-Modeles
+
+Le protocole ESMM permet de construire collaborativement un graphe de connaissances en orchestrant plusieurs modeles LLM.
+
+### Prerequis
+
+1. **Serveur Lyra lance** : `start_server.bat`
+2. **Modeles Ollama installes** : Au moins 2 modeles (ex: llama3.1:8b, deepseek-r1:8b)
+
+### Lancer un run ESMM
+
+#### Mode rapide (test)
+
+```bash
+run_esmm_quick.bat
+```
+
+Lance 1 cycle de chaque type (divergent, debate, meta) - ideal pour tester.
+
+#### Mode complet
+
+```bash
+run_esmm_full.bat
+```
+
+Lance 5 cycles divergent, 3 debate, 2 meta - exploration complete.
+
+#### Mode interactif
+
+```bash
+run_esmm.bat
+```
+
+Menu permettant de choisir le mode et les options.
+
+### CLI ESMM
+
+Le CLI complet offre plus de controle :
+
+```bash
+# Lancer avec options personnalisees
+esmm.bat run --cycles 3,2,1 --models llama3.1:8b,mistral:7b --watch
+
+# Verifier le statut
+esmm.bat status 1
+
+# Voir le resultat complet
+esmm.bat result 1
+
+# Mettre en pause / reprendre
+esmm.bat pause 1
+esmm.bat resume 1
+
+# Surveillance temps reel
+esmm.bat watch 1 --interval 3
+```
+
+### Consulter les metriques
+
+```bash
+# Metriques de couverture
+esmm_metrics.bat coverage
+
+# Lacunes actives
+esmm_metrics.bat gaps
+
+# Lacunes de type bridge
+esmm_metrics.bat gaps bridge
+
+# Stats de la 0-cochaine
+esmm_metrics.bat cochain
+```
+
+Ou via CLI :
+
+```bash
+esmm.bat metrics
+esmm.bat gaps --type bridge --limit 20
+esmm.bat cochain
+```
+
+### Types de cycles
+
+| Type | Objectif | Question type |
+|------|----------|---------------|
+| **DIVERGENT** | Exploration large | "Quels concepts sont lies a X?" |
+| **DEBATE** | Validation dialectique | "La relation A-B est-elle valide?" |
+| **META** | Reflexion | "Quels concepts manquent dans ce domaine?" |
+
+### Types de lacunes
+
+| Type | Description | Priorite |
+|------|-------------|----------|
+| **isolated** | Concepts avec peu de connexions | 1.0 |
+| **unstable** | Relations a haute variance | 1.2 |
+| **bridge** | Liens inter-domaines manquants | 1.5 |
+
+### Exemple de workflow complet
+
+```bash
+# 1. Demarrer le serveur
+start_server.bat
+
+# 2. Lancer un run ESMM rapide
+run_esmm_quick.bat
+
+# 3. Surveiller la progression
+esmm.bat watch 1
+
+# 4. Consulter les resultats
+esmm.bat result 1
+
+# 5. Analyser les metriques
+esmm.bat metrics
+
+# 6. Identifier les lacunes prioritaires
+esmm.bat gaps --type bridge
+```
+
+### Bonnes pratiques
+
+1. **Commencez par un run rapide** pour verifier que tout fonctionne
+2. **Surveillez la VRAM** : Le systeme utilise keep_alive=0 pour decharger les modeles
+3. **Adaptez les cycles** : Plus de divergent si faible couverture, plus de debate si faible consensus
+4. **Explorez les lacunes bridge** en priorite : Elles connectent des domaines
+
+---
+
 ## Dépannage
 
 ### Erreur : "Ollama server not reachable"

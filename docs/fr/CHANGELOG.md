@@ -6,6 +6,106 @@ Format base sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
 ---
 
+## [3.0.0] - 2026-01-22
+
+### Resume
+ESMM Phase 3 - Protocole complet avec orchestration autonome, detection de lacunes et construction de 0-cochaine.
+
+### Ajoute
+
+#### Orchestrateur ESMM (`services/esmm/orchestrator.py`)
+- **ESMMOrchestrator** : Gestion complete des runs avec:
+  - Timeouts configurables par cycle (default 5min)
+  - Checkpoints automatiques toutes les 5 iterations
+  - Gestion d'etat persistante (running/paused/completed/failed)
+  - Adaptation dynamique des cycles
+
+#### Gestionnaire de Cycles (`services/esmm/cycle_manager.py`)
+- **ExplorationCycleManager** : Execute les 3 types de cycles:
+  - DIVERGENT : Exploration large autour de concepts seeds
+  - DEBATE : Validation dialectique inter-modeles
+  - META : Reflexion sur les connaissances extraites
+- Selection dynamique des concepts cibles
+- Cache des resultats recents
+
+#### Detection de Lacunes (`services/esmm/gap_detector.py`)
+- **KnowledgeGapDetector** : Detecte 3 types de lacunes:
+  - `isolated` : Concepts a faible degre (<3 connexions)
+  - `unstable` : Triplets a haute variance de consensus
+  - `bridge` : Liens inter-domaines manquants
+- Seuils dynamiques bases sur les metriques du graphe
+- Prioritisation automatique des lacunes
+
+#### Construction 0-Cochaine (`services/esmm/cochain_builder.py`)
+- **CochainBuilder** : Construit la signature epistemique 5D:
+  - model_agreement : Accord inter-modeles
+  - semantic_consistency : Coherence des embeddings
+  - structural_centrality : Centralite PageRank-like
+  - stability_score : Stabilite temporelle
+  - relation_diversity : Entropie Shannon des relations
+- Classification en 3 types epistemiques:
+  - GENERALIST : Haut degre, relations diverses
+  - SPECIALIZED : Domaine specifique, faible degre
+  - HYBRID : Mix des deux
+
+#### Analyseur de Couverture (`services/esmm/coverage_analyzer.py`)
+- **CoverageAnalyzer** : Metriques de couverture:
+  - coverage_score : Score composite [0,1]
+  - consensus_density : Densite moyenne de consensus
+  - epistemic_diversity : Entropie des types epistemiques
+  - structural_stability : Coefficient de clustering moyen
+- Seuils configurables pour adaptation dynamique
+
+#### Prompts de Cycles (`services/esmm/cycle_prompts.py`)
+- Templates few-shot pour chaque type de cycle
+- Exemples positifs et negatifs
+- Format de sortie JSON structure
+
+#### Modeles Pydantic Phase 3 (`app/models.py`)
+- `ESMMRunRequest` : Configuration de run
+- `ESMMRunStatusResponse` : Statut en temps reel
+- `ESMMRunResultResponse` : Resultat complet
+- `CycleResultResponse` : Resultat d'un cycle
+- `KnowledgeGapResponse` : Lacune detectee
+- `CochainEntryResponse` : Entree de cochaine
+- `CoverageMetricsResponse` : Metriques de couverture
+- `ALLOWED_ESMM_MODELS` : Whitelist de modeles autorises
+
+#### Endpoints API Phase 3 (`app/api/graph.py`)
+- `POST /graph/esmm-run` : Lancer un run ESMM
+- `GET /graph/esmm-run/{id}` : Statut d'un run
+- `GET /graph/esmm-run/{id}/result` : Resultat complet
+- `POST /graph/esmm-run/{id}/pause` : Mettre en pause
+- `POST /graph/esmm-run/{id}/resume` : Reprendre
+- `GET /graph/esmm-run/{id}/cycles` : Historique des cycles
+- `GET /graph/esmm-run/{id}/gaps` : Lacunes d'un run
+- `GET /graph/coverage/metrics` : Metriques globales
+- `GET /graph/gaps/active` : Lacunes actives
+- `POST /graph/gaps/{id}/address` : Marquer lacune adressee
+
+#### Scripts Batch ESMM
+- `esmm.bat` : CLI principal (wrapper Python)
+- `run_esmm.bat` : Menu interactif
+- `run_esmm_quick.bat` : Run rapide (1,1,1)
+- `run_esmm_full.bat` : Run complet (5,3,2)
+- `check_esmm_status.bat` : Verification statut
+- `esmm_control.bat` : Pause/resume
+- `esmm_metrics.bat` : Metriques et lacunes
+- `scripts/esmm_cli.py` : CLI Python complet avec mode watch
+
+### Modifie
+- `services/esmm/__init__.py` : Version 3.0, exports Phase 3
+- `app/models.py` : +200 lignes modeles Phase 3
+- `app/api/graph.py` : +430 lignes endpoints Phase 3
+
+### Notes techniques
+- Background tasks FastAPI pour runs longs
+- Stockage d'etat en memoire (_esmm_runs dict)
+- Adaptation dynamique basee sur regles configurables
+- Limite 2 modeles simultanes pour gestion VRAM
+
+---
+
 ## [2.1.0] - 2026-01-22
 
 ### Resume

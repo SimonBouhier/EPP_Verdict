@@ -51,7 +51,11 @@ CREATE TABLE IF NOT EXISTS concepts (
     -- Métadonnées ESMM
     source TEXT DEFAULT 'manual',            -- 'manual' | 'seed' | 'extracted' | 'merged'
     first_seen_model TEXT,                   -- Premier modèle ayant introduit ce concept
-    
+    domain TEXT DEFAULT 'general',           -- Domaine de connaissance (ex: 'physics', 'biology', 'AI')
+
+    -- Soft delete
+    is_active INTEGER DEFAULT 1,             -- 0=supprimé (soft delete), 1=actif
+
     -- Tracking
     created_at REAL NOT NULL DEFAULT (unixepoch('now')),
     last_accessed REAL,
@@ -62,6 +66,8 @@ CREATE TABLE IF NOT EXISTS concepts (
 CREATE INDEX IF NOT EXISTS idx_concepts_rho ON concepts(rho_static DESC);
 CREATE INDEX IF NOT EXISTS idx_concepts_degree ON concepts(degree DESC);
 CREATE INDEX IF NOT EXISTS idx_concepts_source ON concepts(source);
+CREATE INDEX IF NOT EXISTS idx_concepts_domain ON concepts(domain);
+CREATE INDEX IF NOT EXISTS idx_concepts_active ON concepts(is_active) WHERE is_active = 1;
 
 -- ============================================================================
 -- TABLE 2: CONCEPT_ALIASES (Canonicalisation sémantique)
@@ -80,15 +86,19 @@ CREATE TABLE IF NOT EXISTS concept_aliases (
     similarity REAL NOT NULL,                -- Score cosinus au moment de la fusion
     fusion_method TEXT DEFAULT 'embedding',  -- 'embedding' | 'manual' | 'lemmatization'
     
+    -- Soft delete
+    is_active INTEGER DEFAULT 1,             -- 0=supprimé, 1=actif
+
     -- Tracking
     created_at REAL NOT NULL DEFAULT (unixepoch('now')),
     created_by TEXT DEFAULT 'system',        -- 'system' | 'user' | nom du modèle
-    
+
     FOREIGN KEY (canonical_id) REFERENCES concepts(id) ON DELETE CASCADE
 );
 
 -- Index pour résolution rapide
 CREATE INDEX IF NOT EXISTS idx_aliases_canonical ON concept_aliases(canonical_id);
+CREATE INDEX IF NOT EXISTS idx_aliases_similarity ON concept_aliases(similarity DESC);
 
 -- ============================================================================
 -- TABLE 3: RELATIONS (Arêtes du graphe sémantique)
@@ -111,10 +121,13 @@ CREATE TABLE IF NOT EXISTS relations (
     model_source TEXT DEFAULT 'system',      -- Modèle ayant extrait cette relation
     extraction_count INTEGER DEFAULT 1,      -- Nombre de fois extraite (renforcement)
     
+    -- Soft delete
+    is_active INTEGER DEFAULT 1,             -- 0=supprimé, 1=actif
+
     -- Tracking
     created_at REAL NOT NULL DEFAULT (unixepoch('now')),
     updated_at REAL,
-    
+
     PRIMARY KEY (source, target),
     FOREIGN KEY (source) REFERENCES concepts(id) ON DELETE CASCADE,
     FOREIGN KEY (target) REFERENCES concepts(id) ON DELETE CASCADE
@@ -122,6 +135,7 @@ CREATE TABLE IF NOT EXISTS relations (
 
 -- Index critiques pour les requêtes de voisinage (opération la plus fréquente)
 CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source, weight DESC);
+CREATE INDEX IF NOT EXISTS idx_relations_source_type_target ON relations(source, relation_type, target);
 CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target, weight DESC);
 CREATE INDEX IF NOT EXISTS idx_relations_weight ON relations(weight DESC);
 CREATE INDEX IF NOT EXISTS idx_relations_kappa ON relations(kappa);
@@ -538,7 +552,8 @@ CREATE TABLE IF NOT EXISTS knowledge_gaps (
     priority REAL NOT NULL,                  -- Score de priorité pour exploration
     addressed INTEGER DEFAULT 0,             -- 0=non traité, 1=traité
     addressed_by_cycle_id INTEGER,           -- Cycle qui a adressé cette lacune
-    
+    suggested_question TEXT,                 -- Question suggérée pour adresser la lacune
+
     -- Timing
     detected_at REAL NOT NULL DEFAULT (unixepoch('now')),
     addressed_at REAL,

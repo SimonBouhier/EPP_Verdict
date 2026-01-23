@@ -623,6 +623,320 @@ class Phase1StatsResponse(BaseModel):
 
 
 # ============================================================================
+# ESMM PHASE 2 MODELS - Triplet Extraction
+# ============================================================================
+
+class TripletExtractionRequest(BaseModel):
+    """
+    Requête d'extraction de triplets avec consensus multi-modèles.
+
+    Example:
+        {
+            "text": "L'entropie augmente dans les systèmes isolés...",
+            "models": ["llama3.1:8b", "mistral:7b"],
+            "min_consensus": 0.5,
+            "min_confidence": 0.5,
+            "inject_to_graph": true
+        }
+    """
+    text: str = Field(..., min_length=10, max_length=50000, description="Texte à analyser")
+    models: Optional[List[str]] = Field(
+        None,
+        description="Modèles à utiliser (défaut: llama3.1:8b, gpt-oss:20b)"
+    )
+    min_consensus: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description="Ratio minimum de modèles devant extraire le triplet"
+    )
+    min_confidence: float = Field(
+        0.5,
+        ge=0.0,
+        le=1.0,
+        description="Confiance minimum par triplet"
+    )
+    inject_to_graph: bool = Field(
+        True,
+        description="Injecter les triplets validés dans le graphe"
+    )
+    session_id: Optional[str] = Field(None, description="Session ID pour audit")
+
+    model_config = ConfigDict(frozen=False)
+
+    @field_validator('text')
+    @classmethod
+    def validate_text_content(cls, v):
+        """Validation sémantique: texte non vide après nettoyage."""
+        cleaned = v.strip()
+        if len(cleaned) < 10:
+            raise ValueError("Texte trop court après nettoyage")
+        if cleaned.count(' ') < 2:
+            raise ValueError("Le texte doit contenir au moins 3 mots")
+        return cleaned
+
+    @field_validator('models')
+    @classmethod
+    def validate_models_whitelist(cls, v):
+        """Vérifie que les modèles sont dans la whitelist autorisée."""
+        if v is None:
+            return v
+        from services.esmm.triplet_extractor import ALLOWED_MODELS
+        invalid = set(v) - ALLOWED_MODELS
+        if invalid:
+            raise ValueError(f"Modèles non autorisés: {invalid}")
+        return v
+
+
+class ExtractedTripletResponse(BaseModel):
+    """Triplet extrait avec métriques de consensus."""
+    subject: str
+    relation: str
+    object: str
+    consensus_score: float = Field(..., description="Score combiné agreement*0.6 + confidence*0.4")
+    agreement_ratio: float = Field(..., description="Ratio de modèles ayant extrait ce triplet")
+    avg_confidence: float = Field(..., description="Confiance moyenne des modèles")
+    std_confidence: float = Field(..., description="Écart-type des confiances (controverse)")
+    contributing_models: List[str] = Field(..., description="Modèles ayant extrait ce triplet")
+    triplet_hash: str = Field(..., description="Hash SHA256 pour traçabilité")
+    injected: bool = Field(..., description="True si injecté dans le graphe")
+    skip_reason: Optional[str] = Field(None, description="Raison si non injecté")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TripletExtractionResponse(BaseModel):
+    """
+    Réponse complète de l'extraction de triplets.
+
+    Example:
+        {
+            "triplets": [...],
+            "triplets_extracted": 5,
+            "triplets_injected": 4,
+            "triplets_skipped": 1,
+            "new_concepts_created": 2,
+            "models_used": ["llama3.1:8b", "mistral:7b"],
+            "duration_ms": 8500.0
+        }
+    """
+    triplets: List[ExtractedTripletResponse]
+    triplets_extracted: int = Field(..., description="Nombre total de triplets avec consensus")
+    triplets_injected: int = Field(..., description="Nombre de triplets injectés dans le graphe")
+    triplets_skipped: int = Field(..., description="Nombre de triplets ignorés (doublons)")
+    new_concepts_created: int = Field(..., description="Nouveaux concepts créés")
+    models_used: List[str] = Field(..., description="Modèles utilisés pour l'extraction")
+    duration_ms: float = Field(..., description="Durée totale de l'extraction")
+    input_hash: str = Field(..., description="Hash du texte d'entrée pour audit")
+    skipped_reasons: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Raisons des rejets agrégées"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
+# ESMM PHASE 3 MODELS - ESMM Run
+# ============================================================================
+
+# Whitelist des modeles autorises pour ESMM
+ALLOWED_ESMM_MODELS = {
+    "llama3.3:70b", "llama3.1:8b", "llama3.1:70b", "llama3.2:3b",
+    "deepseek-r1:8b", "deepseek-r1:14b", "deepseek-r1:32b", "deepseek-r1:70b",
+    "mistral:7b", "mixtral:8x7b", "mistral-nemo:12b",
+    "qwen2.5:7b", "qwen2.5:14b", "qwen2.5:32b", "qwen2.5:72b",
+    "gemma2:9b", "gemma2:27b",
+    "phi3:14b", "phi4:14b",
+    "gpt-oss:20b",
+}
+
+
+class ESMMRunRequest(BaseModel):
+    """
+    Requete pour demarrer un run ESMM Phase 3.
+
+    Example:
+        {
+            "models": ["llama3.1:8b", "gpt-oss:20b"],
+            "seed_type": "standard",
+            "cycles_per_type": {"divergent": 3, "debate": 2, "meta": 1},
+            "min_consensus": 0.5,
+            "adaptive_cycles": true
+        }
+    """
+    models: List[str] = Field(
+        default=["llama3.1:8b", "gpt-oss:20b"],
+        min_length=1,
+        max_length=5,
+        description="Modeles a utiliser (whitelist)"
+    )
+    seed_type: str = Field(
+        default="standard",
+        pattern="^(minimal|standard|extended)$",
+        description="Type de graine semantique"
+    )
+    cycles_per_type: Optional[Dict[str, int]] = Field(
+        default=None,
+        description="Nombre de cycles par type (divergent, debate, meta)"
+    )
+    min_consensus: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Seuil minimum de consensus"
+    )
+    min_confidence: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Seuil minimum de confiance"
+    )
+    adaptive_cycles: bool = Field(
+        default=True,
+        description="Adapter dynamiquement les cycles"
+    )
+    detect_gaps: bool = Field(
+        default=True,
+        description="Detecter les lacunes de connaissances"
+    )
+    build_cochain: bool = Field(
+        default=True,
+        description="Construire la 0-cochaine"
+    )
+    max_total_cycles: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Limite de cycles pour eviter boucles infinies"
+    )
+
+    model_config = ConfigDict(frozen=False)
+
+    @field_validator('models')
+    @classmethod
+    def validate_models(cls, v):
+        """Verifie que les modeles sont dans la whitelist."""
+        invalid = set(v) - ALLOWED_ESMM_MODELS
+        if invalid:
+            raise ValueError(f"Modeles non autorises: {invalid}")
+        return v
+
+
+class ESMMRunStatusResponse(BaseModel):
+    """
+    Statut d'un run ESMM en cours.
+
+    Example:
+        {
+            "run_id": 1,
+            "status": "running",
+            "current_cycle": "divergent",
+            "cycles_completed": 3,
+            "progress_percent": 50.0
+        }
+    """
+    run_id: int
+    status: str = Field(..., description="Status: initializing, running, paused, completed, failed")
+    current_cycle: Optional[str] = Field(None, description="Type de cycle en cours")
+    current_iteration: Optional[int] = Field(None, description="Iteration du cycle")
+    cycles_completed: int = Field(default=0, description="Nombre de cycles termines")
+    progress_percent: float = Field(default=0.0, description="Progression estimee [0-100]")
+    started_at: Optional[str] = Field(None, description="Timestamp de debut ISO")
+    error_message: Optional[str] = Field(None, description="Message d'erreur si failed")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ESMMRunResultResponse(BaseModel):
+    """
+    Resultat complet d'un run ESMM termine.
+
+    Example:
+        {
+            "run_id": 1,
+            "status": "completed",
+            "cycles_completed": 6,
+            "total_triplets": 45,
+            "triplets_injected": 38,
+            "cochain_size": 120,
+            "gaps_detected": 15,
+            "coverage_score": 0.72,
+            "consensus_density": 0.68,
+            "duration_ms": 180000.0
+        }
+    """
+    run_id: int
+    status: str
+    cycles_completed: int
+    total_triplets: int = Field(..., description="Total de triplets extraits")
+    triplets_injected: int = Field(..., description="Triplets injectes dans le graphe")
+    cochain_size: int = Field(..., description="Taille de la 0-cochaine")
+    gaps_detected: int = Field(default=0, description="Lacunes detectees")
+    coverage_score: float = Field(..., description="Score de couverture [0,1]")
+    consensus_density: float = Field(..., description="Densite de consensus [0,1]")
+    epistemic_diversity: Optional[float] = Field(None, description="Diversite epistemique [0,1]")
+    structural_stability: Optional[float] = Field(None, description="Stabilite structurelle [0,1]")
+    duration_ms: float = Field(..., description="Duree totale en ms")
+    errors: List[str] = Field(default_factory=list, description="Erreurs rencontrees")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CycleResultResponse(BaseModel):
+    """Resultat d'un cycle d'exploration individuel."""
+    cycle_id: int
+    cycle_type: str = Field(..., description="Type: divergent, debate, meta")
+    iteration: int
+    question: str
+    triplets_extracted: int
+    duration_ms: float
+    target_concepts: Optional[List[str]] = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class KnowledgeGapResponse(BaseModel):
+    """Lacune de connaissance detectee."""
+    gap_id: int
+    gap_type: str = Field(..., description="Type: isolated, unstable, bridge")
+    priority: float = Field(..., description="Priorite [0,1]")
+    details: Dict[str, Any]
+    suggested_question: Optional[str] = None
+    addressed: bool = Field(default=False)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CochainEntryResponse(BaseModel):
+    """Entree de la 0-cochaine."""
+    concept_id: str
+    consensus_score: float
+    model_agreement: float
+    semantic_consistency: float
+    structural_centrality: float
+    stability_score: float
+    epistemic_type: str = Field(..., description="Type: generalist, specialized, hybrid")
+    signature_vector: List[float] = Field(..., description="Vecteur 5D normalise")
+    triplet_count: int
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CoverageMetricsResponse(BaseModel):
+    """Metriques de couverture du graphe."""
+    coverage_score: float = Field(..., description="Score composite [0,1]")
+    consensus_density: float
+    epistemic_diversity: float
+    structural_stability: float
+    graph_density: float
+    isolated_ratio: float
+    clustering_coefficient: float
+
+    model_config = ConfigDict(frozen=True)
+
+
+# ============================================================================
 # UTILITIES
 # ============================================================================
 

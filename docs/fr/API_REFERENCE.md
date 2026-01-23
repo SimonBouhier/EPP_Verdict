@@ -1268,6 +1268,318 @@ Statistiques de la 0-cochaine ESMM.
 
 ---
 
+## ESMM Phase 3 - Orchestration
+
+Endpoints pour le protocole ESMM complet avec orchestration autonome, detection de lacunes et construction de 0-cochaine.
+
+### POST /graph/esmm-run
+
+Lance un run ESMM complet en arriere-plan.
+
+#### Request
+
+**Body:**
+```json
+{
+  "models": ["llama3.1:8b", "deepseek-r1:8b"],
+  "seed_type": "standard",
+  "cycles_per_type": {
+    "divergent": 5,
+    "debate": 3,
+    "meta": 2
+  },
+  "min_consensus": 0.5,
+  "adaptive_cycles": true,
+  "detect_gaps": true,
+  "build_cochain": true
+}
+```
+
+**Parametres:**
+
+| Champ | Type | Requis | Defaut | Description |
+|-------|------|--------|--------|-------------|
+| `models` | array | Oui | - | Liste des modeles (max 2, whitelist) |
+| `seed_type` | string | Non | "standard" | Type de graine (minimal/standard/extended) |
+| `cycles_per_type` | object | Non | {3,2,1} | Cycles par type |
+| `min_consensus` | float | Non | 0.5 | Seuil de consensus minimum |
+| `adaptive_cycles` | boolean | Non | true | Adaptation dynamique |
+| `detect_gaps` | boolean | Non | true | Detection de lacunes |
+| `build_cochain` | boolean | Non | true | Construction 0-cochaine |
+
+#### Response
+
+**Status: 202 Accepted**
+
+```json
+{
+  "run_id": 1,
+  "status": "running",
+  "message": "Run ESMM demarre en arriere-plan",
+  "cycles_planned": 10,
+  "models": ["llama3.1:8b", "deepseek-r1:8b"]
+}
+```
+
+---
+
+### GET /graph/esmm-run/{run_id}
+
+Recupere le statut d'un run ESMM.
+
+#### Parametres
+
+| Parametre | Type | Emplacement | Description |
+|-----------|------|-------------|-------------|
+| `run_id` | integer | path | ID du run |
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "run_id": 1,
+  "status": "running",
+  "progress_percent": 45.5,
+  "cycles_completed": 5,
+  "cycles_planned": 10,
+  "current_cycle": "debate",
+  "current_iteration": 2,
+  "triplets_extracted": 127,
+  "triplets_injected": 98,
+  "started_at": "2026-01-22T14:30:00Z",
+  "elapsed_seconds": 345.2
+}
+```
+
+**Valeurs de status:**
+- `pending` : En attente
+- `running` : En cours
+- `paused` : Mis en pause
+- `completed` : Termine
+- `failed` : Echec
+
+---
+
+### GET /graph/esmm-run/{run_id}/result
+
+Recupere le resultat complet d'un run termine.
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "run_id": 1,
+  "status": "completed",
+  "cycles_completed": 10,
+  "total_triplets": 245,
+  "triplets_injected": 198,
+  "cochain_size": 156,
+  "gaps_detected": 23,
+  "coverage_score": 0.72,
+  "consensus_density": 0.68,
+  "epistemic_diversity": 0.54,
+  "structural_stability": 0.81,
+  "duration_ms": 845200,
+  "models_used": ["llama3.1:8b", "deepseek-r1:8b"],
+  "adaptation_applied": true,
+  "cycles_added": 2
+}
+```
+
+---
+
+### POST /graph/esmm-run/{run_id}/pause
+
+Met en pause un run ESMM en cours.
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "run_id": 1,
+  "status": "paused",
+  "message": "Run mis en pause apres le cycle 5",
+  "can_resume": true
+}
+```
+
+---
+
+### POST /graph/esmm-run/{run_id}/resume
+
+Reprend un run ESMM en pause.
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "run_id": 1,
+  "status": "running",
+  "message": "Run repris a partir du cycle 6",
+  "cycles_remaining": 5
+}
+```
+
+---
+
+### GET /graph/esmm-run/{run_id}/cycles
+
+Recupere l'historique des cycles d'un run.
+
+#### Parametres
+
+| Parametre | Type | Emplacement | Description |
+|-----------|------|-------------|-------------|
+| `run_id` | integer | path | ID du run |
+| `cycle_type` | string | query | Filtrer par type (divergent/debate/meta) |
+| `limit` | integer | query | Nombre max (defaut: 20) |
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "run_id": 1,
+  "cycles": [
+    {
+      "cycle_id": 1,
+      "cycle_type": "divergent",
+      "iteration": 1,
+      "question": "Quels concepts sont lies a entropie?",
+      "triplets_extracted": 12,
+      "consensus_score": 0.75,
+      "duration_ms": 45200,
+      "timestamp": "2026-01-22T14:30:15Z"
+    }
+  ],
+  "total": 10
+}
+```
+
+---
+
+### GET /graph/coverage/metrics
+
+Recupere les metriques de couverture globales du graphe.
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "coverage_score": 0.72,
+  "consensus_density": 0.68,
+  "epistemic_diversity": 0.54,
+  "structural_stability": 0.81,
+  "graph_density": 0.023,
+  "isolated_ratio": 0.12,
+  "total_concepts": 1456,
+  "total_relations": 3892,
+  "avg_degree": 5.34,
+  "clustering_coefficient": 0.42
+}
+```
+
+**Metriques:**
+- `coverage_score` : Score composite [0,1]
+- `consensus_density` : Accord moyen inter-modeles
+- `epistemic_diversity` : Entropie Shannon des types
+- `structural_stability` : Coefficient de clustering moyen
+- `isolated_ratio` : Proportion de concepts isoles
+
+---
+
+### GET /graph/gaps/active
+
+Recupere les lacunes actives prioritisees.
+
+#### Parametres
+
+| Parametre | Type | Emplacement | Description |
+|-----------|------|-------------|-------------|
+| `gap_type` | string | query | Filtrer par type (isolated/unstable/bridge) |
+| `limit` | integer | query | Nombre max (defaut: 30) |
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+[
+  {
+    "gap_id": 1,
+    "gap_type": "bridge",
+    "priority": 0.85,
+    "details": {
+      "cluster_a": "thermodynamique",
+      "cluster_b": "theorie_information",
+      "distance": 0.65
+    },
+    "suggested_question": "Quel est le lien entre entropie thermodynamique et entropie de Shannon?",
+    "detected_at": "2026-01-22T14:45:00Z",
+    "run_id": 1
+  },
+  {
+    "gap_id": 2,
+    "gap_type": "isolated",
+    "priority": 0.72,
+    "details": {
+      "concept": "neguentropie",
+      "degree": 2
+    },
+    "suggested_question": "Quels concepts sont relies a neguentropie?",
+    "detected_at": "2026-01-22T14:45:00Z",
+    "run_id": 1
+  }
+]
+```
+
+---
+
+### POST /graph/gaps/{gap_id}/address
+
+Marque une lacune comme adressee.
+
+#### Parametres
+
+| Parametre | Type | Emplacement | Description |
+|-----------|------|-------------|-------------|
+| `gap_id` | integer | path | ID de la lacune |
+
+#### Request
+
+**Body:**
+```json
+{
+  "resolution": "explored",
+  "notes": "Exploration via cycle divergent supplementaire"
+}
+```
+
+#### Response
+
+**Status: 200 OK**
+
+```json
+{
+  "gap_id": 1,
+  "status": "addressed",
+  "addressed_at": "2026-01-22T15:00:00Z"
+}
+```
+
+---
+
 ## Multi-Model (Lyra-ACE)
 
 L'API Multi-Model permet la génération avec plusieurs LLMs et le calcul de consensus.

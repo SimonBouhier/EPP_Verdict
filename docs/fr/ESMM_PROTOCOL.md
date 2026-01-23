@@ -219,6 +219,221 @@ Un triplet est injecte si:
 
 ---
 
+## Phase 3 - Orchestration Autonome
+
+### ESMMOrchestrator
+
+L'orchestrateur gere l'execution complete d'un run ESMM:
+
+```python
+from services.esmm import ESMMOrchestrator, get_esmm_orchestrator
+
+orchestrator = await get_esmm_orchestrator()
+
+result = await orchestrator.run(
+    run_id=1,
+    models=["llama3.1:8b", "deepseek-r1:8b"],
+    seed_type="standard",
+    cycles_config={
+        "divergent": 5,
+        "debate": 3,
+        "meta": 2
+    },
+    min_consensus=0.5,
+    adaptive_cycles=True,
+    detect_gaps=True,
+    build_cochain=True
+)
+
+print(f"Triplets extraits: {result.total_triplets}")
+print(f"Coverage score: {result.coverage_score:.2%}")
+```
+
+### Gestion des Etats
+
+| Etat | Description |
+|------|-------------|
+| `pending` | Run cree, pas encore demarre |
+| `running` | Execution en cours |
+| `paused` | Mis en pause manuellement |
+| `completed` | Termine avec succes |
+| `failed` | Erreur fatale |
+
+### Adaptation Dynamique
+
+L'orchestrateur ajuste automatiquement les cycles selon ces regles:
+
+```python
+ADAPTATION_RULES = {
+    "low_coverage": {
+        "condition": "coverage_score < 0.3",
+        "action": "add_divergent_cycles(2)"
+    },
+    "low_consensus": {
+        "condition": "consensus_density < 0.5",
+        "action": "add_debate_cycles(1)"
+    },
+    "high_diversity": {
+        "condition": "epistemic_diversity > 0.8",
+        "action": "add_meta_cycles(1)"
+    },
+    "many_gaps": {
+        "condition": "active_gaps > 20",
+        "action": "add_divergent_cycles(1)"
+    }
+}
+```
+
+### Timeouts et Checkpoints
+
+- **Timeout par cycle**: 5 minutes (configurable)
+- **Checkpoint interval**: Toutes les 5 iterations
+- **Timeout total**: Somme des cycles * timeout_per_cycle
+
+---
+
+## CLI ESMM
+
+### Commandes Disponibles
+
+```bash
+# Lancer un run
+esmm.bat run --quick                    # 1 cycle de chaque type
+esmm.bat run --full --watch             # 5,3,2 cycles avec surveillance
+esmm.bat run --cycles 3,2,1 --models llama3.1:8b,mistral:7b
+
+# Statut et resultats
+esmm.bat status <run_id>                # Statut en temps reel
+esmm.bat result <run_id>                # Resultat complet
+esmm.bat cycles <run_id> --type debate  # Historique cycles
+
+# Controle
+esmm.bat pause <run_id>                 # Mettre en pause
+esmm.bat resume <run_id>                # Reprendre
+esmm.bat watch <run_id> --interval 3    # Surveillance temps reel
+
+# Metriques
+esmm.bat metrics                        # Couverture globale
+esmm.bat gaps --type bridge --limit 20  # Lacunes actives
+esmm.bat cochain                        # Stats 0-cochaine
+```
+
+### Mode Watch
+
+Le mode watch affiche les mises a jour en temps reel:
+
+```
+[14:32:15] running    | Cycles:  3 | Progress:  30.0% | Current: divergent/2
+[14:32:45] running    | Cycles:  4 | Progress:  40.0% | Current: divergent/3
+[14:33:12] running    | Cycles:  5 | Progress:  50.0% | Current: debate/1
+...
+[14:45:23] completed  | Cycles: 10 | Progress: 100.0% | Current: -/0
+
+Run termine avec status: completed
+```
+
+---
+
+## Detection de Lacunes (Phase 3)
+
+### Types de Lacunes
+
+#### 1. Isolated (Concepts Isoles)
+
+Concepts avec peu de connexions dans le graphe.
+
+```python
+# Seuil dynamique
+threshold = max(3, avg_degree * 0.3)
+
+# Detection
+gaps = await gap_detector.detect_isolated_concepts(
+    min_degree=threshold,
+    limit=50
+)
+```
+
+#### 2. Unstable (Triplets Instables)
+
+Relations avec haute variance de consensus entre modeles.
+
+```python
+# Seuil
+variance_threshold = 0.3
+
+# Detection
+gaps = await gap_detector.detect_unstable_triplets(
+    max_consensus_variance=variance_threshold
+)
+```
+
+#### 3. Bridge (Ponts Manquants)
+
+Liens potentiels entre clusters semantiques disjoints.
+
+```python
+# Detection via clustering spectral
+gaps = await gap_detector.detect_bridge_opportunities(
+    min_cluster_size=5,
+    max_inter_cluster_distance=0.7
+)
+```
+
+### Prioritisation
+
+Les lacunes sont classees par priorite:
+
+```
+priority = base_priority * (1 + recency_bonus) * type_weight
+
+Ou:
+- base_priority: Importance inherente (degree, variance, etc.)
+- recency_bonus: +20% si detectee recemment
+- type_weight: bridge=1.5, unstable=1.2, isolated=1.0
+```
+
+---
+
+## 0-Cochaine Epistemique (Phase 3)
+
+### Signature 5D
+
+Chaque concept recoit un vecteur 5D normalise:
+
+```python
+signature = [
+    model_agreement,       # Accord inter-modeles [0,1]
+    semantic_consistency,  # Coherence embeddings [0,1]
+    structural_centrality, # Centralite graphe [0,1]
+    stability_score,       # Stabilite temporelle [0,1]
+    relation_diversity     # Entropie Shannon [0,1]
+]
+```
+
+### Calcul de l'Entropie Shannon
+
+Pour la diversite des relations:
+
+```python
+def compute_relation_diversity(relations: List[str]) -> float:
+    counts = Counter(relations)
+    total = sum(counts.values())
+    probs = [c / total for c in counts.values()]
+    entropy = -sum(p * log2(p) for p in probs if p > 0)
+    max_entropy = log2(len(CANONICAL_RELATIONS))
+    return entropy / max_entropy  # Normalise [0,1]
+```
+
+### Types Epistemiques
+
+| Type | Criteres |
+|------|----------|
+| **GENERALIST** | degree >= 10 AND relation_diversity >= 0.6 |
+| **SPECIALIZED** | degree < 5 OR relation_diversity < 0.3 |
+| **HYBRID** | Tous les autres cas |
+
+---
+
 ## Tables de Donnees
 
 ### esmm_runs

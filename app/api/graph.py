@@ -10,6 +10,9 @@ Inclut les endpoints ESMM Phase 1:
 - POST /graph/inject-seed - Injection graine ESMM
 - GET /graph/phase1-stats - Statistiques Phase 1
 - GET /graph/similar/{concept_id} - Recherche de concepts similaires
+
+ESMM Phase 2:
+- POST /graph/extract-triplets - Extraction multi-modèles avec consensus
 """
 from __future__ import annotations
 
@@ -21,13 +24,20 @@ from app.models import (
     PopulateRequest, PopulateResponse,
     GenerateRelationsRequest, GenerateRelationsResponse,
     InjectSeedRequest, InjectSeedResponse,
-    SimilarConceptsResponse, Phase1StatsResponse
+    SimilarConceptsResponse, Phase1StatsResponse,
+    TripletExtractionRequest, TripletExtractionResponse, ExtractedTripletResponse,
+    # Phase 3 models
+    ESMMRunRequest, ESMMRunStatusResponse, ESMMRunResultResponse,
+    KnowledgeGapResponse, CoverageMetricsResponse
 )
 from database import (
     get_db, ISpaceDB, GraphDelta, DeltaOperation,
     DeltaValidationError, MutationLimitExceededError
 )
-from services.esmm import GraphPopulator, RelationGenerator, SeedInjector
+from services.esmm import (
+    GraphPopulator, RelationGenerator, SeedInjector,
+    TripletExtractor, get_triplet_extractor, close_triplet_extractor
+)
 
 
 router = APIRouter(prefix="/graph", tags=["graph"])
@@ -416,6 +426,102 @@ async def get_available_seeds():
 
 
 # ============================================================================
+# ESMM PHASE 2 ENDPOINTS - Triplet Extraction
+# ============================================================================
+
+@router.post("/extract-triplets", response_model=TripletExtractionResponse)
+async def extract_triplets(request: TripletExtractionRequest):
+    """
+    Extrait des triplets depuis du texte avec consensus multi-modèles.
+
+    PIPELINE:
+    1. Génération multi-modèles (batch séquentiel VRAM-optimal)
+    2. Parsing et validation des triplets
+    3. Calcul du consensus (min_agreement filtrage)
+    4. Résolution des entités et normalisation des relations
+    5. Injection dans le graphe (si inject_to_graph=true)
+
+    VRAM-OPTIMISÉ:
+    - Charge modèle 1 → traite le texte → décharge
+    - Charge modèle 2 → traite le texte → décharge
+
+    Example:
+        POST /graph/extract-triplets
+        {
+            "text": "L'entropie augmente dans les systèmes isolés car l'énergie se disperse.",
+            "models": ["llama3.1:8b", "mistral:7b"],
+            "min_consensus": 0.5,
+            "min_confidence": 0.5,
+            "inject_to_graph": true
+        }
+
+    Returns:
+        TripletExtractionResponse avec les triplets extraits et métriques
+    """
+    try:
+        # Créer l'extracteur avec les paramètres de la requête
+        # Note: Le singleton peut ne pas respecter les nouveaux paramètres si déjà initialisé
+        extractor = await get_triplet_extractor(
+            models=request.models,
+            min_consensus=request.min_consensus,
+            min_confidence=request.min_confidence
+        )
+
+        # Extraire les triplets
+        result = await extractor.extract_from_text(
+            text=request.text,
+            session_id=request.session_id,
+            inject_to_graph=request.inject_to_graph
+        )
+
+        # Construire la réponse avec les triplets formatés
+        triplet_responses = []
+        for triplet in result.consensus_triplets:
+            # Déterminer si ce triplet a été injecté ou skippé
+            triplet_hash = triplet.triplet_hash
+            was_skipped = triplet_hash in result.skipped_reasons if hasattr(result, 'skipped_hashes') else False
+            skip_reason = None
+
+            # Approximation: si le triplet est dans consensus mais pas injecté, c'est un doublon
+            if result.triplets_skipped > 0 and not request.inject_to_graph:
+                skip_reason = "injection_disabled"
+
+            triplet_responses.append(ExtractedTripletResponse(
+                subject=triplet.subject,
+                relation=triplet.relation,
+                object=triplet.object,
+                consensus_score=triplet.consensus_score,
+                agreement_ratio=triplet.agreement_ratio,
+                avg_confidence=triplet.avg_confidence,
+                std_confidence=triplet.std_confidence,
+                contributing_models=triplet.contributing_models,
+                triplet_hash=triplet.triplet_hash,
+                injected=request.inject_to_graph and not was_skipped,
+                skip_reason=skip_reason
+            ))
+
+        return TripletExtractionResponse(
+            triplets=triplet_responses,
+            triplets_extracted=result.triplets_extracted,
+            triplets_injected=result.triplets_injected,
+            triplets_skipped=result.triplets_skipped,
+            new_concepts_created=result.new_concepts_created,
+            models_used=result.models_used,
+            duration_ms=result.duration_ms,
+            input_hash=result.input_hash,
+            skipped_reasons=result.skipped_reasons
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Triplet extraction failed: {str(e)}"
+        )
+
+
+# ============================================================================
 # COCHAIN EXPORT ENDPOINTS
 # ============================================================================
 
@@ -530,3 +636,433 @@ async def get_cochain_stats(db: ISpaceDB = Depends(get_database)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cochain stats failed: {str(e)}")
+
+
+# ============================================================================
+# ESMM PHASE 3 ENDPOINTS - Full Protocol
+# ============================================================================
+
+from fastapi import BackgroundTasks
+from services.esmm.orchestrator import (
+    ESMMOrchestrator, ESMMRunConfig,
+    run_esmm_protocol, resume_esmm_protocol
+)
+from services.esmm.gap_detector import create_gap_detector
+from services.esmm.coverage_analyzer import CoverageAnalyzer
+
+
+@router.post("/esmm-run", response_model=ESMMRunStatusResponse)
+async def start_esmm_run(
+    request: ESMMRunRequest,
+    background_tasks: BackgroundTasks,
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Demarre un run ESMM complet en arriere-plan.
+
+    Le run execute:
+    1. Cycles d'exploration (divergent, debate, meta)
+    2. Detection des lacunes
+    3. Construction de la 0-cochaine
+    4. Adaptation dynamique
+
+    Example:
+        POST /graph/esmm-run
+        {
+            "models": ["llama3.1:8b", "mistral:7b"],
+            "seed_type": "standard",
+            "cycles_per_type": {"divergent": 2, "debate": 1, "meta": 1}
+        }
+
+    Returns:
+        ESMMRunStatusResponse avec run_id et status initial
+    """
+    try:
+        # Construire la configuration
+        config = ESMMRunConfig(
+            models=request.models,
+            seed_type=request.seed_type,
+            cycles_per_type=request.cycles_per_type or {
+                "divergent": 3, "debate": 2, "meta": 1
+            },
+            min_consensus=request.min_consensus,
+            min_confidence=request.min_confidence,
+            adaptive_cycles=request.adaptive_cycles,
+            detect_gaps=request.detect_gaps,
+            build_cochain=request.build_cochain,
+            max_total_cycles=request.max_total_cycles
+        )
+
+        # Creer le run dans la DB
+        run_id = await db.create_esmm_run(
+            config=config.__dict__,
+            models=config.models,
+            seed_type=config.seed_type
+        )
+
+        # Lancer en arriere-plan
+        background_tasks.add_task(run_esmm_protocol, run_id, config, db)
+
+        return ESMMRunStatusResponse(
+            run_id=run_id,
+            status="started",
+            current_cycle=None,
+            cycles_completed=0,
+            progress_percent=0.0
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start ESMM run: {str(e)}")
+
+
+@router.get("/esmm-run/{run_id}", response_model=ESMMRunStatusResponse)
+async def get_esmm_run_status(
+    run_id: int,
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Recupere le statut d'un run ESMM.
+
+    Example:
+        GET /graph/esmm-run/1
+
+    Returns:
+        ESMMRunStatusResponse avec progression et metriques
+    """
+    try:
+        async with db.connection() as conn:
+            cursor = await conn.execute("""
+                SELECT run_id, status, current_cycle, current_iteration,
+                       cycles_completed, started_at, error_message,
+                       (SELECT COUNT(*) FROM exploration_cycles WHERE run_id = esmm_runs.run_id) as actual_cycles
+                FROM esmm_runs WHERE run_id = ?
+            """, (run_id,))
+
+            row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+            # Calculer la progression
+            cycles_completed = row[7] or row[4] or 0
+            # Estimation: 6 cycles par defaut (3 divergent + 2 debate + 1 meta)
+            estimated_total = 6
+            progress = min(100.0, (cycles_completed / estimated_total) * 100)
+
+            import datetime
+            started_at = None
+            if row[5]:
+                started_at = datetime.datetime.fromtimestamp(row[5]).isoformat() + "Z"
+
+            return ESMMRunStatusResponse(
+                run_id=row[0],
+                status=row[1],
+                current_cycle=row[2],
+                current_iteration=row[3],
+                cycles_completed=cycles_completed,
+                progress_percent=round(progress, 1),
+                started_at=started_at,
+                error_message=row[6]
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
+
+
+@router.get("/esmm-run/{run_id}/result", response_model=ESMMRunResultResponse)
+async def get_esmm_run_result(
+    run_id: int,
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Recupere le resultat complet d'un run ESMM termine.
+
+    Example:
+        GET /graph/esmm-run/1/result
+
+    Returns:
+        ESMMRunResultResponse avec metriques finales
+    """
+    try:
+        async with db.connection() as conn:
+            cursor = await conn.execute("""
+                SELECT run_id, status, cycles_completed, total_triplets,
+                       triplets_injected, final_cochain_size,
+                       coverage_score, consensus_density,
+                       epistemic_diversity, structural_stability,
+                       started_at, completed_at, error_message
+                FROM esmm_runs WHERE run_id = ?
+            """, (run_id,))
+
+            row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+            # Calculer la duree
+            duration_ms = 0.0
+            if row[10] and row[11]:
+                duration_ms = (row[11] - row[10]) * 1000
+
+            # Compter les gaps
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM knowledge_gaps WHERE run_id = ?",
+                (run_id,)
+            )
+            gaps_count = (await cursor.fetchone())[0] or 0
+
+            errors = []
+            if row[12]:
+                errors = [row[12]]
+
+            return ESMMRunResultResponse(
+                run_id=row[0],
+                status=row[1],
+                cycles_completed=row[2] or 0,
+                total_triplets=row[3] or 0,
+                triplets_injected=row[4] or 0,
+                cochain_size=row[5] or 0,
+                gaps_detected=gaps_count,
+                coverage_score=row[6] or 0.0,
+                consensus_density=row[7] or 0.0,
+                epistemic_diversity=row[8],
+                structural_stability=row[9],
+                duration_ms=round(duration_ms, 2),
+                errors=errors
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Result fetch failed: {str(e)}")
+
+
+@router.post("/esmm-run/{run_id}/pause")
+async def pause_esmm_run(
+    run_id: int,
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Pause un run ESMM en cours.
+
+    L'etat est sauvegarde pour permettre la reprise.
+
+    Example:
+        POST /graph/esmm-run/1/pause
+    """
+    try:
+        await db.update_esmm_run_status(run_id, "paused")
+        return {"status": "paused", "run_id": run_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pause failed: {str(e)}")
+
+
+@router.post("/esmm-run/{run_id}/resume")
+async def resume_esmm_run(
+    run_id: int,
+    background_tasks: BackgroundTasks,
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Reprend un run ESMM pause.
+
+    Example:
+        POST /graph/esmm-run/1/resume
+    """
+    try:
+        # Verifier que le run est bien pause
+        async with db.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT status FROM esmm_runs WHERE run_id = ?",
+                (run_id,)
+            )
+            row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+            if row[0] not in ("paused", "failed"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Run {run_id} cannot be resumed (status: {row[0]})"
+                )
+
+        # Reprendre en arriere-plan
+        background_tasks.add_task(resume_esmm_protocol, run_id, db)
+
+        return {"status": "resuming", "run_id": run_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resume failed: {str(e)}")
+
+
+@router.get("/esmm-run/{run_id}/cycles")
+async def get_esmm_run_cycles(
+    run_id: int,
+    cycle_type: Optional[str] = Query(None, description="Filtrer par type de cycle"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Recupere les cycles d'un run ESMM avec pagination.
+
+    Example:
+        GET /graph/esmm-run/1/cycles?cycle_type=divergent&limit=10
+    """
+    try:
+        async with db.connection() as conn:
+            if cycle_type:
+                cursor = await conn.execute("""
+                    SELECT cycle_id, cycle_type, iteration, question_rendered,
+                           triplets_extracted, started_at, completed_at
+                    FROM exploration_cycles
+                    WHERE run_id = ? AND cycle_type = ?
+                    ORDER BY started_at DESC
+                    LIMIT ? OFFSET ?
+                """, (run_id, cycle_type, limit, offset))
+            else:
+                cursor = await conn.execute("""
+                    SELECT cycle_id, cycle_type, iteration, question_rendered,
+                           triplets_extracted, started_at, completed_at
+                    FROM exploration_cycles
+                    WHERE run_id = ?
+                    ORDER BY started_at DESC
+                    LIMIT ? OFFSET ?
+                """, (run_id, limit, offset))
+
+            cycles = []
+            for row in await cursor.fetchall():
+                duration_ms = 0.0
+                if row[5] and row[6]:
+                    duration_ms = (row[6] - row[5]) * 1000
+
+                cycles.append({
+                    "cycle_id": row[0],
+                    "cycle_type": row[1],
+                    "iteration": row[2],
+                    "question": row[3],
+                    "triplets_extracted": row[4] or 0,
+                    "duration_ms": round(duration_ms, 2)
+                })
+
+            return {"cycles": cycles, "count": len(cycles)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cycles fetch failed: {str(e)}")
+
+
+@router.get("/esmm-run/{run_id}/gaps", response_model=List[KnowledgeGapResponse])
+async def get_esmm_run_gaps(
+    run_id: int,
+    gap_type: Optional[str] = Query(None, description="Filtrer par type de lacune"),
+    limit: int = Query(50, ge=1, le=200),
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Recupere les lacunes detectees pour un run ESMM.
+
+    Example:
+        GET /graph/esmm-run/1/gaps?gap_type=isolated&limit=20
+    """
+    try:
+        gaps = await db.get_active_gaps(gap_type=gap_type, limit=limit)
+
+        # Filtrer par run_id si necessaire
+        run_gaps = [g for g in gaps if g.get("run_id") == run_id or not g.get("run_id")]
+
+        return [
+            KnowledgeGapResponse(
+                gap_id=g["gap_id"],
+                gap_type=g["gap_type"],
+                priority=g["priority"],
+                details=g["details"],
+                suggested_question=g.get("suggested_question"),
+                addressed=bool(g.get("addressed", False))
+            )
+            for g in run_gaps[:limit]
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gaps fetch failed: {str(e)}")
+
+
+@router.get("/coverage/metrics", response_model=CoverageMetricsResponse)
+async def get_coverage_metrics(db: ISpaceDB = Depends(get_database)):
+    """
+    Calcule les metriques de couverture actuelles du graphe.
+
+    Example:
+        GET /graph/coverage/metrics
+
+    Returns:
+        CoverageMetricsResponse avec tous les scores
+    """
+    try:
+        analyzer = CoverageAnalyzer(db)
+        metrics = await analyzer.compute_metrics()
+
+        return CoverageMetricsResponse(
+            coverage_score=metrics.coverage_score,
+            consensus_density=metrics.consensus_density,
+            epistemic_diversity=metrics.epistemic_diversity,
+            structural_stability=metrics.structural_stability,
+            graph_density=metrics.graph_density,
+            isolated_ratio=metrics.isolated_ratio,
+            clustering_coefficient=metrics.clustering_coefficient
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Metrics computation failed: {str(e)}")
+
+
+@router.get("/gaps/active", response_model=List[KnowledgeGapResponse])
+async def get_active_gaps(
+    gap_type: Optional[str] = Query(None, description="Filtrer par type"),
+    limit: int = Query(50, ge=1, le=200),
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Recupere les lacunes actives (non adressees).
+
+    Example:
+        GET /graph/gaps/active?gap_type=bridge&limit=20
+    """
+    try:
+        gaps = await db.get_active_gaps(gap_type=gap_type, limit=limit)
+
+        return [
+            KnowledgeGapResponse(
+                gap_id=g["gap_id"],
+                gap_type=g["gap_type"],
+                priority=g["priority"],
+                details=g["details"],
+                suggested_question=g.get("suggested_question"),
+                addressed=False
+            )
+            for g in gaps
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gaps fetch failed: {str(e)}")
+
+
+@router.post("/gaps/{gap_id}/address")
+async def mark_gap_addressed(
+    gap_id: int,
+    cycle_id: Optional[int] = Query(None, description="Cycle qui a adresse la lacune"),
+    db: ISpaceDB = Depends(get_database)
+):
+    """
+    Marque une lacune comme adressee.
+
+    Example:
+        POST /graph/gaps/1/address?cycle_id=42
+    """
+    try:
+        await db.mark_gap_addressed(gap_id, cycle_id or 0)
+        return {"status": "addressed", "gap_id": gap_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Mark addressed failed: {str(e)}")

@@ -43,7 +43,27 @@
 - ✅ **Métriques de consensus** : Comparaison et sélection automatique des meilleures réponses
 - ✅ **Limite de mutation 5%** : Protection contre les modifications massives du graphe
 
-**Nouveaux endpoints API :**
+### ESMM Phase 2 - Extraction de Triplets
+
+**Nouvelles fonctionnalités :**
+
+- ✅ **ModelRotator** : Rotation VRAM-safe des modèles (keep_alive=0)
+- ✅ **Prompts few-shot** : 20 relations canoniques avec exemples positifs/negatifs
+- ✅ **Validation Pydantic stricte** : Detection patterns invalides, parsing JSON robuste
+- ✅ **Pool SQLite** : 10 connexions poolees, busy_timeout 30s
+
+### ESMM Phase 3 - Protocole Complet (v3.0)
+
+**Nouvelles fonctionnalités :**
+
+- ✅ **Orchestrateur autonome** : Gestion complete des runs ESMM avec timeouts et checkpoints
+- ✅ **3 types de cycles** : DIVERGENT (exploration), DEBATE (dialectique), META (reflexion)
+- ✅ **Detection de lacunes** : Concepts isoles, triplets instables, ponts manquants
+- ✅ **0-Cochaine epistemique** : Signature 5D normalisee, entropie Shannon, types epistemiques
+- ✅ **Adaptation dynamique** : Ajustement automatique des cycles selon couverture/consensus
+- ✅ **CLI complet** : Commandes batch pour run, status, pause/resume, metrics, gaps
+
+**Nouveaux endpoints API Phase 1 :**
 
 - `POST /graph/delta` - Appliquer une mutation au graphe
 - `GET /graph/kappa/{source}/{target}` - Calculer la courbure κ hybride
@@ -51,6 +71,17 @@
 - `GET /graph/stats` - Statistiques des mutations
 - `GET /multimodel/models` - Lister les modèles Ollama disponibles
 - `POST /multimodel/generate` - Génération multi-modèles avec consensus
+
+**Nouveaux endpoints API Phase 3 :**
+
+- `POST /graph/esmm-run` - Lancer un run ESMM complet
+- `GET /graph/esmm-run/{id}` - Statut d'un run
+- `GET /graph/esmm-run/{id}/result` - Resultat complet d'un run
+- `POST /graph/esmm-run/{id}/pause` - Mettre en pause un run
+- `POST /graph/esmm-run/{id}/resume` - Reprendre un run
+- `GET /graph/coverage/metrics` - Metriques de couverture du graphe
+- `GET /graph/gaps/active` - Lacunes actives prioritisees
+- `GET /graph/cochain/stats` - Statistiques de la 0-cochaine
 
 ### Démarrage rapide
 
@@ -87,6 +118,30 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 docker-compose up
 ```
 
+#### Scripts ESMM (Phase 3)
+
+```bash
+# CLI principal ESMM
+esmm.bat run --quick          # Run rapide (1 cycle de chaque type)
+esmm.bat run --full --watch   # Run complet avec surveillance
+esmm.bat status 1             # Statut du run #1
+esmm.bat result 1             # Resultat complet
+esmm.bat metrics              # Metriques de couverture
+esmm.bat gaps --type bridge   # Lacunes de type pont
+esmm.bat watch 1              # Surveillance temps reel
+
+# Raccourcis
+run_esmm_quick.bat            # Run rapide (1,1,1)
+run_esmm_full.bat             # Run complet (5,3,2) avec pause
+run_esmm.bat                  # Menu interactif
+
+# Controle et metriques
+check_esmm_status.bat 1       # Statut detaille
+esmm_control.bat pause 1      # Pause/resume
+esmm_metrics.bat coverage     # Metriques couverture
+esmm_metrics.bat gaps bridge  # Lacunes bridge
+```
+
 #### Variables d'environnement
 
 | Variable | Défaut | Description |
@@ -118,30 +173,47 @@ Ou ouvrez votre navigateur : http://localhost:8000
 lyra_clean_bis/
 ├── app/                    # Application FastAPI
 │   ├── main.py             # Point d'entrée
-│   ├── models.py           # Modèles Pydantic
+│   ├── models.py           # Modèles Pydantic (+ Phase 3 ESMM)
 │   ├── llm_client.py       # Client Ollama + MultiModelClient
 │   ├── embeddings.py       # Wrapper embeddings
 │   └── api/
 │       ├── chat.py         # Endpoint conversation
 │       ├── sessions.py     # Gestion sessions
-│       ├── graph.py        # [ACE] Mutations graphe
+│       ├── graph.py        # [ACE] Mutations graphe + ESMM Phase 3
 │       └── multimodel.py   # [ACE] Multi-modèles
 │
 ├── services/               # Couche métier
 │   ├── injector.py         # Injection contexte
-│   └── consciousness/
-│       ├── metrics.py      # Phase 1: Métriques passives
-│       ├── adaptation.py   # Phase 2: Adaptation active
-│       └── memory.py       # Phase 3: Mémoire sémantique
+│   ├── consciousness/
+│   │   ├── metrics.py      # Phase 1: Métriques passives
+│   │   ├── adaptation.py   # Phase 2: Adaptation active
+│   │   └── memory.py       # Phase 3: Mémoire sémantique
+│   │
+│   └── esmm/               # [NEW] Protocole ESMM Phase 3
+│       ├── __init__.py     # Exports v3.0
+│       ├── prompts.py      # Templates few-shot (20 relations)
+│       ├── triplet_extractor.py    # Extraction + validation
+│       ├── consensus_engine.py     # Calcul consensus multi-modèles
+│       ├── cycle_prompts.py        # Prompts DIVERGENT/DEBATE/META
+│       ├── cycle_manager.py        # Gestionnaire de cycles
+│       ├── gap_detector.py         # Détection lacunes (isolated/unstable/bridge)
+│       ├── cochain_builder.py      # Construction 0-cochaine 5D
+│       ├── coverage_analyzer.py    # Métriques Shannon entropy
+│       └── orchestrator.py         # Orchestrateur principal ESMM
 │
 ├── database/               # Moteur SQLite
-│   ├── engine.py           # ISpaceDB + méthodes delta
+│   ├── engine.py           # ISpaceDB + méthodes ESMM (~80 méthodes)
+│   ├── pool.py             # Pool de connexions SQLite
 │   ├── graph_delta.py      # [ACE] GraphDelta, KappaCalculator
-│   └── schema.sql          # Schéma SQL (11 tables)
+│   └── schema.sql          # Schéma SQL (18 tables)
+│
+├── scripts/                # Scripts utilitaires
+│   └── esmm_cli.py         # CLI Python ESMM
 │
 ├── core/physics/           # Moteur Bézier
 │   └── bezier.py           # Trajectoires physiques
 │
+├── *.bat                   # Scripts Windows (voir Scripts ESMM)
 ├── config.yaml             # Configuration centralisée
 └── docs/                   # Documentation complète
     ├── fr/                 # Documentation française
@@ -209,7 +281,27 @@ MIT License - voir [LICENSE](LICENSE)
 - ✅ **Consensus metrics**: Automatic comparison and selection of best responses
 - ✅ **5% mutation limit**: Protection against massive graph modifications
 
-**New API endpoints:**
+### ESMM Phase 2 - Triplet Extraction
+
+**New features:**
+
+- ✅ **ModelRotator**: VRAM-safe model rotation (keep_alive=0)
+- ✅ **Few-shot prompts**: 20 canonical relations with positive/negative examples
+- ✅ **Strict Pydantic validation**: Invalid pattern detection, robust JSON parsing
+- ✅ **SQLite Pool**: 10 pooled connections, 30s busy_timeout
+
+### ESMM Phase 3 - Complete Protocol (v3.0)
+
+**New features:**
+
+- ✅ **Autonomous orchestrator**: Complete ESMM run management with timeouts and checkpoints
+- ✅ **3 cycle types**: DIVERGENT (exploration), DEBATE (dialectic), META (reflection)
+- ✅ **Gap detection**: Isolated concepts, unstable triplets, missing bridges
+- ✅ **Epistemic 0-cochain**: Normalized 5D signature, Shannon entropy, epistemic types
+- ✅ **Dynamic adaptation**: Automatic cycle adjustment based on coverage/consensus
+- ✅ **Complete CLI**: Batch commands for run, status, pause/resume, metrics, gaps
+
+**New API endpoints Phase 1:**
 
 - `POST /graph/delta` - Apply a mutation to the graph
 - `GET /graph/kappa/{source}/{target}` - Calculate hybrid κ curvature
@@ -217,6 +309,17 @@ MIT License - voir [LICENSE](LICENSE)
 - `GET /graph/stats` - Mutation statistics
 - `GET /multimodel/models` - List available Ollama models
 - `POST /multimodel/generate` - Multi-model generation with consensus
+
+**New API endpoints Phase 3:**
+
+- `POST /graph/esmm-run` - Launch complete ESMM run
+- `GET /graph/esmm-run/{id}` - Run status
+- `GET /graph/esmm-run/{id}/result` - Complete run result
+- `POST /graph/esmm-run/{id}/pause` - Pause a run
+- `POST /graph/esmm-run/{id}/resume` - Resume a run
+- `GET /graph/coverage/metrics` - Graph coverage metrics
+- `GET /graph/gaps/active` - Prioritized active gaps
+- `GET /graph/cochain/stats` - 0-cochain statistics
 
 ### Quick start
 
