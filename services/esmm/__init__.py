@@ -63,7 +63,6 @@ from .triplet_extractor import (
     ExtractionResult,
     get_triplet_extractor,
     close_triplet_extractor,
-    ALLOWED_MODELS
 )
 
 # Phase 3: Protocole ESMM complet
@@ -142,7 +141,6 @@ __all__ = [
     "ExtractionResult",
     "get_triplet_extractor",
     "close_triplet_extractor",
-    "ALLOWED_MODELS",
     # Phase 3: Cycle Prompts
     "CycleType",
     "CYCLE_TEMPLATES",

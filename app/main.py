@@ -29,6 +29,13 @@ from app.models import HealthResponse, StatsResponse, ErrorResponse
 from app.llm_client import get_ollama_client, close_ollama_client, get_multi_model_client, close_multi_model_client
 from database import get_db, close_db
 
+# New provider system
+from services.providers import (
+    ProviderRegistry,
+    get_ollama_provider,
+    get_ollama_embedding_provider,
+)
+
 
 # ============================================================================
 # APPLICATION LIFECYCLE
@@ -84,6 +91,22 @@ async def lifespan(app: FastAPI):
         models = await multi_client.list_available_models()
         print(f"[Startup] MultiModel ready: {len(models)} models available")
 
+        # Initialize Provider Registry (new system)
+        print("[Startup] Initializing Provider Registry...")
+        try:
+            # Register Ollama model provider
+            ollama_provider = await get_ollama_provider()
+            ProviderRegistry.register_model("ollama", ollama_provider)
+
+            # Register Ollama embedding provider
+            ollama_emb = await get_ollama_embedding_provider()
+            ProviderRegistry.register_embedding("ollama", ollama_emb)
+
+            stats = ProviderRegistry.get_stats()
+            print(f"[Startup] Provider Registry ready: {stats['model_providers']} model providers, {stats['embedding_providers']} embedding providers")
+        except Exception as e:
+            print(f"[Startup] ⚠️  Provider Registry initialization failed: {e}")
+
         print("="*80)
         print(" LYRA CLEAN - READY")
         print(" API Documentation: http://localhost:8000/docs")
@@ -120,6 +143,12 @@ async def lifespan(app: FastAPI):
             await close_multi_model_client()
         except Exception as e:
             print(f"[Shutdown Error] MultiModel: {e}")
+
+        try:
+            print("[Shutdown] Closing Provider Registry...")
+            await ProviderRegistry.close_all()
+        except Exception as e:
+            print(f"[Shutdown Error] Provider Registry: {e}")
 
         print("[Shutdown] Cleanup complete")
         print("="*80)

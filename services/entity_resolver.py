@@ -34,6 +34,8 @@ class ResolutionResult:
     method: str                # 'exact' | 'embedding' | 'new'
 
 
+# AUDIT[A5-001] 🔴 CRITICAL: db doit être initialisée avant resolve(). Pas de garde __init__.
+# AUDIT[A6-001] 🟢 MIGRATED: app/embeddings.py replaced with OllamaEmbeddingProvider.
 class EntityResolver:
     """
     Resolveur d'entites semantiques.
@@ -141,9 +143,10 @@ class EntityResolver:
         Returns:
             (canonical_id, similarity) ou None
         """
-        # Obtenir l'embedding du concept cible
-        from app.embeddings import get_embedding
-        target_embedding = await get_embedding(concept)
+        # AUDIT[A6-002] 🟢 MIGRATED: replaced deprecated app.embeddings with provider layer.
+        from services.providers.ollama_embeddings import get_ollama_embedding_provider
+        embedding_provider = await get_ollama_embedding_provider()
+        target_embedding = await embedding_provider.embed(concept)
         if not target_embedding:
             return None
 
@@ -175,13 +178,17 @@ class EntityResolver:
 
     async def _create_concept(self, concept: str) -> None:
         """Cree un nouveau concept avec embedding."""
-        from app.embeddings import get_embedding
-        embedding = await get_embedding(concept)
+        # AUDIT[A6-002] 🟢 MIGRATED: replaced deprecated app.embeddings with provider layer.
+        from services.providers.ollama_embeddings import get_ollama_embedding_provider
+        embedding_provider = await get_ollama_embedding_provider()
+        embedding = await embedding_provider.embed(concept)
 
+        serialized = self._serialize_embedding(embedding) if embedding else None
         await self.db.add_concept(
             concept_id=concept,
             rho_static=0.0,
-            embedding=self._serialize_embedding(embedding) if embedding else None,
+            embedding=serialized,
+            embedding_model="mxbai-embed-large" if serialized else None,
             source="extracted"
         )
 
@@ -217,6 +224,7 @@ class EntityResolver:
 # SINGLETON
 # ============================================================================
 
+# AUDIT[§5.5] 🟡→✅ FIXED Phase 4.3: close function ajoutée, annotation mise à jour.
 _resolver_instance: Optional[EntityResolver] = None
 
 
@@ -229,3 +237,9 @@ async def get_entity_resolver() -> EntityResolver:
         db = await get_db()
         _resolver_instance = EntityResolver(db)
     return _resolver_instance
+
+
+def close_entity_resolver() -> None:
+    """Reset l'instance singleton (pour tests)."""
+    global _resolver_instance
+    _resolver_instance = None

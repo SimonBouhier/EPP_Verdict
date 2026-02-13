@@ -24,7 +24,8 @@ from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 
 from database.graph_delta import GraphDelta, DeltaOperation
-from app.embeddings import get_embeddings
+# AUDIT[A6-001] 🟢 MIGRATED: app/embeddings.py replaced with OllamaEmbeddingProvider.
+from services.providers.ollama_embeddings import get_ollama_embedding_provider
 from .populate_graph import GraphPopulator
 
 logger = logging.getLogger(__name__)
@@ -239,17 +240,20 @@ class SeedInjector:
             embedding_bytes = None
             if generate_embeddings:
                 try:
-                    embedding = await get_embeddings(concept)
+                    embedding_provider = await get_ollama_embedding_provider()
+                    embedding = await embedding_provider.embed(concept)
                     embedding_bytes = self._populator.serialize_embedding(embedding)
                 except Exception as e:
                     logger.warning(f"[SeedInjector] Embedding failed for '{concept}': {e}")
                     errors.append(f"Embedding: {concept}")
 
             try:
+                # AUDIT[A3-001] 🟢 ACCEPTED: embedding_model ajouté Phase 3.2 — corrige ValueError garanti.
                 await self.db.add_concept(
                     concept_id=concept,
                     rho_static=0.5,  # Concepts seed ont une densité moyenne
                     embedding=embedding_bytes,
+                    embedding_model="mxbai-embed-large" if embedding_bytes else None,
                     source="seed",
                     first_seen_model=None
                 )
@@ -404,15 +408,18 @@ class SeedInjector:
         embedding_bytes = None
         if generate_embedding:
             try:
-                embedding = await get_embeddings(concept_id)
+                embedding_provider = await get_ollama_embedding_provider()
+                embedding = await embedding_provider.embed(concept_id)
                 embedding_bytes = self._populator.serialize_embedding(embedding)
             except Exception as e:
                 logger.warning(f"[SeedInjector] Embedding failed: {e}")
 
+        # AUDIT[A3-001] 🟢 ACCEPTED: embedding_model ajouté Phase 3.2.
         await self.db.add_concept(
             concept_id=concept_id,
             rho_static=0.5,
             embedding=embedding_bytes,
+            embedding_model="mxbai-embed-large" if embedding_bytes else None,
             source="seed"
         )
         return True

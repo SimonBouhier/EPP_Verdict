@@ -219,7 +219,7 @@ class TripletValidator:
                 if isinstance(data, list):
                     return data
             except json.JSONDecodeError:
-                pass
+                pass  # OK: fallthrough to JSONL parsing strategy
 
         # 3. Essayer de parser ligne par ligne (JSONL)
         triplets = []
@@ -244,7 +244,7 @@ class TripletValidator:
             elif isinstance(obj, list):
                 return obj
         except json.JSONDecodeError:
-            pass
+            pass  # OK: all parsing strategies exhausted, warning logged below
 
         logger.warning(f"[TripletValidator] Failed to parse LLM output: {output[:100]}...")
         return []

@@ -1,0 +1,19 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+epp = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
+
+[programs.devnet]
+epp = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

@@ -1,10 +1,14 @@
 """
-LYRA REPAIR TOOL - EMBEDDING HYDRATION
-======================================
-Ce script répare les archives de benchmark corrompues (embeddings simulés).
-Il relit les textes générés et recalcule les vrais vecteurs via Ollama.
+LEGACY TOOL — Not part of the main pipeline.
+============================================
 
-Auteur: Lyra Architect
+Uses direct HTTP calls to Ollama (not EmbeddingProvider).
+For production embedding migration, use tools/migrate_embeddings.py instead.
+
+Original purpose: Repair corrupted benchmark archives (simulated embeddings).
+Re-reads generated texts and recalculates real vectors via Ollama.
+
+Author: Lyra Architect
 """
 import json
 import time
@@ -18,7 +22,7 @@ from datetime import datetime
 # Le dossier où se trouve ton benchmark raté
 TARGET_DIR = Path("benchmark_results") 
 OLLAMA_URL = "http://localhost:11434/api/embeddings"
-MODEL_EMBEDDING = "mxbai-embed-large"
+MODEL_EMBEDDING = "nomic-embed-text"
 
 # Timeout très large pour éviter les crashs (10 minutes)
 TIMEOUT_CONFIG = httpx.Timeout(600.0, connect=60.0)

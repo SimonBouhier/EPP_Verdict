@@ -288,7 +288,8 @@ class SessionStorage:
             # Créer la session
             await conn.execute(
                 """
-                INSERT INTO sessions (session_id, created_at, last_activity, profile,
+                -- AUDIT[§5.1] 🟡→✅ FIXED Phase 4.1: INSERT OR IGNORE (ADR-004).
+                INSERT OR IGNORE INTO sessions (session_id, created_at, last_activity, profile,
                                       message_count, total_tokens)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
@@ -312,7 +313,7 @@ class SessionStorage:
 
                     await conn.execute(
                         """
-                        INSERT INTO events (session_id, event_type, role, content,
+                        INSERT OR IGNORE INTO events (session_id, event_type, role, content,
                                            injected_concepts, graph_weight, timestamp, latency_ms)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
@@ -334,7 +335,7 @@ class SessionStorage:
             for traj in data.get('trajectories', []):
                 await conn.execute(
                     """
-                    INSERT INTO trajectories (session_id, t_param, tau_c, rho, delta_r, kappa, timestamp)
+                    INSERT OR IGNORE INTO trajectories (session_id, t_param, tau_c, rho, delta_r, kappa, timestamp)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
@@ -354,7 +355,7 @@ class SessionStorage:
             for adj in data.get('consciousness_adjustments', []):
                 await conn.execute(
                     """
-                    INSERT INTO session_adjustments (session_id, turn_number, metrics, adjustments, timestamp)
+                    INSERT OR IGNORE INTO session_adjustments (session_id, turn_number, metrics, adjustments, timestamp)
                     VALUES (?, ?, ?, ?, ?)
                     """,
                     (

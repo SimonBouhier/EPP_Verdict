@@ -82,7 +82,7 @@ def cmd_run(args):
             }
 
     # Modeles
-    models = ["llama3.1:8b", "gpt-oss:20b"]
+    models = ["mistral", "gpt-oss:20b"]
     if args.models:
         models = [m.strip() for m in args.models.split(",")]
 

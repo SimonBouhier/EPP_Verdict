@@ -14,7 +14,7 @@ from typing import Dict, Any
 
 from app.models import ChatRequest, ChatResponse, ErrorResponse
 from app.llm_client import get_ollama_client, OllamaClient
-from app.embeddings import get_embeddings
+from services.providers.ollama_embeddings import get_ollama_embedding_provider
 from database import get_db, ISpaceDB
 from core.physics import BezierEngine, TimeMapper, PhysicsState
 from services import ContextInjector, ConversationMemory, build_system_prompt
@@ -222,7 +222,8 @@ async def chat_message(
                 semantic_memory = get_semantic_memory()
 
                 # Encode query with embeddings
-                query_embeddings = await get_embeddings(request.text)
+                embedding_provider = await get_ollama_embedding_provider()
+                query_embeddings = await embedding_provider.embed(request.text)
                 
                 # Recall similar messages from session
                 recalled = semantic_memory.recall_memory(
@@ -249,14 +250,77 @@ async def chat_message(
                 logger.warning(f"Semantic memory recall failed: {e}")
 
         # ====================================================================
+        # STEP 4C: ESMM TRIPLET CONTEXT (when use_esmm=True)
+        # ====================================================================
+
+        esmm_context = None
+        if request.use_esmm:
+            try:
+                # Get high-confidence triplets related to user query keywords
+                context_data = enriched_prompt.get("context") or {}
+                keywords = context_data.get("query_keywords", [])
+                if not keywords:
+                    # Extract keywords from user text
+                    words = [w.lower() for w in request.text.split() if len(w) > 3]
+                    keywords = words[:5]
+
+                triplets_used = []
+                total_consensus = 0.0
+
+                for keyword in keywords[:3]:  # Limit to 3 keywords
+                    neighbors = await db.get_neighbors(keyword, min_weight=0.6, limit=5)
+                    for neighbor in neighbors:
+                        triplet_text = f"{keyword} → {neighbor.get('relation', 'related_to')} → {neighbor['concept']}"
+                        triplets_used.append({
+                            "text": triplet_text,
+                            "weight": neighbor.get("weight", 0.7)
+                        })
+                        total_consensus += neighbor.get("weight", 0.7)
+
+                if triplets_used:
+                    avg_consensus = total_consensus / len(triplets_used)
+                    esmm_context = {
+                        "enabled": True,
+                        "triplets_used": len(triplets_used),
+                        "avg_consensus": avg_consensus
+                    }
+
+                    # Inject ESMM context into prompt
+                    esmm_injection = "[ESMM CONTEXT]\nConnaissances extraites par consensus multi-modèles:\n"
+                    for t in triplets_used[:10]:  # Limit to 10 triplets
+                        esmm_injection += f"- {t['text']} (confiance: {t['weight']:.2f})\n"
+                    esmm_injection += "[/ESMM CONTEXT]\n"
+
+                    # Insert before last user message
+                    enriched_prompt["messages"].insert(-1, {
+                        "role": "system",
+                        "content": esmm_injection
+                    })
+
+                    print(f"[ESMM] Injected {len(triplets_used)} triplets with avg consensus {avg_consensus:.2f}")
+                else:
+                    esmm_context = {"enabled": True, "triplets_used": 0, "avg_consensus": 0.0}
+                    print("[ESMM] No high-confidence triplets found for query")
+
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"ESMM context injection failed: {e}")
+                esmm_context = {"enabled": False, "error": str(e)}
+
+        # ====================================================================
         # STEP 5: LLM GENERATION
         # ====================================================================
 
         llm_start = time.time()
 
+        # Use model override if specified
+        model_override = request.model if hasattr(request, 'model') and request.model else None
+
         llm_response = await llm.chat(
             messages=enriched_prompt["messages"],
-            physics_state=physics_state
+            physics_state=physics_state,
+            model=model_override
         )
 
         llm_latency_ms = llm_response["latency_ms"]
@@ -315,7 +379,8 @@ async def chat_message(
                 semantic_memory = get_semantic_memory()
 
                 # Encode and store user message
-                message_embeddings = await get_embeddings(request.text)
+                embedding_provider = await get_ollama_embedding_provider()
+                message_embeddings = await embedding_provider.embed(request.text)
                 semantic_memory.store_memory(
                     session_id=session_id,
                     content=request.text,
@@ -383,7 +448,8 @@ async def chat_message(
             },
             tokens=tokens,
             consciousness=consciousness_metrics.dict() if consciousness_metrics else None,
-            memory_echo=memory_echo
+            memory_echo=memory_echo,
+            esmm_context=esmm_context
         )
 
     except HTTPException:

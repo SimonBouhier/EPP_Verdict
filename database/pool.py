@@ -228,8 +228,9 @@ class SQLiteConnectionPool:
             for pc in self._pool:
                 try:
                     await pc.connection.close()
-                except Exception:
-                    pass
+                # AUDIT[A2-001] 🔴→✅ FIXED Phase 4.2: erreur loggée au lieu d'être avalée.
+                except Exception as e:
+                    self._logger.warning(f"Error closing connection: {e}")
             self._pool.clear()
             self._overflow_count = 0
             self._initialized = False
@@ -257,8 +258,9 @@ class SQLiteConnectionPool:
             for pc in to_remove:
                 try:
                     await pc.connection.close()
-                except Exception:
-                    pass
+                # AUDIT[A2-002] 🟡→✅ FIXED Phase 4.2: erreur loggée au lieu d'être avalée.
+                except Exception as e:
+                    self._logger.warning(f"Error closing stale connection: {e}")
                 self._pool.remove(pc)
                 closed += 1
 
@@ -331,7 +333,7 @@ class ConceptCache:
                 first_key = next(iter(self._cache))
                 del self._cache[first_key]
             except StopIteration:
-                pass
+                pass  # OK: cache vide, StopIteration attendu
         self._cache[key] = value
 
     def delete(self, key: str) -> None:
@@ -532,7 +534,9 @@ class SQLValidator:
 # ============================================================================
 
 _pool_instance: Optional[SQLiteConnectionPool] = None
+# AUDIT[A1-007] 🟡 FRAGILE: cache sans TTL ni invalidation après mutations DB.
 _concept_cache: Optional[ConceptCache] = None
+# AUDIT[A1-008] 🟡 FRAGILE: Semaphore global non lié au pool spécifique.
 _concurrency_limiter: Optional[ConcurrencyLimiter] = None
 
 
@@ -542,6 +546,11 @@ async def get_pool(
 ) -> SQLiteConnectionPool:
     """Retourne l'instance singleton du pool."""
     global _pool_instance
+    # AUDIT[A1-006] 🟡 FRAGILE: pool_size ignoré si instance existe déjà (seul db_path est vérifié).
+    # Si le pool existe mais pointe vers un autre fichier, le fermer d'abord
+    if _pool_instance is not None and str(_pool_instance.db_path) != str(Path(db_path)):
+        await _pool_instance.close()
+        _pool_instance = None
     if _pool_instance is None:
         _pool_instance = SQLiteConnectionPool(db_path, pool_size=pool_size)
         await _pool_instance.initialize()

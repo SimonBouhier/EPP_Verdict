@@ -81,6 +81,25 @@ class ISpaceDB:
                 "ALTER TABLE relations ADD COLUMN is_active INTEGER DEFAULT 1",
                 "ALTER TABLE knowledge_gaps ADD COLUMN suggested_question TEXT",
             ]
+
+            # Phase 0.2: Migration embedding versioning
+            # Copie les embeddings existants vers concept_embeddings (idempotent)
+            phase02_migration = """
+            INSERT OR IGNORE INTO concept_embeddings (concept_id, model_id, dimension, embedding, created_at)
+            SELECT
+                id,
+                COALESCE(embedding_model, 'mxbai-embed-large'),
+                CASE COALESCE(embedding_model, 'mxbai-embed-large')
+                    WHEN 'mxbai-embed-large' THEN 1024
+                    WHEN 'nomic-embed-text' THEN 768
+                    ELSE length(embedding) / 4  -- float32 = 4 bytes
+                END,
+                embedding,
+                COALESCE(embedding_updated_at, unixepoch('now'))
+            FROM concepts
+            WHERE embedding IS NOT NULL
+            """
+            # AUDIT[A2-005] 🟢 ACCEPTED: ALTER TABLE échoue si colonne existe déjà — migrations idempotentes.
             for migration in migrations:
                 try:
                     await db.execute(migration)
@@ -91,6 +110,15 @@ class ISpaceDB:
             # Maintenant appliquer le schema complet (tables + index)
             await db.executescript(schema_sql)
 
+            # Phase 0.2: Copier embeddings existants vers concept_embeddings
+            # S'exécute après le schema car la table concept_embeddings doit exister
+            try:
+                await db.execute(phase02_migration)
+                await db.commit()
+            except Exception as e:
+                # Peut échouer si aucun embedding ou table vide - OK
+                pass
+
             # Performance optimizations
             await db.execute("PRAGMA journal_mode=WAL")        # Write-Ahead Logging
             await db.execute("PRAGMA synchronous=NORMAL")      # Balance safety/speed
@@ -100,6 +128,43 @@ class ISpaceDB:
             await db.execute("PRAGMA busy_timeout=30000")      # 30s wait on lock contention
 
             await db.commit()
+
+            # Seed metrological frames if table is empty
+            try:
+                cursor = await db.execute("SELECT COUNT(*) FROM metrological_frames")
+                count = (await cursor.fetchone())[0]
+                if count == 0:
+                    from services.solana.metrological_frame import (
+                        create_blockchain_tps_frame,
+                        create_general_knowledge_frame,
+                    )
+                    for factory in [create_blockchain_tps_frame, create_general_knowledge_frame]:
+                        frame = factory()
+                        frame_dict = frame.model_dump()
+                        await db.execute(
+                            """
+                            INSERT OR IGNORE INTO metrological_frames
+                            (frame_id, version, domain, metric, description,
+                             parameters, required_sources, governance, frame_hash, created_by)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                frame_dict["frame_id"],
+                                frame_dict["version"],
+                                frame_dict["domain"],
+                                frame_dict["metric"],
+                                frame_dict["description"],
+                                json.dumps(frame_dict.get("parameters", {})),
+                                frame_dict.get("required_sources", 1),
+                                json.dumps(frame_dict.get("governance", {})),
+                                frame.compute_frame_hash(),
+                                "system_seed",
+                            )
+                        )
+                    await db.commit()
+            # AUDIT[A2-005] 🟡 FRAGILE: except:pass masque potentiellement des erreurs de seeding frames.
+            except Exception:
+                pass  # Table may not exist yet in older schemas
 
         # Initialize connection pool
         self._pool = await get_pool(str(self.db_path), pool_size=10)
@@ -244,6 +309,7 @@ class ISpaceDB:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
 
+    # AUDIT[A2-007] 🟡 FRAGILE: retourne [] sur exception — erreur d'embedding invisible.
     async def get_multi_neighbors(
         self,
         concept_ids: List[str],
@@ -267,6 +333,7 @@ class ISpaceDB:
         placeholders = ','.join('?' * len(concept_ids))
 
         async with self.connection() as conn:
+            # AUDIT[A4-007] 🟡 FRAGILE: f-string SQL — valeurs internes uniquement, pas d'input user.
             cursor = await conn.execute(
                 f"""
                 SELECT target, weight, kappa, source
@@ -314,6 +381,7 @@ class ISpaceDB:
         concept_id: str,
         rho_static: float = 0.0,
         embedding: bytes = None,
+        embedding_model: str = None,
         source: str = "manual",
         first_seen_model: str = None
     ) -> None:
@@ -324,34 +392,69 @@ class ISpaceDB:
             concept_id: Identifiant canonique
             rho_static: Densite pre-calculee
             embedding: Vecteur d'embedding (bytes)
+            embedding_model: Modele d'embedding (OBLIGATOIRE si embedding fourni)
             source: Source du concept
             first_seen_model: Modele ayant introduit le concept
+
+        Raises:
+            ValueError: Si embedding fourni sans embedding_model
         """
+        # Phase 0.2: embedding_model obligatoire si embedding fourni
+        if embedding is not None and embedding_model is None:
+            raise ValueError("embedding_model is required when embedding is provided")
+
+        now = time.time()
         async with self.connection() as conn:
+            # AUDIT[A4-002] 🔴 CRITICAL: INSERT OR REPLACE perd les métadonnées existantes (created_at, embeddings).
             await conn.execute(
                 """
                 INSERT OR IGNORE INTO concepts
-                (id, rho_static, degree, embedding, embedding_updated_at, source, first_seen_model, created_at)
-                VALUES (?, ?, 0, ?, ?, ?, ?, ?)
+                (id, rho_static, degree, embedding, embedding_model, embedding_updated_at, source, first_seen_model, created_at)
+                VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    concept_id, rho_static, embedding,
-                    time.time() if embedding else None,
-                    source, first_seen_model, time.time()
+                    concept_id, rho_static, embedding, embedding_model,
+                    now if embedding else None,
+                    source, first_seen_model, now
                 )
             )
+
+            # Phase 0.2: Also write to concept_embeddings for versioning
+            if embedding is not None and embedding_model is not None:
+                # Calculate dimension from blob size (float32 = 4 bytes)
+                dimension = len(embedding) // 4
+                await conn.execute(
+                    """
+                    INSERT OR IGNORE INTO concept_embeddings
+                    (concept_id, model_id, dimension, embedding, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (concept_id, embedding_model, dimension, embedding, now)
+                )
+
             await conn.commit()
 
-    async def get_concepts_with_embeddings(self, limit: int = 1000) -> List[Dict]:
+    async def get_concepts_with_embeddings(
+        self,
+        limit: int = 1000,
+        model_id: Optional[str] = None
+    ) -> List[Dict]:
         """
         Recupere les concepts avec leurs embeddings pour recherche de similarite.
 
+        Phase 0.2: Si model_id est specifie, retourne les embeddings de ce modele
+        depuis concept_embeddings. Sinon, utilise concepts.embedding (legacy).
+
         Args:
             limit: Nombre maximum de concepts
+            model_id: Modele d'embedding specifique (optionnel)
 
         Returns:
             Liste de dicts avec id et embedding
         """
+        if model_id:
+            return await self.get_concepts_with_embeddings_for_model(model_id, limit)
+
         async with self.connection() as conn:
             cursor = await conn.execute(
                 """
@@ -362,6 +465,37 @@ class ISpaceDB:
                 LIMIT ?
                 """,
                 (limit,)
+            )
+            return [dict(row) for row in await cursor.fetchall()]
+
+    async def get_concepts_with_embeddings_for_model(
+        self,
+        model_id: str,
+        limit: int = 1000
+    ) -> List[Dict]:
+        """
+        Recupere les concepts avec embeddings pour un modele specifique.
+
+        Phase 0.2: Cherche dans concept_embeddings pour le model_id specifie.
+
+        Args:
+            model_id: Identifiant du modele d'embedding
+            limit: Nombre maximum de concepts
+
+        Returns:
+            Liste de dicts avec id, embedding, model_id, dimension
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT ce.concept_id as id, ce.embedding, ce.model_id, ce.dimension
+                FROM concept_embeddings ce
+                JOIN concepts c ON ce.concept_id = c.id
+                WHERE ce.model_id = ?
+                ORDER BY c.degree DESC
+                LIMIT ?
+                """,
+                (model_id, limit)
             )
             return [dict(row) for row in await cursor.fetchall()]
 
@@ -439,6 +573,7 @@ class ISpaceDB:
             )
             await conn.commit()
 
+    # AUDIT[A4-001] 🔴→✅ FIXED Phase 4.2: utilise ON CONFLICT DO UPDATE, relation_type préservé.
     async def upsert_relations_batch(
         self,
         relations: List[Dict[str, Any]]
@@ -525,6 +660,7 @@ class ISpaceDB:
                         inserted += 1
 
                 except Exception:
+                    # AUDIT[A2-009] 🟡 FRAGILE: erreur de batch silencieuse — seul le compteur errors est incrémenté.
                     errors += 1
 
             await conn.commit()
@@ -552,7 +688,7 @@ class ISpaceDB:
         async with self.connection() as conn:
             await conn.execute(
                 """
-                INSERT INTO sessions (session_id, created_at, last_activity, profile, params_snapshot, message_count)
+                INSERT OR IGNORE INTO sessions (session_id, created_at, last_activity, profile, params_snapshot, message_count)
                 VALUES (?, ?, ?, ?, ?, 0)
                 """,
                 (
@@ -943,7 +1079,7 @@ class ISpaceDB:
                         pressure=metrics_dict.get("pressure", 0.0)
                     )
                 except (json.JSONDecodeError, KeyError):
-                    return None
+                    return None  # OK: JSON corrompu en DB, dégradation gracieuse
 
             return None
 
@@ -985,6 +1121,7 @@ class ISpaceDB:
     # UTILITIES
     # ========================================================================
 
+    # AUDIT[A2-006] 🟡 FRAGILE: retourne {} sur exception — indistinguable de "pas de données".
     async def get_stats(self) -> Dict[str, Any]:
         """
         Get database statistics.
@@ -995,13 +1132,33 @@ class ISpaceDB:
         async with self.connection() as conn:
             stats = {}
 
-            for table in ['concepts', 'relations', 'sessions', 'events', 'trajectories', 'profiles']:
-                cursor = await conn.execute(f"SELECT COUNT(*) FROM {table}")
-                count = await cursor.fetchone()
-                stats[table] = count[0]
+            tables = [
+                'concepts', 'relations', 'sessions', 'events',
+                'attestations', 'esmm_runs', 'cochain_entries',
+                'triplet_extractions', 'knowledge_gaps',
+            ]
+            for table in tables:
+                try:
+                    cursor = await conn.execute(f"SELECT COUNT(*) FROM {table}")
+                    count = await cursor.fetchone()
+                    stats[table] = count[0]
+                except Exception:
+                    stats[table] = 0  # Table may not exist yet
+            # AUDIT[A2-006] 🟡 FRAGILE: stats silencieusement à 0 si table n'existe pas.
+            # Attestations anchored on-chain
+            try:
+                cursor = await conn.execute(
+                    "SELECT COUNT(*) FROM attestations WHERE solana_tx_signature IS NOT NULL"
+                )
+                stats['attestations_anchored'] = (await cursor.fetchone())[0]
+            # AUDIT[§5.2] 🟡 FRAGILE: except silencieux sur stats anchored — 0 indiscernable de table absente.
+            except Exception:
+                stats['attestations_anchored'] = 0
 
             # Database file size
-            stats['db_size_mb'] = self.db_path.stat().st_size / (1024 * 1024) if self.db_path.exists() else 0
+            stats['db_size_mb'] = round(
+                self.db_path.stat().st_size / (1024 * 1024), 2
+            ) if self.db_path.exists() else 0
 
             return stats
 
@@ -1082,8 +1239,13 @@ class ISpaceDB:
 
                     await conn.execute(
                         """
+                        -- AUDIT[A4-001] 🔴→✅ FIXED Phase 4.2: ON CONFLICT préserve relation_type et metadata.
                         INSERT INTO relations (source, target, weight, kappa, created_at)
                         VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(source, target) DO UPDATE SET
+                            weight = excluded.weight,
+                            kappa = excluded.kappa,
+                            updated_at = excluded.created_at
                         """,
                         (delta.source, delta.target, delta.weight, delta.new_kappa, time.time())
                     )
@@ -1382,14 +1544,24 @@ class ISpaceDB:
                     SELECT delta_id, operation, source, target, old_weight, old_kappa
                     FROM graph_deltas
                     WHERE session_id = ?
-                      AND timestamp > ?
+                      AND applied_at > ?
                       AND rolled_back_at IS NULL
-                    ORDER BY timestamp DESC
+                    ORDER BY applied_at DESC
                     """,
                     (session_id, to_timestamp)
                 )
             else:
-                return 0
+                # Fallback: rollback ALL unrolled deltas for this session (LIFO)
+                cursor = await conn.execute(
+                    """
+                    SELECT delta_id, operation, source, target, old_weight, old_kappa
+                    FROM graph_deltas
+                    WHERE session_id = ?
+                      AND rolled_back_at IS NULL
+                    ORDER BY timestamp DESC
+                    """,
+                    (session_id,)
+                )
 
             deltas_to_rollback = await cursor.fetchall()
             rollback_count = 0
@@ -1409,8 +1581,13 @@ class ISpaceDB:
                 elif operation == DeltaOperation.DELETE_EDGE.value and old_weight is not None:
                     await conn.execute(
                         """
+                        -- AUDIT[A4-001] 🔴→✅ FIXED Phase 4.2: ON CONFLICT préserve metadata lors du rollback.
                         INSERT INTO relations (source, target, weight, kappa, created_at)
                         VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(source, target) DO UPDATE SET
+                            weight = excluded.weight,
+                            kappa = excluded.kappa,
+                            updated_at = excluded.created_at
                         """,
                         (source, target, old_weight, old_kappa or 0.5, time.time())
                     )
@@ -2147,6 +2324,822 @@ class ISpaceDB:
             )
             await conn.commit()
 
+    # ========================================================================
+    # EMBEDDING VERSIONING (Phase 0.2)
+    # ========================================================================
+
+    async def store_concept_embedding(
+        self,
+        concept_id: str,
+        model_id: str,
+        dimension: int,
+        embedding: bytes
+    ) -> None:
+        """
+        Stocke un embedding versionné dans concept_embeddings.
+
+        Args:
+            concept_id: Identifiant du concept
+            model_id: Identifiant du modèle d'embedding
+            dimension: Dimension du vecteur
+            embedding: Vecteur float32 sérialisé
+
+        Note:
+            Utilise INSERT OR IGNORE pour idempotence (UNIQUE constraint)
+        """
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                INSERT OR IGNORE INTO concept_embeddings
+                (concept_id, model_id, dimension, embedding, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (concept_id, model_id, dimension, embedding, time.time())
+            )
+            await conn.commit()
+
+    async def get_concept_embedding(
+        self,
+        concept_id: str,
+        model_id: str
+    ) -> Optional[bytes]:
+        """
+        Récupère un embedding pour un concept et un modèle donné.
+
+        Args:
+            concept_id: Identifiant du concept
+            model_id: Identifiant du modèle
+
+        Returns:
+            Embedding blob ou None si non trouvé
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT embedding FROM concept_embeddings
+                WHERE concept_id = ? AND model_id = ?
+                """,
+                (concept_id, model_id)
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else None
+
+    async def get_concepts_needing_migration(
+        self,
+        target_model: str,
+        limit: int = 100
+    ) -> List[str]:
+        """
+        Retourne les concept_ids qui ont un embedding mais pas pour target_model.
+
+        Args:
+            target_model: Modèle cible de la migration
+            limit: Nombre maximum de concepts à retourner
+
+        Returns:
+            Liste de concept_ids à migrer
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT DISTINCT c.id
+                FROM concepts c
+                WHERE c.embedding IS NOT NULL
+                  AND c.id NOT IN (
+                      SELECT concept_id FROM concept_embeddings WHERE model_id = ?
+                  )
+                LIMIT ?
+                """,
+                (target_model, limit)
+            )
+            return [row[0] for row in await cursor.fetchall()]
+
+    async def create_embedding_migration(
+        self,
+        from_model: str,
+        to_model: str,
+        dim_from: int,
+        dim_to: int,
+        triggered_by: str = "manual"
+    ) -> int:
+        """
+        Crée une entrée de migration et retourne migration_id.
+
+        Args:
+            from_model: Modèle source
+            to_model: Modèle cible
+            dim_from: Dimension source
+            dim_to: Dimension cible
+            triggered_by: Source du déclenchement ('manual', 'config_change', 'cli')
+
+        Returns:
+            migration_id
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                INSERT INTO embedding_migrations
+                (from_model, to_model, dimension_from, dimension_to, status, started_at, triggered_by)
+                VALUES (?, ?, ?, ?, 'running', ?, ?)
+                """,
+                (from_model, to_model, dim_from, dim_to, time.time(), triggered_by)
+            )
+            await conn.commit()
+            return cursor.lastrowid
+
+    async def update_embedding_migration(
+        self,
+        migration_id: int,
+        **kwargs
+    ) -> None:
+        """
+        Met à jour les champs d'une migration.
+
+        Args:
+            migration_id: ID de la migration
+            **kwargs: Champs à mettre à jour (concepts_migrated, concepts_failed, status, error_log, etc.)
+        """
+        if not kwargs:
+            return
+
+        valid_fields = {
+            'status', 'concepts_total', 'concepts_migrated', 'concepts_failed',
+            'started_at', 'completed_at', 'error_log'
+        }
+
+        updates = []
+        params = []
+        for key, value in kwargs.items():
+            if key in valid_fields:
+                updates.append(f"{key} = ?")
+                params.append(value)
+
+        if not updates:
+            return
+
+        params.append(migration_id)
+
+        async with self.connection() as conn:
+            await conn.execute(
+                f"UPDATE embedding_migrations SET {', '.join(updates)} WHERE migration_id = ?",
+                params
+            )
+            await conn.commit()
+
+    async def get_embedding_migration(self, migration_id: int) -> Optional[Dict]:
+        """
+        Récupère les détails d'une migration.
+
+        Args:
+            migration_id: ID de la migration
+
+        Returns:
+            Dict avec les détails ou None
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT * FROM embedding_migrations WHERE migration_id = ?",
+                (migration_id,)
+            )
+            row = await cursor.fetchone()
+            if row:
+                result = dict(row)
+                if result.get('error_log'):
+                    result['error_log'] = json.loads(result['error_log'])
+                return result
+            return None
+
+    async def finalize_embedding_migration(
+        self,
+        migration_id: int,
+        target_model: str
+    ) -> int:
+        """
+        Copie concept_embeddings → concepts.embedding pour le modèle cible.
+
+        Args:
+            migration_id: ID de la migration
+            target_model: Modèle dont copier les embeddings
+
+        Returns:
+            Nombre de concepts mis à jour
+
+        Raises:
+            ValueError: Si la migration a des échecs (concepts_failed > 0)
+        """
+        # Check migration status
+        migration = await self.get_embedding_migration(migration_id)
+        if not migration:
+            raise ValueError(f"Migration {migration_id} not found")
+
+        if migration.get('concepts_failed', 0) > 0:
+            raise ValueError(
+                f"Cannot finalize migration {migration_id}: {migration['concepts_failed']} concepts failed"
+            )
+
+        async with self.connection() as conn:
+            # Update concepts.embedding from concept_embeddings
+            cursor = await conn.execute(
+                """
+                UPDATE concepts
+                SET embedding = (
+                    SELECT ce.embedding FROM concept_embeddings ce
+                    WHERE ce.concept_id = concepts.id AND ce.model_id = ?
+                ),
+                embedding_model = ?,
+                embedding_updated_at = ?
+                WHERE id IN (
+                    SELECT concept_id FROM concept_embeddings WHERE model_id = ?
+                )
+                """,
+                (target_model, target_model, time.time(), target_model)
+            )
+            updated_count = cursor.rowcount
+
+            # Mark migration as completed
+            await conn.execute(
+                """
+                UPDATE embedding_migrations
+                SET status = 'completed', completed_at = ?
+                WHERE migration_id = ?
+                """,
+                (time.time(), migration_id)
+            )
+
+            await conn.commit()
+            return updated_count
+
+    async def rollback_embedding_migration(
+        self,
+        migration_id: int
+    ) -> int:
+        """
+        Annule une migration en supprimant les embeddings du modèle cible.
+
+        Args:
+            migration_id: ID de la migration
+
+        Returns:
+            Nombre d'embeddings supprimés
+        """
+        migration = await self.get_embedding_migration(migration_id)
+        if not migration:
+            raise ValueError(f"Migration {migration_id} not found")
+
+        target_model = migration['to_model']
+
+        async with self.connection() as conn:
+            # Delete embeddings for the target model
+            cursor = await conn.execute(
+                "DELETE FROM concept_embeddings WHERE model_id = ?",
+                (target_model,)
+            )
+            deleted_count = cursor.rowcount
+
+            # Mark migration as rolled back
+            await conn.execute(
+                """
+                UPDATE embedding_migrations
+                SET status = 'rolled_back', completed_at = ?
+                WHERE migration_id = ?
+                """,
+                (time.time(), migration_id)
+            )
+
+            await conn.commit()
+            return deleted_count
+
+    async def count_concepts_with_embeddings(self) -> int:
+        """
+        Compte le nombre de concepts avec embeddings.
+
+        Returns:
+            Nombre de concepts avec embedding non-null
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM concepts WHERE embedding IS NOT NULL"
+            )
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+    # =========================================================================
+    # ATTESTATIONS (Phase 0.3)
+    # =========================================================================
+
+    async def store_attestation(self, attestation: Dict[str, Any]) -> int:
+        """
+        Stocke une attestation cristallisée en DB.
+
+        Args:
+            attestation: Dict issu de EpistemicAttestation.model_dump()
+                Doit contenir : claim_hash, subject, predicate, object,
+                consensus_score, model_votes, signature_5d, etc.
+
+        Returns:
+            attestation_id
+        """
+        import json
+
+        # Extract signature 5D components
+        sig = attestation.get("signature_5d", {})
+
+        # Serialize model_votes to JSON
+        model_votes_json = json.dumps(attestation.get("model_votes", []))
+
+        # Build portable JSON if not provided
+        portable_json = attestation.get("portable_json")
+        if portable_json is None:
+            portable_json = json.dumps(
+                attestation,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+                separators=(",", ":"),
+            )
+
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                INSERT INTO attestations (
+                    claim_hash, subject, predicate, object,
+                    consensus_score, models_consulted, models_agreeing, model_votes,
+                    sig_agreement, sig_semantic_consistency, sig_centrality,
+                    sig_stability, sig_relation_diversity,
+                    epistemic_type, confidence_tier,
+                    metrological_frame, source_anchor, run_id, question,
+                    timestamp, protocol_version,
+                    validation_count, previous_hash, portable_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    attestation["claim_hash"],
+                    attestation["subject"],
+                    attestation["predicate"],
+                    attestation["object"],
+                    attestation["consensus_score"],
+                    attestation["models_consulted"],
+                    attestation["models_agreeing"],
+                    model_votes_json,
+                    sig.get("agreement", 0.0),
+                    sig.get("semantic_consistency", 0.0),
+                    sig.get("centrality", 0.0),
+                    sig.get("stability", 0.0),
+                    sig.get("relation_diversity", 0.0),
+                    attestation["epistemic_type"],
+                    attestation["confidence_tier"],
+                    attestation.get("metrological_frame"),
+                    attestation.get("source_anchor"),
+                    attestation.get("run_id"),
+                    attestation.get("question"),
+                    attestation["timestamp"],
+                    attestation.get("protocol_version", "0.3"),
+                    attestation.get("validation_count", 1),
+                    attestation.get("previous_hash"),
+                    portable_json,
+                )
+            )
+            await conn.commit()
+            return cursor.lastrowid
+
+    async def get_attestation_by_hash(self, claim_hash: str) -> Optional[Dict]:
+        """
+        Récupère une attestation par son hash (la plus récente si plusieurs).
+
+        Args:
+            claim_hash: SHA-256 du triplet + frame
+
+        Returns:
+            Dict attestation ou None
+        """
+        import json
+
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT
+                    attestation_id, claim_hash, subject, predicate, object,
+                    consensus_score, models_consulted, models_agreeing, model_votes,
+                    sig_agreement, sig_semantic_consistency, sig_centrality,
+                    sig_stability, sig_relation_diversity,
+                    epistemic_type, confidence_tier,
+                    metrological_frame, source_anchor, run_id, question,
+                    timestamp, protocol_version,
+                    validation_count, previous_hash, portable_json
+                FROM attestations
+                WHERE claim_hash = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """,
+                (claim_hash,)
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+
+            return self._row_to_attestation_dict(row)
+
+    async def get_attestations_by_subject(
+        self,
+        subject: str,
+        min_consensus: float = 0.0,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """
+        Récupère les attestations concernant un sujet.
+
+        Args:
+            subject: Sujet à chercher
+            min_consensus: Score minimum
+            limit: Nombre max de résultats
+
+        Returns:
+            Liste d'attestations triées par consensus DESC
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT
+                    attestation_id, claim_hash, subject, predicate, object,
+                    consensus_score, models_consulted, models_agreeing, model_votes,
+                    sig_agreement, sig_semantic_consistency, sig_centrality,
+                    sig_stability, sig_relation_diversity,
+                    epistemic_type, confidence_tier,
+                    metrological_frame, source_anchor, run_id, question,
+                    timestamp, protocol_version,
+                    validation_count, previous_hash, portable_json
+                FROM attestations
+                WHERE subject = ? AND consensus_score >= ?
+                ORDER BY consensus_score DESC
+                LIMIT ?
+                """,
+                (subject, min_consensus, limit)
+            )
+            rows = await cursor.fetchall()
+            return [self._row_to_attestation_dict(row) for row in rows]
+
+    async def get_attestation_history(self, claim_hash: str) -> List[Dict]:
+        """
+        Récupère l'historique de revalidation d'un claim.
+
+        Toutes les attestations partageant le même claim_hash,
+        triées par timestamp ASC (première → dernière validation).
+
+        Args:
+            claim_hash: Hash du claim
+
+        Returns:
+            Liste chronologique des attestations
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT
+                    attestation_id, claim_hash, subject, predicate, object,
+                    consensus_score, models_consulted, models_agreeing, model_votes,
+                    sig_agreement, sig_semantic_consistency, sig_centrality,
+                    sig_stability, sig_relation_diversity,
+                    epistemic_type, confidence_tier,
+                    metrological_frame, source_anchor, run_id, question,
+                    timestamp, protocol_version,
+                    validation_count, previous_hash, portable_json
+                FROM attestations
+                WHERE claim_hash = ?
+                ORDER BY timestamp ASC
+                """,
+                (claim_hash,)
+            )
+            rows = await cursor.fetchall()
+            return [self._row_to_attestation_dict(row) for row in rows]
+
+    def _row_to_attestation_dict(self, row) -> Dict:
+        """Convert a database row to an attestation dictionary."""
+        import json
+
+        model_votes = row[8]
+        if isinstance(model_votes, str):
+            model_votes = json.loads(model_votes)
+
+        return {
+            "attestation_id": row[0],
+            "claim_hash": row[1],
+            "subject": row[2],
+            "predicate": row[3],
+            "object": row[4],
+            "consensus_score": row[5],
+            "models_consulted": row[6],
+            "models_agreeing": row[7],
+            "model_votes": model_votes,
+            "sig_agreement": row[9],
+            "sig_semantic_consistency": row[10],
+            "sig_centrality": row[11],
+            "sig_stability": row[12],
+            "sig_relation_diversity": row[13],
+            "epistemic_type": row[14],
+            "confidence_tier": row[15],
+            "metrological_frame": row[16],
+            "source_anchor": row[17],
+            "run_id": row[18],
+            "question": row[19],
+            "timestamp": row[20],
+            "protocol_version": row[21],
+            "validation_count": row[22],
+            "previous_hash": row[23],
+            "portable_json": row[24],
+        }
+
+    # ========================================================================
+    # METROLOGICAL FRAMES
+    # ========================================================================
+
+    async def store_frame(self, frame_data: Dict[str, Any]) -> None:
+        """Stocke un MetrologicalFrame en DB."""
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                INSERT OR REPLACE INTO metrological_frames
+                (frame_id, version, domain, metric, description,
+                 parameters, required_sources, governance, frame_hash, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    frame_data["frame_id"],
+                    frame_data["version"],
+                    frame_data["domain"],
+                    frame_data["metric"],
+                    frame_data["description"],
+                    json.dumps(frame_data.get("parameters", {})),
+                    frame_data.get("required_sources", 1),
+                    json.dumps(frame_data.get("governance", {})),
+                    frame_data["frame_hash"],
+                    frame_data.get("created_by", "system"),
+                )
+            )
+            await conn.commit()
+
+    async def get_frame(self, frame_id: str, version: Optional[str] = None) -> Optional[Dict]:
+        """Récupère un frame par ID (dernière version si non spécifié)."""
+        async with self.connection() as conn:
+            if version:
+                cursor = await conn.execute(
+                    "SELECT * FROM metrological_frames WHERE frame_id = ? AND version = ?",
+                    (frame_id, version)
+                )
+            else:
+                cursor = await conn.execute(
+                    "SELECT * FROM metrological_frames WHERE frame_id = ? ORDER BY created_at DESC LIMIT 1",
+                    (frame_id,)
+                )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return dict(row)
+
+    async def list_frames(self) -> List[Dict]:
+        """Liste tous les frames (dernière version de chaque)."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT DISTINCT frame_id, version, domain, metric, frame_hash, created_at
+                FROM metrological_frames
+                ORDER BY domain, frame_id
+                """
+            )
+            return [dict(row) for row in await cursor.fetchall()]
+
+    # ========================================================================
+    # MODEL TRACK RECORD
+    # ========================================================================
+
+    async def record_model_prediction(
+        self,
+        model_id: str,
+        provider_id: str,
+        claim_hash: str,
+        predicted_confidence: float,
+        predicted_agreed: bool,
+    ) -> int:
+        """Enregistre une prédiction de modèle pour tracking Brier."""
+        async with self.connection() as conn:
+            # AUDIT[A4-010] 🟢 ACCEPTED: INSERT OR IGNORE — protège contre doublons en retry. Corrigé Phase 3.2.
+            cursor = await conn.execute(
+                """
+                INSERT OR IGNORE INTO model_track_record
+                (model_id, provider_id, claim_hash, predicted_confidence, predicted_agreed)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (model_id, provider_id, claim_hash, predicted_confidence, int(predicted_agreed))
+            )
+            await conn.commit()
+            return cursor.lastrowid
+
+    async def resolve_prediction(
+        self,
+        claim_hash: str,
+        actual_outcome: bool,
+        resolution_source: str = "manual",
+    ) -> int:
+        """
+        Résout toutes les prédictions pour un claim donné.
+        Calcule le Brier score pour chaque prédiction.
+
+        Returns:
+            Nombre de prédictions résolues
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT record_id, predicted_confidence, predicted_agreed
+                FROM model_track_record
+                WHERE claim_hash = ? AND actual_outcome IS NULL
+                """,
+                (claim_hash,)
+            )
+            rows = await cursor.fetchall()
+
+            resolved = 0
+            for row in rows:
+                record_id = row[0]
+                predicted = row[1]  # confidence [0, 1]
+                agreed = row[2]     # 1 or 0
+
+                # Brier score : (prediction - outcome)²
+                effective_prediction = predicted if agreed else (1.0 - predicted)
+                actual = 1.0 if actual_outcome else 0.0
+                brier = (effective_prediction - actual) ** 2
+
+                await conn.execute(
+                    """
+                    UPDATE model_track_record
+                    SET actual_outcome = ?, resolved_at = ?, resolution_source = ?, brier_score = ?
+                    WHERE record_id = ?
+                    """,
+                    (int(actual_outcome), time.time(), resolution_source, round(brier, 6), record_id)
+                )
+                resolved += 1
+
+            await conn.commit()
+            return resolved
+
+    async def get_model_brier_score(
+        self,
+        model_id: str,
+        window_days: int = 90,
+    ) -> Optional[Dict[str, Any]]:
+        """Calcule le Brier score d'un modèle sur une fenêtre glissante."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT
+                    COUNT(*) as total,
+                    AVG(brier_score) as avg_brier,
+                    MIN(brier_score) as best,
+                    MAX(brier_score) as worst
+                FROM model_track_record
+                WHERE model_id = ?
+                  AND actual_outcome IS NOT NULL
+                  AND created_at > unixepoch('now') - (? * 86400)
+                """,
+                (model_id, window_days)
+            )
+            row = await cursor.fetchone()
+            if not row or row[0] == 0:
+                return None
+            return {
+                "model_id": model_id,
+                "total_resolved": row[0],
+                "avg_brier_score": round(row[1], 4),
+                "best_brier": round(row[2], 4),
+                "worst_brier": round(row[3], 4),
+            }
+
+    # ========================================================================
+    # TIER TRANSITIONS
+    # ========================================================================
+
+    async def log_tier_transition(
+        self,
+        claim_hash: str,
+        old_tier: str,
+        new_tier: str,
+        reason: str,
+        attestation_id: Optional[int] = None,
+        run_id: Optional[int] = None,
+    ) -> int:
+        """Logue un changement de niveau de confiance."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                INSERT INTO tier_transitions
+                (claim_hash, old_tier, new_tier, reason, attestation_id, run_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (claim_hash, old_tier, new_tier, reason, attestation_id, run_id)
+            )
+            await conn.commit()
+            return cursor.lastrowid
+
+    # ========================================================================
+    # ATTESTATION QUERIES & STATUS
+    # ========================================================================
+
+    async def get_latest_attestation(self) -> Optional[Dict]:
+        """Retourne la dernière attestation stockée (par timestamp)."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT * FROM attestations
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            col_names = [d[0] for d in cursor.description]
+            result = dict(zip(col_names, row))
+            # Deserialize JSON fields
+            for json_field in ("model_votes", "signature_5d"):
+                if json_field in result and isinstance(result[json_field], str):
+                    try:
+                        result[json_field] = json.loads(result[json_field])
+                    # AUDIT[§5.2] 🟡→✅ FIXED Phase 4.3: loggé au lieu d'avalé.
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.debug(f"JSON field '{json_field}' not deserializable: {e}")
+            return result
+
+    async def get_attestation_count(self) -> int:
+        """Retourne le nombre total d'attestations."""
+        async with self.connection() as conn:
+            cursor = await conn.execute("SELECT COUNT(*) FROM attestations")
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+    # AUDIT[A4-003] 🔴 CRITICAL: submission_status manquait du schéma — ajouté Phase 3.2.
+    async def update_attestation_submission_status(
+        self,
+        claim_hash: str,
+        status: str,
+    ) -> bool:
+        """
+        Met à jour le statut de soumission d'une attestation.
+
+        Args:
+            claim_hash: Hash du claim
+            status: Nouveau statut (local | queued | submitted)
+
+        Returns:
+            True si mise à jour, False si claim_hash non trouvé
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                UPDATE attestations
+                SET submission_status = ?
+                WHERE claim_hash = ?
+                """,
+                (status, claim_hash)
+            )
+            await conn.commit()
+            return cursor.rowcount > 0
+
+    # ========================================================================
+    # SOLANA TX UPDATE
+    # ========================================================================
+
+    # AUDIT[A4-004] 🟡 FRAGILE: UPDATE sur table append-only (contradicts design doc).
+    async def update_attestation_solana_tx(
+        self,
+        claim_hash: str,
+        tx_signature: str,
+        slot: Optional[int] = None,
+    ) -> bool:
+        """
+        Met à jour une attestation après ancrage on-chain.
+
+        Args:
+            claim_hash: Hash du claim ancré
+            tx_signature: Signature de la transaction Solana
+            slot: Slot Solana (optionnel)
+
+        Returns:
+            True si mise à jour, False si claim_hash non trouvé
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                UPDATE attestations
+                SET solana_tx_signature = ?,
+                    solana_slot = ?,
+                    anchored_at = ?
+                WHERE claim_hash = ?
+                  AND solana_tx_signature IS NULL
+                """,
+                (tx_signature, slot, time.time(), claim_hash)
+            )
+            await conn.commit()
+            return cursor.rowcount > 0
+
 
 # ============================================================================
 # SINGLETON INSTANCE (Dependency Injection ready)
@@ -2155,9 +3148,13 @@ class ISpaceDB:
 _db_instance: Optional[ISpaceDB] = None
 
 
-async def get_db(db_path: str = "data/ispace.db") -> ISpaceDB:
+# AUDIT[A1-001] 🔴→✅ FIXED Phase 4.3: warning si db_path change entre appels.
+async def get_db(db_path: Optional[str] = None) -> ISpaceDB:
     """
     Get or create database instance (singleton pattern).
+
+    Uses config_loader to resolve the DB path if not provided.
+    Fallback: "data/epp.db".
 
     Usage:
         db = await get_db()
@@ -2166,8 +3163,19 @@ async def get_db(db_path: str = "data/ispace.db") -> ISpaceDB:
     global _db_instance
 
     if _db_instance is None:
+        if db_path is None:
+            try:
+                from services.config_loader import get_value
+                db_path = get_value("database", "path", "data/epp.db")
+            except Exception:
+                db_path = "data/epp.db"  # OK: fallback vers chemin par défaut si config indisponible
         _db_instance = ISpaceDB(db_path)
         await _db_instance.initialize()
+    elif db_path is not None and str(_db_instance.db_path) != str(db_path):
+        import logging
+        logging.getLogger("database.engine").warning(
+            f"get_db() called with db_path='{db_path}' but instance already exists for '{_db_instance.db_path}'. Returning existing."
+        )
 
     return _db_instance
 

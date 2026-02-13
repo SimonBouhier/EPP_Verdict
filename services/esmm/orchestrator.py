@@ -66,16 +66,18 @@ class ESMMRunConfig:
         max_total_cycles: Limite pour eviter boucles infinies
         max_duration_hours: Timeout global en heures
     """
-    models: List[str] = field(default_factory=lambda: ["llama3.1:8b", "gpt-oss:20b"])
+    models: List[str] = field(default_factory=list)  # Must be provided by caller
     seed_type: str = "standard"
     cycles_per_type: Dict[str, int] = field(default_factory=lambda: {
         "divergent": 3,
         "debate": 2,
         "meta": 1
     })
+    # AUDIT[A8-004] 🟡 FRAGILE: cycle_sequence hardcodé — config.yaml ignoré.
     cycle_sequence: List[str] = field(default_factory=lambda: [
         "divergent", "debate", "meta"
     ])
+    # AUDIT[A8-003] 🟡 FRAGILE: min_consensus=0.5 hardcodé — config.yaml dit 0.4.
     min_consensus: float = 0.5
     min_confidence: float = 0.5
     max_questions_per_cycle: int = 10
@@ -139,6 +141,7 @@ class ESMMRunResult:
     structural_stability: float
     duration_ms: float
     errors: List[str] = field(default_factory=list)
+    consensus_triplets: List = field(default_factory=list)
 
 
 # ============================================================================
@@ -155,7 +158,8 @@ class ESMMOrchestrator:
     def __init__(
         self,
         db: "ISpaceDB",
-        config: ESMMRunConfig = None
+        config: ESMMRunConfig = None,
+        providers: Optional[Dict] = None,
     ):
         """
         Initialise l'orchestrateur.
@@ -163,9 +167,11 @@ class ESMMOrchestrator:
         Args:
             db: Instance de la base de donnees
             config: Configuration du run (defaut si None)
+            providers: Dict {provider_id: ModelProvider} (D6, optional)
         """
         self.db = db
         self.config = config or ESMMRunConfig()
+        self._providers = providers
 
         # Composants (initialises dans initialize_run)
         self.cycle_manager: Optional[ExplorationCycleManager] = None
@@ -177,6 +183,7 @@ class ESMMOrchestrator:
         self._state: Optional[ESMMRunState] = None
         self._start_time: Optional[datetime] = None
         self._run_id: Optional[int] = None
+        self._collected_triplets: List = []
 
         # Statistiques accumulees
         self._stats = {
@@ -266,11 +273,12 @@ class ESMMOrchestrator:
             seed_type=self.config.seed_type
         )
 
-        # Initialiser les composants
+        # Initialiser les composants (D6: pass providers if available)
         self.cycle_manager = await create_cycle_manager(
             db=self.db,
             run_id=run_id,
-            models=self.config.models
+            models=self.config.models,
+            providers=self._providers,
         )
 
         self.gap_detector = create_gap_detector(
@@ -363,6 +371,10 @@ class ESMMOrchestrator:
                     self._stats["total_triplets"] += result.triplets_extracted
                     self._state.triplets_extracted += result.triplets_extracted
 
+                    # Collect consensus triplets (D2)
+                    if result.consensus_triplets:
+                        self._collected_triplets.extend(result.consensus_triplets)
+
                     logger.info(
                         "[ESMMOrchestrator] Cycle completed",
                         extra={
@@ -373,6 +385,7 @@ class ESMMOrchestrator:
                         }
                     )
 
+                # AUDIT[A2-012] 🟡 FRAGILE: timeout logué, cycle sauté — un cycle critique manqué fausse le consensus.
                 except Exception as e:
                     logger.error(
                         f"[ESMMOrchestrator] Cycle failed: {e}",
@@ -495,7 +508,8 @@ class ESMMOrchestrator:
             epistemic_diversity=metrics.epistemic_diversity,
             structural_stability=metrics.structural_stability,
             duration_ms=round(duration_ms, 2),
-            errors=self._stats["errors"]
+            errors=self._stats["errors"],
+            consensus_triplets=list(self._collected_triplets),
         )
 
         logger.info(

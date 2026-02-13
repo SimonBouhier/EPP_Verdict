@@ -128,6 +128,7 @@ class RelationNormalizer:
 # SINGLETON
 # ============================================================================
 
+# AUDIT[§5.5] 🟡→✅ FIXED Phase 4.3: close function ajoutée, annotation mise à jour.
 _normalizer_instance: Optional[RelationNormalizer] = None
 
 
@@ -140,3 +141,9 @@ async def get_relation_normalizer() -> RelationNormalizer:
         db = await get_db()
         _normalizer_instance = RelationNormalizer(db)
     return _normalizer_instance
+
+
+def close_relation_normalizer() -> None:
+    """Reset l'instance singleton (pour tests)."""
+    global _normalizer_instance
+    _normalizer_instance = None

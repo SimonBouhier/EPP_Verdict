@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Set
 from dataclasses import dataclass
 
-from app.embeddings import get_embeddings, EMBEDDING_DIM
+# AUDIT[A6-001] 🟢 MIGRATED: app/embeddings.py replaced with OllamaEmbeddingProvider.
+from services.providers.ollama_embeddings import get_ollama_embedding_provider
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,13 @@ class GraphPopulator:
         self.db = db
         self.batch_size = batch_size
         self._seen_concepts: Set[str] = set()
+        self._embedding_provider = None
+
+    async def _get_embedding_provider(self):
+        """Lazy-initialize the embedding provider singleton."""
+        if self._embedding_provider is None:
+            self._embedding_provider = await get_ollama_embedding_provider()
+        return self._embedding_provider
 
     def normalize_concept_name(self, raw: str) -> Optional[str]:
         """
@@ -152,10 +160,12 @@ class GraphPopulator:
         """
         Sérialise un embedding en bytes pour stockage SQLite.
 
-        Format: 1024 float32 = 4096 bytes
+        Format: N float32 = N*4 bytes (e.g., 768 * 4 = 3072 bytes for nomic-embed-text)
         """
-        if len(embedding) != EMBEDDING_DIM:
-            logger.warning(f"Embedding dimension mismatch: {len(embedding)} != {EMBEDDING_DIM}")
+        if self._embedding_provider is not None:
+            expected_dim = self._embedding_provider.get_dimension()
+            if len(embedding) != expected_dim:
+                logger.warning(f"Embedding dimension mismatch: {len(embedding)} != {expected_dim}")
 
         return struct.pack(f'{len(embedding)}f', *embedding)
 
@@ -236,7 +246,8 @@ class GraphPopulator:
                 embedding_bytes: Optional[bytes] = None
                 if generate_embeddings:
                     try:
-                        embedding = await get_embeddings(concept)
+                        provider = await self._get_embedding_provider()
+                        embedding = await provider.embed(concept)
                         embedding_bytes = self.serialize_embedding(embedding)
                         embeddings_generated += 1
                     except Exception as e:
@@ -246,10 +257,12 @@ class GraphPopulator:
 
                 # Insérer le concept
                 try:
+                    # AUDIT[A3-002] 🟢 ACCEPTED: embedding_model ajouté Phase 3.2.
                     await self.db.add_concept(
                         concept_id=concept,
                         rho_static=0.0,
                         embedding=embedding_bytes,
+                        embedding_model="mxbai-embed-large" if embedding_bytes else None,
                         source="topics_file",
                         first_seen_model=None
                     )
@@ -316,7 +329,8 @@ class GraphPopulator:
             embedding_bytes: Optional[bytes] = None
             if generate_embeddings:
                 try:
-                    embedding = await get_embeddings(concept)
+                    provider = await self._get_embedding_provider()
+                    embedding = await provider.embed(concept)
                     embedding_bytes = self.serialize_embedding(embedding)
                     embeddings_generated += 1
                 except Exception as e:
@@ -325,10 +339,12 @@ class GraphPopulator:
 
             # Insérer
             try:
+                # AUDIT[A3-002] 🟢 ACCEPTED: embedding_model ajouté Phase 3.2.
                 await self.db.add_concept(
                     concept_id=concept,
                     rho_static=0.0,
                     embedding=embedding_bytes,
+                    embedding_model="mxbai-embed-large" if embedding_bytes else None,
                     source=source
                 )
                 loaded += 1

@@ -35,34 +35,21 @@ from collections import defaultdict
 
 from tenacity import retry, stop_after_attempt, wait_exponential, RetryError
 
-from .model_rotator import get_model_rotator, BatchModelResult
+from .multi_provider_rotator import MultiProviderRotator, BatchProviderResult
 from .triplet_validator import TripletValidator
 from .consensus_engine import ConsensusEngine, ConsensusTriplet
 from .prompts import get_triplet_extraction_prompt
+from services.providers.registry import ProviderRegistry
 
 logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# MODEL WHITELIST (Security)
+# MODEL VALIDATION (Phase 0.3 — Provider-agnostic)
 # ============================================================================
-
-ALLOWED_MODELS: Set[str] = {
-    # Llama family
-    "llama3.3:70b", "llama3.1:8b", "llama3.1:70b", "llama3.2:3b",
-    # DeepSeek family
-    "deepseek-r1:8b", "deepseek-r1:14b", "deepseek-r1:32b", "deepseek-r1:70b",
-    # Mistral family
-    "mistral:7b", "mixtral:8x7b", "mistral-nemo:12b",
-    # Qwen family
-    "qwen2.5:7b", "qwen2.5:14b", "qwen2.5:32b", "qwen2.5:72b",
-    # Gemma family
-    "gemma2:9b", "gemma2:27b",
-    # Phi family
-    "phi3:14b", "phi4:14b",
-    # GPT-OSS family
-    "gpt-oss:20b",
-}
+# Per Axiom 1 (Obsolescence permanente des modèles):
+# Any model implementing the ModelProvider interface enters the system.
+# No hardcoded whitelist — validation happens via ProviderRegistry at runtime.
 
 
 # ============================================================================
@@ -125,28 +112,25 @@ class TripletExtractor:
         models: List[str] = None,
         min_consensus: float = 0.5,
         min_confidence: float = 0.5,
-        allowed_models: Set[str] = None
     ):
         """
         Initialize triplet extractor.
 
         Args:
             db: ISpaceDB instance for database operations
-            models: List of model names to use (must be in whitelist)
+            models: List of model names to use (required, no default)
             min_consensus: Minimum agreement ratio for consensus (0.0-1.0)
             min_confidence: Minimum confidence for triplet validation
-            allowed_models: Custom whitelist (defaults to ALLOWED_MODELS)
 
         Raises:
-            ValueError: If any model is not in the whitelist
+            ValueError: If models list is empty or not provided
         """
         self.db = db
-        self.allowed_models = allowed_models or ALLOWED_MODELS
 
-        # Validate and set models
-        default_models = ["llama3.1:8b", "gpt-oss:20b"]
-        self.models = models or default_models
-        self._validate_models(self.models)
+        # Models must be provided explicitly (Phase 0.3 — no hardcoded defaults)
+        if not models:
+            raise ValueError("models list is required - no hardcoded defaults")
+        self.models = models
 
         # Configuration
         self.min_confidence = min_confidence
@@ -176,23 +160,6 @@ class TripletExtractor:
                 "min_confidence": min_confidence
             }
         )
-
-    def _validate_models(self, models: List[str]) -> None:
-        """
-        Validate that all models are in the whitelist.
-
-        Args:
-            models: List of model names to validate
-
-        Raises:
-            ValueError: If any model is not allowed
-        """
-        invalid = set(models) - self.allowed_models
-        if invalid:
-            raise ValueError(
-                f"Modèles non autorisés: {invalid}. "
-                f"Modèles autorisés: {sorted(self.allowed_models)}"
-            )
 
     async def _get_entity_resolver(self):
         """
@@ -260,9 +227,10 @@ class TripletExtractor:
     )
     async def _generate_with_retry(
         self,
-        rotator,
+        rotator: MultiProviderRotator,
+        provider_ids: List[str],
         text: str
-    ) -> BatchModelResult:
+    ) -> BatchProviderResult:
         """
         Generate with automatic retry on transient failures.
 
@@ -271,9 +239,13 @@ class TripletExtractor:
         - VRAM exhaustion
         - Network errors
         """
-        return await rotator.batch_sequential_models(
-            models=self.models,
-            questions=[text],
+        # MultiProviderRotator expects questions as List[List[Dict]]
+        # Each question is a list of messages
+        messages = [{"role": "user", "content": text}]
+
+        return await rotator.batch_sequential_providers(
+            provider_ids=provider_ids,
+            questions=[messages],  # List of questions (each question is list of messages)
             system_prompt=self._get_cached_prompt(text),
             temperature=0.3  # Low temperature for consistency
         )
@@ -324,9 +296,26 @@ class TripletExtractor:
         # =====================================================================
         # STEP 1: Multi-model generation
         # =====================================================================
-        rotator = await get_model_rotator()
+        # Create MultiProviderRotator with model-specific Ollama providers
+        # Each model gets its own OllamaProvider instance
+        from services.providers.ollama import OllamaProvider
+
+        providers = {}
+        for model in self.models:
+            # Create a provider ID that includes the model name
+            provider_id = f"ollama-{model.replace(':', '_').replace('.', '_')}"
+            # Create a dedicated OllamaProvider instance for this model
+            providers[provider_id] = OllamaProvider(model=model, timeout=120.0)
+            logger.debug(f"[TripletExtractor] Created provider {provider_id} for model {model}")
+
+        if not providers:
+            raise RuntimeError("No models configured for extraction")
+
+        rotator = MultiProviderRotator(providers=providers)
+        provider_ids = list(providers.keys())
+
         try:
-            result = await self._generate_with_retry(rotator, text)
+            result = await self._generate_with_retry(rotator, provider_ids, text)
         except RetryError as e:
             logger.error(f"[TripletExtractor] Generation failed after retries: {e}")
             raise
@@ -339,16 +328,25 @@ class TripletExtractor:
         # =====================================================================
         model_triplets: Dict[str, List] = {}
 
-        for model, responses in result.results.items():
-            model_triplets[model] = []
+        # Map provider_ids back to model names for consensus
+        # provider_id format: "ollama-llama3_1_8b" -> model: "llama3.1:8b"
+        provider_to_model = {
+            provider_id: model
+            for model, provider_id in zip(self.models, provider_ids)
+        }
+
+        for provider_id, responses in result.results.items():
+            model_name = provider_to_model.get(provider_id, provider_id)
+            model_triplets[model_name] = []
             for response in responses:
                 try:
                     raw = self.validator.parse_llm_output(response.text)
                     valid, _ = self.validator.validate_batch(raw)
-                    model_triplets[model].extend(valid)
+                    model_triplets[model_name].extend(valid)
+                # AUDIT[A2-014] 🟡 FRAGILE: JSON invalide du LLM → retourne liste vide — perte silencieuse de triplets.
                 except Exception as e:
                     logger.warning(
-                        f"[TripletExtractor] Validation failed for {model}: {e}"
+                        f"[TripletExtractor] Validation failed for {model_name}: {e}"
                     )
 
         total_raw = sum(len(t) for t in model_triplets.values())
@@ -537,7 +535,8 @@ class TripletExtractor:
                         """
                         INSERT INTO relations (source, target, relation_type, weight, model_source)
                         VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT(source, target, relation_type) DO UPDATE SET
+                        -- AUDIT[A3-004] 🔴→✅ FIXED Phase 4.1: ON CONFLICT aligné sur PK (source, target).
+                        ON CONFLICT(source, target) DO UPDATE SET
                             weight = MAX(weight, excluded.weight),
                             extraction_count = extraction_count + 1
                         """,

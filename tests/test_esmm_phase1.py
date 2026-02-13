@@ -373,7 +373,7 @@ class TestSeedInjector:
 
         assert isinstance(result, SeedInjectionResult)
         assert result.seed_type == "minimal"
-        assert result.duration_ms > 0
+        assert result.duration_ms >= 0  # Can be 0.0 with mocked DB (< 1ms)
 
     @pytest.mark.asyncio
     async def test_get_seed_status(self, mock_db):
@@ -409,6 +409,7 @@ class TestESMMPhase1Integration:
     async def real_db(self, tmp_path):
         """Crée une vraie base de données pour les tests d'intégration."""
         from database import ISpaceDB
+        from database.pool import close_pool
 
         db_path = tmp_path / "test_ispace.db"
         db = ISpaceDB(str(db_path))
@@ -416,9 +417,13 @@ class TestESMMPhase1Integration:
 
         yield db
 
-        # Cleanup
+        # Cleanup: close pool first to release file locks
+        await close_pool()
         if db_path.exists():
-            db_path.unlink()
+            try:
+                db_path.unlink()
+            except PermissionError:
+                pass
 
     @pytest.mark.asyncio
     @pytest.mark.integration

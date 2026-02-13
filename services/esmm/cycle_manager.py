@@ -37,16 +37,35 @@ from .consensus_engine import ConsensusTriplet
 
 if TYPE_CHECKING:
     from database.engine import ISpaceDB
-    from .model_rotator import ModelRotator
+    from .multi_provider_rotator import MultiProviderRotator
     from .triplet_extractor import TripletExtractor
 
 logger = logging.getLogger(__name__)
+
+# Phase 4.5.1 — Max length for sanitized concept names in prompts
+_MAX_CONCEPT_LEN = 200
+
+
+def _sanitize_concept(value: str) -> str:
+    """Sanitize a concept string before template insertion (Phase 4.5.1).
+
+    Strips XML-like tags, control characters, and truncates to safe length
+    to prevent prompt injection via concept names.
+    """
+    import re
+    # Strip XML/HTML tags
+    cleaned = re.sub(r"<[^>]*>", "", value)
+    # Strip control characters (keep printable + common whitespace)
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", cleaned)
+    # Truncate
+    return cleaned[:_MAX_CONCEPT_LEN].strip()
 
 
 # ============================================================================
 # TIMEOUTS PAR TYPE DE CYCLE (secondes)
 # ============================================================================
 
+# AUDIT[A8-006] 🟡 FRAGILE: timeouts hardcodés — config.yaml::esmm.timeout_per_cycle_seconds ignoré.
 CYCLE_TIMEOUTS = {
     CycleType.DIVERGENT: 30,   # Exploration simple
     CycleType.DEBATE: 60,      # Dialectique complexe
@@ -92,7 +111,7 @@ class ExplorationCycleManager:
     def __init__(
         self,
         db: "ISpaceDB",
-        model_rotator: "ModelRotator",
+        model_rotator: "MultiProviderRotator",
         triplet_extractor: "TripletExtractor",
         run_id: int,
         models: List[str] = None
@@ -102,7 +121,7 @@ class ExplorationCycleManager:
 
         Args:
             db: Instance de la base de donnees
-            model_rotator: Rotateur de modeles VRAM-optimise
+            model_rotator: Multi-provider rotator pour orchestration des LLMs
             triplet_extractor: Extracteur de triplets multi-modeles
             run_id: ID du run ESMM courant
             models: Liste des modeles a utiliser
@@ -111,7 +130,16 @@ class ExplorationCycleManager:
         self.model_rotator = model_rotator
         self.triplet_extractor = triplet_extractor
         self.run_id = run_id
-        self.models = models or ["llama3.1:8b", "gpt-oss:20b"]
+        if not models:
+            raise ValueError("models list is required - no hardcoded defaults")
+        self.models = models
+
+        # Map model names to provider IDs for MultiProviderRotator
+        self.provider_ids = [
+            f"ollama-{model.replace(':', '_').replace('.', '_')}"
+            for model in self.models
+        ]
+        self.provider_to_model = dict(zip(self.provider_ids, self.models))
 
         # Cache des reponses modeles (evite retraitement)
         self._response_cache: Dict[str, Dict[str, str]] = {}
@@ -495,29 +523,32 @@ class ExplorationCycleManager:
 
         # Formater selon le type
         try:
+            # Phase 4.5.1 — sanitize concepts before template insertion
+            safe = [_sanitize_concept(c) for c in concepts]
+
             if cycle_type == CycleType.DIVERGENT:
-                concept = concepts[0] if concepts else "concept"
+                concept = safe[0] if safe else "concept"
                 return template.format(concept=concept)
 
             elif cycle_type == CycleType.DEBATE:
-                if len(concepts) >= 2:
+                if len(safe) >= 2:
                     return template.format(
-                        thesis=concepts[0],
-                        antithesis=concepts[1],
-                        concept_a=concepts[0],
-                        concept_b=concepts[1]
+                        thesis=safe[0],
+                        antithesis=safe[1],
+                        concept_a=safe[0],
+                        concept_b=safe[1]
                     )
                 return template.format(
-                    thesis=concepts[0] if concepts else "thesis",
+                    thesis=safe[0] if safe else "thesis",
                     antithesis="antithesis",
-                    concept_a=concepts[0] if concepts else "A",
+                    concept_a=safe[0] if safe else "A",
                     concept_b="B"
                 )
 
             elif cycle_type == CycleType.META:
                 # Formater les triplets recents
                 recent_str = format_triplets_for_prompt(self._recent_triplets)
-                domain = context.get("domain", "general")
+                domain = _sanitize_concept(context.get("domain", "general"))
                 return template.format(
                     recent_triplets=recent_str or "aucun triplet recent",
                     domain=domain
@@ -555,20 +586,22 @@ class ExplorationCycleManager:
 
         try:
             # Utiliser le model rotator pour les appels sequentiels
+            messages = [{"role": "user", "content": question}]
             result = await asyncio.wait_for(
-                self.model_rotator.batch_sequential_models(
-                    models=self.models,
-                    questions=[question],
+                self.model_rotator.batch_sequential_providers(
+                    provider_ids=self.provider_ids,
+                    questions=[messages],
                     system_prompt=system_prompt,
                     temperature=0.3
                 ),
                 timeout=timeout
             )
 
-            # Extraire les reponses
-            for model, model_responses in result.results.items():
-                if model_responses and len(model_responses) > 0:
-                    responses[model] = model_responses[0].text
+            # Extraire les reponses et mapper provider_ids -> model names
+            for provider_id, provider_responses in result.results.items():
+                model_name = self.provider_to_model.get(provider_id, provider_id)
+                if provider_responses and len(provider_responses) > 0:
+                    responses[model_name] = provider_responses[0].text
 
         except asyncio.TimeoutError:
             logger.warning(
@@ -620,19 +653,21 @@ class ExplorationCycleManager:
         responses = {}
 
         try:
+            messages = [{"role": "user", "content": simplified_question}]
             result = await asyncio.wait_for(
-                self.model_rotator.batch_sequential_models(
-                    models=self.models,
-                    questions=[simplified_question],
+                self.model_rotator.batch_sequential_providers(
+                    provider_ids=self.provider_ids,
+                    questions=[messages],
                     system_prompt=simplified_system,
                     temperature=0.5  # Plus creatif pour retry
                 ),
                 timeout=timeout
             )
 
-            for model, model_responses in result.results.items():
-                if model_responses and len(model_responses) > 0:
-                    responses[model] = model_responses[0].text
+            for provider_id, provider_responses in result.results.items():
+                model_name = self.provider_to_model.get(provider_id, provider_id)
+                if provider_responses and len(provider_responses) > 0:
+                    responses[model_name] = provider_responses[0].text
 
         except asyncio.TimeoutError:
             logger.warning("[CycleManager] Retry timeout")
@@ -691,6 +726,7 @@ class ExplorationCycleManager:
                 "models_contributed": list(responses.keys())
             }
 
+        # AUDIT[A2-013] 🟡 FRAGILE: échecs d'extraction individuels accumulés sans arrêt.
         except Exception as e:
             logger.error(f"[CycleManager] Triplet extraction error: {e}")
             return {
@@ -812,7 +848,8 @@ class ExplorationCycleManager:
 async def create_cycle_manager(
     db: "ISpaceDB",
     run_id: int,
-    models: List[str] = None
+    models: List[str] = None,
+    providers: Dict = None,
 ) -> ExplorationCycleManager:
     """
     Factory function pour ExplorationCycleManager.
@@ -823,14 +860,28 @@ async def create_cycle_manager(
         db: Instance de la base de donnees
         run_id: ID du run ESMM
         models: Liste des modeles a utiliser
+        providers: Dict {provider_id: ModelProvider} pre-configured (D6).
+                   If provided, uses these instead of creating OllamaProvider.
+                   Fallback: OllamaProvider if providers is None.
 
     Returns:
         Instance configuree de ExplorationCycleManager
     """
-    from .model_rotator import get_model_rotator
+    from .multi_provider_rotator import MultiProviderRotator
     from .triplet_extractor import get_triplet_extractor
 
-    model_rotator = await get_model_rotator()
+    if not models:
+        raise ValueError("models list is required - no hardcoded defaults")
+
+    # Use provided providers or fallback to OllamaProvider (D6)
+    if providers is None:
+        from services.providers.ollama import OllamaProvider
+        providers = {}
+        for model in models:
+            provider_id = f"ollama-{model.replace(':', '_').replace('.', '_')}"
+            providers[provider_id] = OllamaProvider(model=model, timeout=120.0)
+
+    model_rotator = MultiProviderRotator(providers=providers)
     triplet_extractor = await get_triplet_extractor(models=models)
 
     return ExplorationCycleManager(

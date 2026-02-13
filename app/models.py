@@ -27,18 +27,22 @@ class ChatRequest(BaseModel):
             "session_id": "abc-123",
             "profile": "creative",
             "enable_context": true,
-            "consciousness_level": 1
+            "consciousness_level": 1,
+            "model": "mistral:7b",
+            "use_esmm": true
         }
     """
-    text: str = Field(..., min_length=1, max_length=10000, description="User message")
+    text: str = Field(..., min_length=1, max_length=50000, description="User message")
     session_id: Optional[str] = Field(None, description="Session UUID (auto-created if None)")
     profile: str = Field("balanced", description="Bezier profile name")
     enable_context: bool = Field(True, description="Enable semantic context injection")
     max_history: int = Field(50, ge=0, le=500, description="Max conversation history messages")
     consciousness_level: int = Field(0, ge=0, le=3, description="Consciousness level: 0=off, 1=passive, 2=adaptive, 3=full")
+    model: Optional[str] = Field(None, description="Override LLM model (None = use server default)")
+    use_esmm: bool = Field(False, description="Enable ESMM triplet context injection")
 
     model_config = ConfigDict(frozen=False)  # Allow mutation for backward compat
-    
+
     @field_validator('consciousness_level')
     @classmethod
     def validate_consciousness_level(cls, v):
@@ -93,6 +97,12 @@ class ChatResponse(BaseModel):
     memory_echo: Optional[str] = Field(
         None,
         description="Formatted memory recall from semantic memory if consciousness_level >= 3"
+    )
+
+    # ESMM context info (when use_esmm=True)
+    esmm_context: Optional[Dict[str, Any]] = Field(
+        None,
+        description="ESMM triplet context info: enabled, triplets_used, avg_consensus"
     )
 
     model_config = ConfigDict(frozen=True)
@@ -744,7 +754,7 @@ class TripletExtractionResponse(BaseModel):
 ALLOWED_ESMM_MODELS = {
     "llama3.3:70b", "llama3.1:8b", "llama3.1:70b", "llama3.2:3b",
     "deepseek-r1:8b", "deepseek-r1:14b", "deepseek-r1:32b", "deepseek-r1:70b",
-    "mistral:7b", "mixtral:8x7b", "mistral-nemo:12b",
+    "mistral", "mistral:7b", "mixtral:8x7b", "mistral-nemo:12b",
     "qwen2.5:7b", "qwen2.5:14b", "qwen2.5:32b", "qwen2.5:72b",
     "gemma2:9b", "gemma2:27b",
     "phi3:14b", "phi4:14b",
@@ -758,7 +768,7 @@ class ESMMRunRequest(BaseModel):
 
     Example:
         {
-            "models": ["llama3.1:8b", "gpt-oss:20b"],
+            "models": ["mistral", "gpt-oss:20b"],
             "seed_type": "standard",
             "cycles_per_type": {"divergent": 3, "debate": 2, "meta": 1},
             "min_consensus": 0.5,
@@ -766,7 +776,7 @@ class ESMMRunRequest(BaseModel):
         }
     """
     models: List[str] = Field(
-        default=["llama3.1:8b", "gpt-oss:20b"],
+        default=["mistral", "gpt-oss:20b"],
         min_length=1,
         max_length=5,
         description="Modeles a utiliser (whitelist)"

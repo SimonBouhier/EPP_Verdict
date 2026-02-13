@@ -1,0 +1,304 @@
+============================================================
+AUDIT PHASE 4 — Résultats
+============================================================
+
+=== 2. SINGLETONS (C2) — global _ dans code production ===
+(aucun trouvé)
+Total : 0
+
+=== 3. EXCEPT SILENCIEUX (C3) — except ... pass sans log/raise/AUDIT ===
+(aucun trouvé)
+Total : 0
+
+=== 4. ASSERTIONS FAIBLES (C6) — assert is not None / assert True ===
+(aucune trouvée)
+Total : 0
+
+=== 5. GIT STATUS ===
+M ../../.claude/settings.local.json
+ M ../../README.md
+ D ../../app/__pycache__/embeddings.cpython-310.pyc
+MM ../../app/__pycache__/models.cpython-310.pyc
+ M ../../app/api/__pycache__/chat.cpython-310.pyc
+ M ../../app/api/chat.py
+ D ../../app/embeddings.py
+ M ../../app/main.py
+MM ../../app/models.py
+ M ../../app/static/index.html
+ M ../../config.yaml
+MM ../../data/ispace.db
+D  ../../data/ispace.db-shm
+D  ../../data/ispace.db-wal
+ M ../../database/__pycache__/engine.cpython-310.pyc
+ M ../../database/__pycache__/pool.cpython-310.pyc
+ M ../../database/engine.py
+ M ../../database/pool.py
+ M ../../database/schema.sql
+ D ../../docs/README.md
+ D ../../docs/To_do_list/IMPLEMENTATION_ROADMAP_CLAUDE_CODE.md
+ D ../../docs/To_do_list/LYRA_ACE_ESMM_ROADMAP.md
+ D ../../docs/To_do_list/schema_v2.sql
+ D ../../docs/en/API_REFERENCE.md
+ D ../../docs/en/CONFIGURATION.md
+ D ../../docs/en/DEVELOPER_GUIDE.md
+ D ../../docs/en/USER_GUIDE.md
+ D ../../docs/fr/API_REFERENCE.md
+ M ../../docs/fr/CHANGELOG.md
+ D ../../docs/fr/CONFIGURATION.md
+ D ../../docs/fr/DATABASE.md
+ D ../../docs/fr/DEVELOPER_GUIDE.md
+ D ../../docs/fr/ESMM_PROTOCOL.md
+ D ../../docs/fr/USER_GUIDE.md
+ D ../../gpt-oss_20b/20260119_095850_3919c65a.json
+ D ../../gpt-oss_20b/20260119_102536_95b89ef3.json
+ D ../../gpt-oss_20b/20260119_102918_12df5039.json
+M  ../../run_esmm.bat
+M  ../../scripts/esmm_cli.py
+ M ../../services/__pycache__/entity_resolver.cpython-310.pyc
+ M ../../services/__pycache__/relation_normalizer.cpython-310.pyc
+ M ../../services/__pycache__/session_storage.cpython-310.pyc
+ M ../../services/consciousness/__pycache__/memory.cpython-310.pyc
+ M ../../services/consciousness/memory.py
+ M ../../services/entity_resolver.py
+ M ../../services/esmm/__init__.py
+ M ../../services/esmm/__pycache__/__init__.cpython-310.pyc
+MM ../../services/esmm/__pycache__/cycle_manager.cpython-310.pyc
+MM ../../services/esmm/__pycache__/orchestrator.cpython-310.pyc
+ M ../../services/esmm/__pycache__/populate_graph.cpython-310.pyc
+ M ../../services/esmm/__pycache__/seed_injector.cpython-310.pyc
+MM ../../services/esmm/__pycache__/triplet_extractor.cpython-310.pyc
+ M ../../services/esmm/__pycache__/triplet_validator.cpython-310.pyc
+MM ../../services/esmm/cycle_manager.py
+A  ../../services/esmm/log_temp/logs_esmm_full_1.txt
+A  ../../services/esmm/log_temp/logs_esmm_full_2.txt
+MM ../../services/esmm/orchestrator.py
+ M ../../services/esmm/populate_graph.py
+ M ../../services/esmm/seed_injector.py
+MM ../../services/esmm/triplet_extractor.py
+ M ../../services/esmm/triplet_validator.py
+ M ../../services/relation_normalizer.py
+ M ../../services/session_storage.py
+ M ../test_esmm_phase1.py
+ M ../../tools/hydrate_embeddings.py
+?? ../../.claude/settings.json
+?? ../../.claude/skills/
+?? ../../cli/
+?? "../../c\357\200\272UserssimonPROJECTSEPP_Verdicttestsfull_test_results.txt"
+?? ../../data/epp.db
+?? ../../data/epp.db-shm
+?? ../../data/epp.db-wal
+?? ../../data/ispace.db-shm
+?? ../../data/ispace.db-wal
+?? ../../data/test_ispace.db
+?? ../../data/test_singleton_a.db
+?? ../../demos/
+?? ../../desktop.ini
+?? ../../docs/ARCHITECTURE.md
+?? ../../docs/To_do_list/AUDIT_INTERNE.md
+?? ../../docs/To_do_list/CLAUDE.md
+?? ../../docs/To_do_list/CORRECTIONS_POOL_AND_ROLLBACK.md
+?? ../../docs/To_do_list/EPP_PLAN_MVP.md
+?? ../../docs/To_do_list/INSTRUCTIONS_TESTS.md
+?? ../../docs/To_do_list/PHASE_0_2_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_0_3_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_1_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_2_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_3_2_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_3_3_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_3_CORRECTIONS.md
+?? ../../docs/To_do_list/PHASE_3_INSTRUCTIONS_FINAL.md
+?? ../../docs/To_do_list/PHASE_4_7_INSTRUCTIONS.md
+?? ../../docs/To_do_list/PHASE_4_PLAN.md
+?? ../../docs/adr/
+?? ../../docs/fr/AUDIT_REPORT.md
+?? ../../logs/audit_phase4.log
+?? ../../nul
+?? ../../programs/
+?? ../../pytest.ini
+?? ../../saves/deepseek-r1_latest/
+?? ../../saves/gpt-oss_20b/20260126_223913_0d6227ed.json
+?? ../../services/__pycache__/config_loader.cpython-310.pyc
+?? ../../services/config_loader.py
+?? ../../services/esmm/__pycache__/attestation.cpython-310.pyc
+?? ../../services/esmm/__pycache__/multi_provider_rotator.cpython-310.pyc
+?? ../../services/esmm/__pycache__/pipeline.cpython-310.pyc
+?? ../../services/esmm/__pycache__/post_crystallization.cpython-310.pyc
+?? ../../services/esmm/__pycache__/question_seeder.cpython-310.pyc
+?? ../../services/esmm/__pycache__/run_logger.cpython-310.pyc
+?? ../../services/esmm/__pycache__/triplet_adapter.cpython-310.pyc
+?? ../../services/esmm/attestation.py
+?? ../../services/esmm/multi_provider_rotator.py
+?? ../../services/esmm/pipeline.py
+?? ../../services/esmm/post_crystallization.py
+?? ../../services/esmm/question_seeder.py
+?? ../../services/esmm/run_logger.py
+?? ../../services/esmm/triplet_adapter.py
+?? ../../services/providers/
+?? ../../services/solana/
+?? ../__pycache__/conftest.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_ab_metrics.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_bridge_solana_compat.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_esmm_phase1.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase02_decoupling.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase02_migration.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase02_schema.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase02_search.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_attestation.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_audit.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_integration.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_logging.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_revalidation.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase03_storage.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase1_bridge.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase1_cli.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase1_client.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase1_frame.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase1_integration.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_confidence.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_config.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_diversity.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_frames_db.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_integration.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_pipeline.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase2_track_record.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_cli.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_config_loader.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_integration.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_mock_provider.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_orchestrator.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_pipeline.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_post_crystallization.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_question_seeder.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_track_record.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase3_triplet_adapter.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase4_runtime_fixes.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase4_security.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_phase4_solana.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_providers.cpython-310-pytest-9.0.1.pyc
+?? ../__pycache__/test_rotator.cpython-310-pytest-9.0.1.pyc
+?? ./
+?? ../conftest.py
+?? ../full_test_results.txt
+?? ../test_bridge_solana_compat.py
+?? ../test_phase02_decoupling.py
+?? ../test_phase02_migration.py
+?? ../test_phase02_schema.py
+?? ../test_phase02_search.py
+?? ../test_phase03_attestation.py
+?? ../test_phase03_audit.py
+?? ../test_phase03_integration.py
+?? ../test_phase03_logging.py
+?? ../test_phase03_revalidation.py
+?? ../test_phase03_storage.py
+?? ../test_phase1_bridge.py
+?? ../test_phase1_cli.py
+?? ../test_phase1_client.py
+?? ../test_phase1_frame.py
+?? ../test_phase1_integration.py
+?? ../test_phase2_confidence.py
+?? ../test_phase2_config.py
+?? ../test_phase2_diversity.py
+?? ../test_phase2_frames_db.py
+?? ../test_phase2_integration.py
+?? ../test_phase2_pipeline.py
+?? ../test_phase2_track_record.py
+?? ../test_phase3_cli.py
+?? ../test_phase3_config_loader.py
+?? ../test_phase3_integration.py
+?? ../test_phase3_mock_provider.py
+?? ../test_phase3_orchestrator.py
+?? ../test_phase3_pipeline.py
+?? ../test_phase3_post_crystallization.py
+?? ../test_phase3_question_seeder.py
+?? ../test_phase3_track_record.py
+?? ../test_phase3_triplet_adapter.py
+?? ../test_phase4_runtime_fixes.py
+?? ../test_phase4_security.py
+?? ../test_phase4_solana.py
+?? ../test_providers.py
+?? ../test_rotator.py
+?? ../../tools/migrate_embeddings.py
+
+=== 6. GIT DIFF STAT ===
+.claude/settings.local.json                        |   33 +-
+ README.md                                          |  535 ++---
+ app/__pycache__/embeddings.cpython-310.pyc         |  Bin 2462 -> 0 bytes
+ app/__pycache__/models.cpython-310.pyc             |  Bin 30407 -> 30744 bytes
+ app/api/__pycache__/chat.cpython-310.pyc           |  Bin 7963 -> 9357 bytes
+ app/api/chat.py                                    |   76 +-
+ app/embeddings.py                                  |   90 -
+ app/main.py                                        |   29 +
+ app/models.py                                      |   16 +-
+ app/static/index.html                              |  425 +++-
+ config.yaml                                        |  128 +-
+ data/ispace.db                                     |  Bin 782336 -> 1097728 bytes
+ database/__pycache__/engine.cpython-310.pyc        |  Bin 62100 -> 92716 bytes
+ database/__pycache__/pool.cpython-310.pyc          |  Bin 15072 -> 15299 bytes
+ database/engine.py                                 | 1042 +++++++++-
+ database/pool.py                                   |   19 +-
+ database/schema.sql                                |  273 ++-
+ docs/README.md                                     |  146 --
+ .../IMPLEMENTATION_ROADMAP_CLAUDE_CODE.md          | 1473 --------------
+ docs/To_do_list/LYRA_ACE_ESMM_ROADMAP.md           | 1535 ---------------
+ docs/To_do_list/schema_v2.sql                      |  772 --------
+ docs/en/API_REFERENCE.md                           | 1489 --------------
+ docs/en/CONFIGURATION.md                           |  876 ---------
+ docs/en/DEVELOPER_GUIDE.md                         | 1588 ---------------
+ docs/en/USER_GUIDE.md                              | 1037 ----------
+ docs/fr/API_REFERENCE.md                           | 2066 --------------------
+ docs/fr/CHANGELOG.md                               |  463 ++---
+ docs/fr/CONFIGURATION.md                           |  876 ---------
+ docs/fr/DATABASE.md                                |  205 --
+ docs/fr/DEVELOPER_GUIDE.md                         | 1588 ---------------
+ docs/fr/ESMM_PROTOCOL.md                           |  544 ------
+ docs/fr/USER_GUIDE.md                              | 1165 -----------
+ gpt-oss_20b/20260119_095850_3919c65a.json          | 1014 ----------
+ gpt-oss_20b/20260119_102536_95b89ef3.json          |   67 -
+ gpt-oss_20b/20260119_102918_12df5039.json          |  183 --
+ .../__pycache__/entity_resolver.cpython-310.pyc    |  Bin 6007 -> 6360 bytes
+ .../relation_normalizer.cpython-310.pyc            |  Bin 3881 -> 4058 bytes
+ .../__pycache__/session_storage.cpython-310.pyc    |  Bin 13415 -> 13543 bytes
+ .../__pycache__/memory.cpython-310.pyc             |  Bin 9163 -> 9160 bytes
+ services/consciousness/memory.py                   |    3 +-
+ services/entity_resolver.py                        |   26 +-
+ services/esmm/__init__.py                          |    2 -
+ services/esmm/__pycache__/__init__.cpython-310.pyc |  Bin 3521 -> 3488 bytes
+ .../esmm/__pycache__/cycle_manager.cpython-310.pyc |  Bin 29253 -> 30976 bytes
+ .../esmm/__pycache__/orchestrator.cpython-310.pyc  |  Bin 15463 -> 15672 bytes
+ .../__pycache__/populate_graph.cpython-310.pyc     |  Bin 9444 -> 9965 bytes
+ .../esmm/__pycache__/seed_injector.cpython-310.pyc |  Bin 10825 -> 11000 bytes
+ .../__pycache__/triplet_extractor.cpython-310.pyc  |  Bin 16210 -> 16147 bytes
+ .../__pycache__/triplet_validator.cpython-310.pyc  |  Bin 10907 -> 10904 bytes
+ services/esmm/cycle_manager.py                     |  109 +-
+ services/esmm/orchestrator.py                      |   24 +-
+ services/esmm/populate_graph.py                    |   28 +-
+ services/esmm/seed_injector.py                     |   13 +-
+ services/esmm/triplet_extractor.py                 |  113 +-
+ services/esmm/triplet_validator.py                 |    4 +-
+ services/relation_normalizer.py                    |    7 +
+ services/session_storage.py                        |    9 +-
+ tests/test_esmm_phase1.py                          |   11 +-
+ tools/hydrate_embeddings.py                        |   16 +-
+ 59 files changed, 2501 insertions(+), 17617 deletions(-)
+
+=== 6b. GIT DIFF STAGED STAT ===
+app/__pycache__/models.cpython-310.pyc             |  Bin 30402 -> 30407 bytes
+ app/models.py                                      |    6 +-
+ data/ispace.db                                     |  Bin 479232 -> 782336 bytes
+ data/ispace.db-shm                                 |  Bin 32768 -> 0 bytes
+ data/ispace.db-wal                                 |  Bin 20632 -> 0 bytes
+ run_esmm.bat                                       |    2 +-
+ scripts/esmm_cli.py                                |    2 +-
+ .../esmm/__pycache__/cycle_manager.cpython-310.pyc |  Bin 29257 -> 29253 bytes
+ .../esmm/__pycache__/orchestrator.cpython-310.pyc  |  Bin 15467 -> 15463 bytes
+ .../__pycache__/triplet_extractor.cpython-310.pyc  |  Bin 16201 -> 16210 bytes
+ services/esmm/cycle_manager.py                     |    2 +-
+ services/esmm/log_temp/logs_esmm_full_1.txt        | 2094 ++++++++++++++++++++
+ services/esmm/log_temp/logs_esmm_full_2.txt        | 1539 ++++++++++++++
+ services/esmm/orchestrator.py                      |    2 +-
+ services/esmm/triplet_extractor.py                 |    2 +-
+ 15 files changed, 3641 insertions(+), 8 deletions(-)
+
+============================================================
+FIN AUDIT
+============================================================

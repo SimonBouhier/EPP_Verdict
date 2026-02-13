@@ -295,26 +295,12 @@ CREATE TABLE IF NOT EXISTS session_adjustments (
 
 CREATE INDEX IF NOT EXISTS idx_session_adjustments ON session_adjustments(session_id, turn_number DESC);
 
--- ============================================================================
--- TABLE 10: SEMANTIC_MEMORY (Mémoire sémantique Phase 3)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS semantic_memory (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    turn_number INTEGER NOT NULL,
-    
-    content TEXT NOT NULL,
-    embeddings BLOB NOT NULL,                -- JSON array 1024 floats
-    
-    timestamp REAL NOT NULL DEFAULT (unixepoch('now')),
-    
-    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_semantic_memory_session ON semantic_memory(session_id, turn_number DESC);
+-- TABLE 10: SEMANTIC_MEMORY supprimée (Phase 4.4.3).
+-- SemanticMemory fonctionne en mémoire (services/consciousness/memory.py).
+-- Si une persistance DB est requise, recréer la table via migration.
 
 -- ============================================================================
--- TABLE 11: GRAPH_DELTAS (Historique des mutations - audit & rollback)
+-- TABLE 10: GRAPH_DELTAS (Historique des mutations - audit & rollback)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS graph_deltas (
     delta_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -349,7 +335,50 @@ CREATE INDEX IF NOT EXISTS idx_deltas_source ON graph_deltas(source);
 CREATE INDEX IF NOT EXISTS idx_deltas_rollback ON graph_deltas(rolled_back_at) WHERE rolled_back_at IS NOT NULL;
 
 -- ============================================================================
--- TABLE 12: KAPPA_HISTORY (Historique des courbures pour analyse)
+-- TABLE 12: CONCEPT_EMBEDDINGS (Stockage multi-versions des embeddings)
+-- ============================================================================
+-- Phase 0.2: Permet de changer de modèle d'embedding sans perdre les anciens vecteurs.
+
+CREATE TABLE IF NOT EXISTS concept_embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    concept_id TEXT NOT NULL,
+    model_id TEXT NOT NULL,           -- ex: "nomic-embed-text", "mxbai-embed-large"
+    dimension INTEGER NOT NULL,       -- ex: 768, 1024
+    embedding BLOB NOT NULL,          -- vecteur float32 sérialisé
+    created_at REAL NOT NULL DEFAULT (unixepoch('now')),
+
+    UNIQUE(concept_id, model_id),
+    FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_concept_embeddings_model ON concept_embeddings(model_id);
+CREATE INDEX IF NOT EXISTS idx_concept_embeddings_concept ON concept_embeddings(concept_id);
+
+-- ============================================================================
+-- TABLE 13: EMBEDDING_MIGRATIONS (Journal des migrations de modèle)
+-- ============================================================================
+-- Phase 0.2: Traçabilité complète des migrations d'embeddings.
+
+CREATE TABLE IF NOT EXISTS embedding_migrations (
+    migration_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_model TEXT NOT NULL,
+    to_model TEXT NOT NULL,
+    dimension_from INTEGER NOT NULL,
+    dimension_to INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'running' | 'completed' | 'failed' | 'rolled_back'
+    concepts_total INTEGER DEFAULT 0,
+    concepts_migrated INTEGER DEFAULT 0,
+    concepts_failed INTEGER DEFAULT 0,
+    started_at REAL,
+    completed_at REAL,
+    triggered_by TEXT DEFAULT 'manual',      -- 'manual' | 'config_change' | 'cli'
+    error_log TEXT                            -- JSON array of {concept_id, error}
+);
+
+CREATE INDEX IF NOT EXISTS idx_embedding_migrations_status ON embedding_migrations(status);
+
+-- ============================================================================
+-- TABLE 14: KAPPA_HISTORY (Historique des courbures pour analyse)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS kappa_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -752,6 +781,212 @@ BEGIN
         message_count = message_count + 1
     WHERE session_id = NEW.session_id;
 END;
+
+-- ============================================================================
+-- TABLE 19: ATTESTATIONS (Attestations épistémiques cristallisées)
+-- ============================================================================
+-- Output final du pipeline ESMM. Contrat d'interface avec la couche Solana.
+-- Chaque attestation correspond à un triplet validé par consensus.
+
+CREATE TABLE IF NOT EXISTS attestations (
+    -- Clé primaire
+    attestation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Identifiant déterministe
+    claim_hash TEXT NOT NULL,                -- SHA-256(subject|predicate|object|frame)
+
+    -- Contenu (triplet canonique)
+    subject TEXT NOT NULL,                   -- max 64 chars
+    predicate TEXT NOT NULL,                 -- max 64 chars (relation canonique)
+    object TEXT NOT NULL,                    -- max 128 chars
+
+    -- Consensus
+    consensus_score REAL NOT NULL,           -- [0, 1]
+    models_consulted INTEGER NOT NULL,
+    models_agreeing INTEGER NOT NULL,
+    model_votes TEXT NOT NULL,               -- JSON: [{model_id, provider_id, agreed, confidence, weight}]
+
+    -- Signature épistémique 5D
+    sig_agreement REAL NOT NULL,
+    sig_semantic_consistency REAL NOT NULL,
+    sig_centrality REAL NOT NULL,
+    sig_stability REAL NOT NULL,
+    sig_relation_diversity REAL NOT NULL,
+
+    -- Classification
+    epistemic_type TEXT NOT NULL,            -- 'foundational' | 'bridge' | 'specialized' | ...
+    confidence_tier TEXT NOT NULL,           -- 'low' | 'medium' | 'high' | 'verified'
+
+    -- Provenance
+    metrological_frame TEXT,                 -- ID du référentiel applicable
+    source_anchor TEXT,                      -- Hash source vérifiable externe
+    run_id INTEGER,                          -- FK vers esmm_runs
+    question TEXT,                           -- Question originale
+
+    -- Temporel
+    timestamp REAL NOT NULL,
+    protocol_version TEXT NOT NULL DEFAULT '0.3',
+
+    -- Revalidation
+    validation_count INTEGER DEFAULT 1,
+    previous_hash TEXT,                      -- Hash attestation précédente si revalidation
+
+    -- Sérialisation complète
+    portable_json TEXT,                      -- JSON déterministe complet (pour vérification)
+
+    -- Ancrage on-chain (Phase 1 — NULL jusqu'à implémentation Solana)
+    solana_tx_signature TEXT,                -- Signature transaction Solana
+    solana_slot INTEGER,                     -- Slot Solana
+    anchored_at REAL,                        -- Timestamp ancrage
+    submission_status TEXT DEFAULT 'pending', -- 'pending' | 'submitted' | 'confirmed' | 'failed'
+
+    FOREIGN KEY (run_id) REFERENCES esmm_runs(run_id) ON DELETE SET NULL
+);
+
+-- Index
+CREATE INDEX IF NOT EXISTS idx_attestations_hash ON attestations(claim_hash);
+CREATE INDEX IF NOT EXISTS idx_attestations_subject ON attestations(subject);
+CREATE INDEX IF NOT EXISTS idx_attestations_predicate ON attestations(predicate);
+CREATE INDEX IF NOT EXISTS idx_attestations_consensus ON attestations(consensus_score DESC);
+CREATE INDEX IF NOT EXISTS idx_attestations_tier ON attestations(confidence_tier);
+CREATE INDEX IF NOT EXISTS idx_attestations_run ON attestations(run_id);
+CREATE INDEX IF NOT EXISTS idx_attestations_frame ON attestations(metrological_frame);
+CREATE INDEX IF NOT EXISTS idx_attestations_timestamp ON attestations(timestamp DESC);
+
+-- Vue : attestations de haute confiance
+CREATE VIEW IF NOT EXISTS v_high_confidence_attestations AS
+SELECT
+    attestation_id,
+    claim_hash,
+    subject,
+    predicate,
+    object,
+    consensus_score,
+    confidence_tier,
+    models_consulted,
+    models_agreeing,
+    validation_count,
+    timestamp
+FROM attestations
+WHERE confidence_tier IN ('validated', 'verified', 'high')
+ORDER BY consensus_score DESC;
+
+-- ============================================================================
+-- TABLE 20: METROLOGICAL_FRAMES (Référentiels métrologiques persistés)
+-- ============================================================================
+-- Les frames sont versionés et hashés. Le hash est ancré on-chain avec chaque
+-- attestation. Le contenu complet est stocké ici pour vérification off-chain.
+
+CREATE TABLE IF NOT EXISTS metrological_frames (
+    -- Clé primaire
+    frame_id TEXT NOT NULL,              -- Ex: "blockchain_tps_v1.0"
+    version TEXT NOT NULL,               -- Ex: "1.0"
+
+    -- Contenu
+    domain TEXT NOT NULL,                -- Ex: "blockchain_metrics"
+    metric TEXT NOT NULL,                -- Ex: "transactions_per_second"
+    description TEXT NOT NULL,
+    parameters TEXT NOT NULL,            -- JSON
+    required_sources INTEGER NOT NULL DEFAULT 1,
+
+    -- Gouvernance
+    governance TEXT NOT NULL,            -- JSON: {current_authority, amendment_process, target_authority}
+
+    -- Hash déterministe
+    frame_hash TEXT NOT NULL,            -- SHA-256 du frame canonique
+
+    -- Tracking
+    created_at REAL NOT NULL DEFAULT (unixepoch('now')),
+    created_by TEXT DEFAULT 'system',    -- 'system' | 'user' | 'cli'
+
+    PRIMARY KEY (frame_id, version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_frames_hash ON metrological_frames(frame_hash);
+CREATE INDEX IF NOT EXISTS idx_frames_domain ON metrological_frames(domain);
+
+
+-- ============================================================================
+-- TABLE 21: MODEL_TRACK_RECORD (Historique de performance des modèles)
+-- ============================================================================
+-- Chaque entrée = une prédiction d'un modèle sur un claim résolu.
+-- Utilisé pour calculer le Brier score et ajuster les poids dans le consensus.
+
+CREATE TABLE IF NOT EXISTS model_track_record (
+    record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    -- Identité du modèle
+    model_id TEXT NOT NULL,              -- Ex: "ollama::mistral:7b"
+    provider_id TEXT NOT NULL,           -- Ex: "ollama"
+
+    -- Prédiction
+    claim_hash TEXT NOT NULL,            -- Hash du claim évalué
+    predicted_confidence REAL NOT NULL,  -- Confiance du modèle [0, 1]
+    predicted_agreed INTEGER NOT NULL,   -- 1 = a voté pour, 0 = a voté contre
+
+    -- Résolution (rempli plus tard quand le claim est vérifié)
+    actual_outcome INTEGER,              -- NULL = non résolu, 1 = vrai, 0 = faux
+    resolved_at REAL,                    -- Timestamp de résolution
+    resolution_source TEXT,              -- "external_api" | "manual" | "revalidation"
+
+    -- Score Brier pour cette prédiction (calculé à la résolution)
+    brier_score REAL,                    -- (predicted - actual)² pour cette prédiction
+
+    -- Tracking
+    created_at REAL NOT NULL DEFAULT (unixepoch('now')),
+
+    FOREIGN KEY (claim_hash) REFERENCES attestations(claim_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_track_model ON model_track_record(model_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_track_claim ON model_track_record(claim_hash);
+CREATE INDEX IF NOT EXISTS idx_track_unresolved ON model_track_record(actual_outcome) WHERE actual_outcome IS NULL;
+
+
+-- ============================================================================
+-- TABLE 22: TIER_TRANSITIONS (Historique des changements de niveau de confiance)
+-- ============================================================================
+-- Chaque promotion ou rétrogradation est loggée ici.
+
+CREATE TABLE IF NOT EXISTS tier_transitions (
+    transition_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    claim_hash TEXT NOT NULL,
+    old_tier TEXT NOT NULL,              -- "sandbox" | "proposition" | "validated" | "verified"
+    new_tier TEXT NOT NULL,
+    reason TEXT NOT NULL,                -- Ex: "consensus_increased", "source_anchor_added", "revalidation_degraded"
+
+    -- Contexte
+    attestation_id INTEGER,
+    run_id INTEGER,
+
+    -- Tracking
+    transitioned_at REAL NOT NULL DEFAULT (unixepoch('now')),
+
+    FOREIGN KEY (claim_hash) REFERENCES attestations(claim_hash),
+    FOREIGN KEY (attestation_id) REFERENCES attestations(attestation_id),
+    FOREIGN KEY (run_id) REFERENCES esmm_runs(run_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transitions_claim ON tier_transitions(claim_hash, transitioned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transitions_tier ON tier_transitions(new_tier);
+
+-- Vue : Brier score par modèle (fenêtre glissante 90 jours)
+CREATE VIEW IF NOT EXISTS v_model_brier_scores AS
+SELECT
+    model_id,
+    provider_id,
+    COUNT(*) as total_predictions,
+    COUNT(actual_outcome) as resolved_predictions,
+    AVG(brier_score) as avg_brier_score,
+    MIN(brier_score) as best_brier,
+    MAX(brier_score) as worst_brier
+FROM model_track_record
+WHERE created_at > unixepoch('now') - (90 * 86400)
+  AND actual_outcome IS NOT NULL
+GROUP BY model_id, provider_id
+ORDER BY avg_brier_score ASC;
+
 
 -- ============================================================================
 -- NOTES DE PERFORMANCE

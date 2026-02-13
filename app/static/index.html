@@ -836,6 +836,155 @@
             color: var(--text-secondary);
         }
 
+        /* Options Button */
+        .options-btn {
+            background: linear-gradient(135deg, var(--accent-secondary), #5b21b6);
+            color: white;
+            border: none;
+        }
+
+        .options-btn:hover {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            border: none;
+            color: white;
+        }
+
+        /* Options Modal Specific Styles */
+        .options-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .options-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .options-section select {
+            width: 100%;
+        }
+
+        .esmm-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        .esmm-toggle-label {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .esmm-toggle-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .esmm-stats {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 1rem;
+        }
+
+        .esmm-stats-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .esmm-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .esmm-stat-item {
+            text-align: center;
+        }
+
+        .esmm-stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .esmm-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .esmm-stats-loading {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 1rem;
+        }
+
+        .esmm-stats-error {
+            text-align: center;
+            color: var(--warning-color);
+            font-size: 0.85rem;
+            padding: 1rem;
+        }
+
+        /* ESMM indicator in chat metadata */
+        .esmm-context-info {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid var(--accent-secondary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .esmm-context-title {
+            font-size: 0.8rem;
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .esmm-context-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .esmm-context-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .esmm-context-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .esmm-context-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        /* Model name in metadata */
+        .model-name {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-secondary);
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .header {
@@ -894,6 +1043,9 @@
                 </button>
                 <button class="new-session-btn" id="newSessionBtn" title="Start a new session">
                     New Session
+                </button>
+                <button class="new-session-btn options-btn" id="advancedOptionsBtn" title="Options avancées ESMM">
+                    Options
                 </button>
             </div>
         </div>
@@ -986,6 +1138,54 @@
         </div>
     </div>
 
+    <!-- Advanced Options Modal -->
+    <div class="modal-overlay" id="optionsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Options Avancées</div>
+                <button class="modal-close" id="closeOptionsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Model Selection -->
+                <div class="options-section">
+                    <div class="options-section-title">Modèle LLM</div>
+                    <div class="select-wrapper">
+                        <select id="modelSelect">
+                            <option value="">Défaut serveur</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ESMM Toggle -->
+                <div class="options-section">
+                    <div class="options-section-title">Enrichissement ESMM</div>
+                    <div class="esmm-toggle-row">
+                        <div class="esmm-toggle-label">
+                            <div>Utiliser les triplets ESMM</div>
+                            <div class="esmm-toggle-desc">Injecte les connaissances extraites par consensus multi-modèles</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="esmmToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ESMM Stats -->
+                <div class="options-section">
+                    <div class="options-section-title">Status du Graphe</div>
+                    <div class="esmm-stats" id="esmmStatsContainer">
+                        <div class="esmm-stats-loading">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="new-session-btn" id="cancelOptionsBtn">Annuler</button>
+                <button class="send-button" id="applyOptionsBtn">Appliquer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Load Session Modal -->
     <div class="modal-overlay" id="loadModal">
         <div class="modal">
@@ -1039,7 +1239,12 @@
             maxHistory: 50,
             currentModel: localStorage.getItem('lyra_model') || 'unknown',
             saves: [],
-            selectedSave: null
+            selectedSave: null,
+            // Advanced options
+            selectedModel: localStorage.getItem('lyra_selected_model') || null,
+            useEsmm: localStorage.getItem('lyra_use_esmm') === 'true',
+            availableModels: [],
+            esmmStats: null
         };
 
         // ========================================================================
@@ -1066,7 +1271,16 @@
             modelFilter: document.getElementById('modelFilter'),
             savesList: document.getElementById('savesList'),
             cancelLoadBtn: document.getElementById('cancelLoadBtn'),
-            confirmLoadBtn: document.getElementById('confirmLoadBtn')
+            confirmLoadBtn: document.getElementById('confirmLoadBtn'),
+            // Advanced options elements
+            advancedOptionsBtn: document.getElementById('advancedOptionsBtn'),
+            optionsModal: document.getElementById('optionsModal'),
+            closeOptionsModal: document.getElementById('closeOptionsModal'),
+            modelSelect: document.getElementById('modelSelect'),
+            esmmToggle: document.getElementById('esmmToggle'),
+            esmmStatsContainer: document.getElementById('esmmStatsContainer'),
+            cancelOptionsBtn: document.getElementById('cancelOptionsBtn'),
+            applyOptionsBtn: document.getElementById('applyOptionsBtn')
         };
 
         // ========================================================================
@@ -1132,6 +1346,12 @@
             elements.cancelLoadBtn.addEventListener('click', closeLoadModal);
             elements.confirmLoadBtn.addEventListener('click', confirmLoadSession);
             elements.modelFilter.addEventListener('change', handleModelFilterChange);
+
+            // Advanced options event listeners
+            elements.advancedOptionsBtn.addEventListener('click', openOptionsModal);
+            elements.closeOptionsModal.addEventListener('click', closeOptionsModal);
+            elements.cancelOptionsBtn.addEventListener('click', closeOptionsModal);
+            elements.applyOptionsBtn.addEventListener('click', applyOptions);
 
             // Auto-resize textarea
             elements.messageInput.addEventListener('input', autoResizeTextarea);
@@ -1280,6 +1500,16 @@
                     `;
                 }
 
+                // Model used
+                if (message.metadata.model) {
+                    metadata.innerHTML += `
+                        <div class="metadata-item">
+                            <span class="metadata-label">Model:</span>
+                            <span class="model-name">${escapeHtml(message.metadata.model)}</span>
+                        </div>
+                    `;
+                }
+
                 // Physics state
                 if (message.metadata.physics_state) {
                     const ps = message.metadata.physics_state;
@@ -1337,6 +1567,27 @@
                     `;
                     content.appendChild(memoryDiv);
                 }
+
+                // ESMM context (if enabled)
+                if (message.metadata.esmm_context && message.metadata.esmm_context.enabled) {
+                    const esmmCtx = message.metadata.esmm_context;
+                    const esmmDiv = document.createElement('div');
+                    esmmDiv.className = 'esmm-context-info';
+                    esmmDiv.innerHTML = `
+                        <div class="esmm-context-title">Contexte ESMM</div>
+                        <div class="esmm-context-grid">
+                            <div class="esmm-context-item">
+                                <span class="esmm-context-label">Triplets utilisés</span>
+                                <span class="esmm-context-value">${esmmCtx.triplets_used || 0}</span>
+                            </div>
+                            <div class="esmm-context-item">
+                                <span class="esmm-context-label">Consensus moyen</span>
+                                <span class="esmm-context-value">${(esmmCtx.avg_consensus || 0).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                    content.appendChild(esmmDiv);
+                }
             }
 
             messageDiv.appendChild(avatar);
@@ -1385,24 +1636,43 @@
             setLoading(true);
 
             try {
+                // Build payload with explicit type coercion
+                const payload = {
+                    text: String(text),
+                    session_id: state.sessionId || null,
+                    profile: String(state.profile || 'balanced'),
+                    consciousness_level: Math.min(3, Math.max(0, parseInt(state.consciousnessLevel) || 0)),
+                    enable_context: Boolean(state.enableContext),
+                    max_history: Math.min(500, Math.max(0, parseInt(state.maxHistory) || 50)),
+                    use_esmm: Boolean(state.useEsmm)
+                };
+
+                // Add model override if selected (must be non-empty string)
+                if (state.selectedModel && typeof state.selectedModel === 'string' && state.selectedModel.trim()) {
+                    payload.model = state.selectedModel.trim();
+                }
+
+                console.log('[Lyra] Sending payload:', JSON.stringify(payload, null, 2));
+
                 const response = await fetch('/chat/message', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        text: text,
-                        session_id: state.sessionId,
-                        profile: state.profile,
-                        consciousness_level: state.consciousnessLevel,
-                        enable_context: state.enableContext,
-                        max_history: state.maxHistory
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.detail || 'API request failed');
+                    // Handle FastAPI validation errors (422)
+                    if (response.status === 422 && errorData.detail) {
+                        const validationErrors = Array.isArray(errorData.detail)
+                            ? errorData.detail.map(e => `${e.loc?.join('.')}: ${e.msg}`).join('; ')
+                            : String(errorData.detail);
+                        console.error('[Lyra] Validation error:', errorData.detail);
+                        throw new Error(`Validation error: ${validationErrors}`);
+                    }
+                    throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -1414,7 +1684,9 @@
                     physics_state: data.physics_state,
                     context: data.context,
                     consciousness: data.consciousness,
-                    memory_echo: data.memory_echo
+                    memory_echo: data.memory_echo,
+                    esmm_context: data.esmm_context,
+                    model: data.model
                 });
 
                 // Update current model from response
@@ -1735,6 +2007,135 @@
                 console.error('[Lyra] Load error:', error);
                 alert(`Failed to load session: ${error.message}`);
             }
+        }
+
+        // ========================================================================
+        // ADVANCED OPTIONS HANDLERS
+        // ========================================================================
+
+        async function openOptionsModal() {
+            // Show modal
+            elements.optionsModal.classList.add('active');
+
+            // Set current values
+            elements.esmmToggle.checked = state.useEsmm;
+
+            // Load available models and stats
+            await Promise.all([
+                loadAvailableModels(),
+                loadEsmmStats()
+            ]);
+        }
+
+        function closeOptionsModal() {
+            elements.optionsModal.classList.remove('active');
+        }
+
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('/multimodel/models');
+                if (!response.ok) {
+                    throw new Error('Failed to load models');
+                }
+
+                const data = await response.json();
+                state.availableModels = data.models || [];
+
+                // Populate model select
+                elements.modelSelect.innerHTML = '<option value="">Défaut serveur</option>';
+                state.availableModels.forEach(model => {
+                    const option = document.createElement('option');
+                    const modelName = typeof model === 'string' ? model : model.name;
+                    option.value = modelName;
+                    option.textContent = modelName;
+                    if (modelName === state.selectedModel) {
+                        option.selected = true;
+                    }
+                    elements.modelSelect.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error('[Lyra] Failed to load models:', error);
+                elements.modelSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
+        }
+
+        async function loadEsmmStats() {
+            elements.esmmStatsContainer.innerHTML = '<div class="esmm-stats-loading">Chargement...</div>';
+
+            try {
+                // Try to get graph stats
+                const statsResponse = await fetch('/graph/stats');
+
+                if (!statsResponse.ok) {
+                    throw new Error('Stats not available');
+                }
+
+                const statsData = await statsResponse.json();
+                state.esmmStats = statsData;
+
+                // Try to get coverage metrics
+                let coverageData = null;
+                try {
+                    const coverageResponse = await fetch('/graph/coverage/metrics');
+                    if (coverageResponse.ok) {
+                        coverageData = await coverageResponse.json();
+                    }
+                } catch (e) {
+                    // Coverage metrics may not be available
+                }
+
+                // Render stats
+                const triplets = statsData.triplet_count || statsData.relations_count || 0;
+                const concepts = statsData.concept_count || statsData.nodes_count || 0;
+                const coverage = coverageData ? (coverageData.coverage_score || 0) : 0;
+                const consensus = coverageData ? (coverageData.consensus_density || 0) : 0;
+
+                elements.esmmStatsContainer.innerHTML = `
+                    <div class="esmm-stats-title">Graphe Sémantique</div>
+                    <div class="esmm-stats-grid">
+                        <div class="esmm-stat-item">
+                            <div class="esmm-stat-value">${concepts}</div>
+                            <div class="esmm-stat-label">Concepts</div>
+                        </div>
+                        <div class="esmm-stat-item">
+                            <div class="esmm-stat-value">${triplets}</div>
+                            <div class="esmm-stat-label">Relations</div>
+                        </div>
+                        <div class="esmm-stat-item">
+                            <div class="esmm-stat-value">${coverage.toFixed(2)}</div>
+                            <div class="esmm-stat-label">Couverture</div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('[Lyra] Failed to load ESMM stats:', error);
+                elements.esmmStatsContainer.innerHTML = `
+                    <div class="esmm-stats-error">
+                        Graphe non initialisé. Exécutez ESMM Phase 1 pour peupler le graphe.
+                    </div>
+                `;
+            }
+        }
+
+        function applyOptions() {
+            // Save model selection
+            const selectedModel = elements.modelSelect.value || null;
+            state.selectedModel = selectedModel;
+            if (selectedModel) {
+                localStorage.setItem('lyra_selected_model', selectedModel);
+            } else {
+                localStorage.removeItem('lyra_selected_model');
+            }
+
+            // Save ESMM toggle
+            state.useEsmm = elements.esmmToggle.checked;
+            localStorage.setItem('lyra_use_esmm', state.useEsmm);
+
+            console.log('[Lyra] Options applied - Model:', state.selectedModel || 'default', '| ESMM:', state.useEsmm);
+
+            closeOptionsModal();
         }
 
         // ========================================================================

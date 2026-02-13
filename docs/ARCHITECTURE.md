@@ -1,0 +1,267 @@
+# ARCHITECTURE.md — EPP_Verdict
+
+> **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
+> Ne documente que ce qui EXISTE. Pas de spéculations.
+
+**Dernière mise à jour** : 2026-02-12
+**Base** : Fork Lyra ACE → EPP_Verdict
+
+---
+
+## État actuel des composants
+
+### Pipeline ESMM (fonctionnel, hérité de Lyra)
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `orchestrator.py` | Pilote les runs ESMM (cycles, timeouts, checkpoints) | ✅ Fonctionnel, couplé Lyra |
+| `cycle_manager.py` | Exécution des 3 types de cycles | ✅ Fonctionnel |
+| `cycle_prompts.py` | Prompts DIVERGENT / DEBATE / META | ✅ Fonctionnel |
+| `triplet_extractor.py` | Pipeline complet extraction → validation → consensus | ✅ Fonctionnel |
+| `triplet_validator.py` | Validation Pydantic, détection patterns invalides | ✅ Fonctionnel |
+| `consensus_engine.py` | Vote multi-modèles, SHA-256 hashing, scoring | ✅ Fonctionnel |
+| `cochain_builder.py` | Signature 5D normalisée, typage épistémique | ✅ Fonctionnel |
+| `gap_detector.py` | Concepts isolés, triplets instables, ponts manquants | ✅ Fonctionnel |
+| `coverage_analyzer.py` | Shannon entropy, métriques de couverture | ✅ Fonctionnel |
+
+### Provider Layer (Phase 0.1 — fonctionnel)
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/providers/base.py` | ABC ModelProvider + EmbeddingProvider | ✅ Fonctionnel |
+| `services/providers/ollama.py` | Adaptateur Ollama avec VRAM management | ✅ Fonctionnel |
+| `services/providers/openai_compat.py` | Adaptateur OpenAI-compatible | ✅ Créé, non branché |
+| `services/providers/anthropic.py` | Adaptateur Anthropic | ✅ Créé, non branché |
+| `services/providers/ollama_embeddings.py` | Adaptateur embeddings Ollama | ✅ Fonctionnel |
+| `services/providers/registry.py` | Registre centralisé des providers | ✅ Fonctionnel |
+| `services/esmm/multi_provider_rotator.py` | Rotation multi-provider | ✅ Fonctionnel |
+
+### Cristallisation (Phase 0.3 — fonctionnel)
+
+Système de cristallisation des attestations épistémiques, produisant des objets sérialisables avec hash SHA-256 déterministe.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/esmm/attestation.py` | Modèle EpistemicAttestation, crystallize(), compute_claim_hash(), RevalidationInput | ✅ Fonctionnel |
+| `services/esmm/run_logger.py` | Logs structurés du pipeline (PhaseEvent, RunLogger) | ✅ Fonctionnel |
+| Table `attestations` | Stockage attestations cristallisées (table 20) | ✅ Fonctionnel |
+
+**Méthodes ISpaceDB ajoutées** :
+
+- `store_attestation()` — Stocke une attestation cristallisée
+- `get_attestation_by_hash()` — Récupère par claim_hash SHA-256
+- `get_attestations_by_subject()` — Filtre par sujet + min_consensus
+- `get_attestation_history()` — Historique de revalidation d'un claim
+
+### End-to-End Pipeline (Phase 3 — fonctionnel)
+
+Flux complet : CLI -> pipeline -> orchestrator -> crystallization -> DB -> graph.
+Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph | ✅ Fonctionnel |
+| `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
+| `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
+| `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7) | ✅ Fonctionnel |
+| `services/esmm/post_crystallization.py` | Hook track record + tier transitions (D8) | ✅ Fonctionnel |
+| `services/providers/mock_provider.py` | MockProvider + make_synthetic_triplets() (D10) | ✅ Fonctionnel |
+| `services/providers/base.py` | + infer_architecture_family() pour mesure diversité | ✅ Fonctionnel |
+
+**Méthodes ISpaceDB ajoutées (Phase 3)** :
+
+- `get_latest_attestation()` — Dernière attestation (par timestamp)
+- `get_attestation_count()` — Compteur total attestations
+- `update_attestation_submission_status()` — Mise à jour status submission
+
+**Confidence Tiers (Méthode scientifique)** :
+
+| Tier | Seuil | Conditions |
+|------|-------|-----------|
+| `sandbox` | < 0.40 | Aucune |
+| `proposition` | >= 0.40 | + >= 2 modèles |
+| `validated` | >= 0.70 | + >= 3 modèles + >= 2 familles archi |
+| `verified` | >= 0.85 | + source_anchor OU validation_count >= 3 |
+
+**Tables SQL ajoutées (20-22)** :
+
+- `metrological_frames` — Référentiels métrologiques persistés (seedés automatiquement)
+- `model_track_record` — Brier scoring par modèle (prédiction vs résolution)
+- `tier_transitions` — Audit des promotions/rétrogradations de confiance
+- Vue `v_model_brier_scores` — Brier score agrégé par modèle (90j glissant)
+
+**Méthodes ISpaceDB ajoutées** :
+
+- `update_attestation_solana_tx()` — Mise à jour post-ancrage on-chain
+- `store_frame()` / `get_frame()` / `list_frames()` — CRUD frames
+- `record_model_prediction()` / `resolve_prediction()` / `get_model_brier_score()` — Track record
+- `log_tier_transition()` — Audit des changements de tier
+
+### Embedding Versioning (Phase 0.2 — fonctionnel)
+
+Système de stockage multi-version des embeddings permettant le changement de modèle sans perte de vecteurs.
+
+| Table/Fichier | Rôle | État |
+|---------------|------|------|
+| `concept_embeddings` | Table multi-version (concept_id, model_id, dimension, embedding) | ✅ Fonctionnel |
+| `embedding_migrations` | Traçabilité migrations (from_model → to_model, status, stats) | ✅ Fonctionnel |
+| `tools/migrate_embeddings.py` | CLI migration progressive (dry-run, finalize, rollback) | ✅ Fonctionnel |
+| `config.yaml::embeddings` | Config active_model, fallback_reembed, similarity_min_score | ✅ Fonctionnel |
+
+**Méthodes ISpaceDB ajoutées** :
+
+- `store_concept_embedding()` / `get_concept_embedding()` — CRUD versioned embeddings
+- `get_concepts_with_embeddings_for_model()` — Requête par model_id (pas de mélange dimensions)
+- `get_concepts_needing_migration()` — Concepts sans embedding pour un modèle cible
+- `create/update/get_embedding_migration()` — Gestion entrées migration
+- `finalize_embedding_migration()` — Copie finale vers concepts.embedding
+- `rollback_embedding_migration()` — Suppression embeddings du modèle cible
+
+### Interface modèles (legacy)
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `llm_client.py` | Client async Ollama (httpx, retry, pooling) | ⚠️ Couplé Ollama |
+| `model_rotator.py` | Rotation VRAM-safe, keep_alive=0 | ⚠️ Hérité Lyra, remplacé par multi_provider_rotator.py |
+| `multimodel.py` | Endpoints FastAPI multi-modèles | ⚠️ Couplé Ollama |
+
+> `embeddings.py` supprimé en Phase 4.4 (remplacé par `EmbeddingProvider` dans `base.py`).
+
+### Graphe de connaissances (fonctionnel)
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `engine.py` | ISpaceDB — ~100 méthodes, WAL mode, O(log N) indexes | ✅ Fonctionnel |
+| `pool.py` | Pool 10 connexions, 30s busy_timeout, cache LRU | ✅ Fonctionnel |
+| `graph.py` | Opérations graphe sémantique (PPMI, voisinage) | ✅ Fonctionnel |
+| `graph_delta.py` | GraphDelta + KappaCalculator (Ollivier + Jaccard) | ✅ Fonctionnel |
+| `schema.sql` | 23 tables, 8 vues SQLite | ✅ Fonctionnel |
+| `entity_resolver.py` | Résolution d'entités | ✅ Fonctionnel |
+| `relation_normalizer.py` | 20 relations canoniques | ✅ Fonctionnel |
+| `relation_generator.py` | Génération de relations | ✅ Fonctionnel |
+
+### Conscience & Physique (héritage Lyra, usage TBD dans EPP)
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `metrics.py` | Monitoring passif (cohérence, tension, fit) | ✅ Hérité |
+| `adaptation.py` | Auto-ajustement paramètres | ✅ Hérité |
+| `memory.py` | Mémoire sémantique (cosine + decay temporel) | ✅ Hérité |
+| `bezier.py` | Courbes Bézier cubiques (τ_c, ρ, δ_r, κ) | ✅ Hérité |
+
+### Application & Support
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `main.py` | FastAPI entry point, lifecycle, CORS | ✅ Fonctionnel |
+| `models.py` | Modèles Pydantic (requêtes/réponses) | ✅ Fonctionnel |
+| `config.yaml` | Configuration centralisée | ✅ Fonctionnel |
+| `injector.py` | Injection contexte sémantique (TF-IDF + PPMI) | ✅ Fonctionnel |
+| `sessions.py` | Gestion sessions | ✅ Fonctionnel |
+| `session_storage.py` | Export/import sessions JSON | ✅ Fonctionnel |
+| `security.py` | Gestion secrets | ✅ Fonctionnel |
+| `prompts.py` | Prompts extraction triplets (few-shot, 20 relations) | ✅ Fonctionnel |
+| `seed_injector.py` | Injection graines sémantiques | ✅ Fonctionnel |
+| `populate_graph.py` | Population initiale graphe | ✅ Fonctionnel |
+| `hydrate_embeddings.py` | Hydratation vecteurs | ✅ Fonctionnel |
+
+### Couche Solana (Phase 1 — MVP)
+
+Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/solana/config.py` | Config cluster, devnet guard, DEFAULT_PROGRAM_ID, keypair path | ✅ Fonctionnel |
+| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256 | ✅ Fonctionnel |
+| `services/solana/bridge.py` | Sérialisation Python <-> Anchor (float↔u16, string↔bytes) | ✅ Fonctionnel (AUDIT_REQUIRED) |
+| `services/solana/client.py` | Transaction builder, PDA derivation, mock mode, account deser (Phase 4.6) | ✅ Fonctionnel (AUDIT_REQUIRED) |
+| `programs/epp/programs/epp/src/lib.rs` | Instructions Anchor : submit_attestation, ping | ✅ Build OK (221 KB .so) |
+| `programs/epp/programs/epp/src/state.rs` | EpistemicAttestation account (462 bytes) | ✅ Build OK |
+| `programs/epp/programs/epp/src/errors.rs` | EppError enum (11 variantes) | ✅ Build OK |
+| `programs/epp/programs/epp/src/constants.rs` | Constantes on-chain (MAX_SUBJECT_LEN, SCORE_SCALE, seeds) | ✅ Build OK |
+| `cli/epp_cli.py` | CLI : ask, submit (--devnet), query, frame list/show, graph stats | ✅ Fonctionnel |
+
+**Décisions architecturales** :
+
+- PDA seeds : `[b"attestation", submitter.key(), &claim_hash]`
+- Float encoding : `[0.0, 1.0]` → `u16 [0, 10000]` (précision 4 décimales)
+- Strings : zero-padded UTF-8 → `[u8; 64]` / `[u8; 128]`
+- Devnet-only guard : MAINNET intentionnellement absent de `SolanaCluster`
+
+**Prérequis** : Solana CLI 3.0+ / Anchor 0.32+ / Rust 1.70+ (WSL sur Windows).
+
+### Architecture Decision Records (Phase 3.3+)
+
+8 ADR actifs dans `docs/adr/` :
+
+| ADR | Sujet | Statut |
+|-----|-------|--------|
+| ADR-001 | Encodage float→u16 (bridge, tolérance 1e-4) | Actif |
+| ADR-002 | Stratégie INSERT (OR IGNORE vs OR REPLACE) | Actif |
+| ADR-003 | Gestion des singletons (get_pool, get_db) | Actif |
+| ADR-004 | session_storage INSERT OR IGNORE | Actif |
+| ADR-005 | Confidence tiers multi-critères (pas de seuil simple) | Actif |
+| ADR-006 | Claim hash déterministe SHA-256 | Actif |
+| ADR-007 | Append-only pour events et graph_deltas | Actif |
+| ADR-008 | Stratégie auth submitter Solana (keypair, devnet guard) | Actif |
+
+### Phase 4 — Corrections systématiques (2026-02-12)
+
+Corrections appliquées en 7 sous-phases (4.0-4.6). 45 tests ajoutés (425→470).
+
+**4.0 Fondations** : Isolation 16 singletons (setup+teardown dans conftest.py).
+**4.1 Crashs** : triplet_extractor ON CONFLICT, imports dépréciés migrés, session_storage INSERT OR IGNORE.
+**4.2 Corruption** : graph_delta INSERT ON CONFLICT DO UPDATE, pool.py except:pass → logger.warning.
+**4.3 Durcissement** : get_db() warning si db_path change, close_entity_resolver/relation_normalizer ajoutés.
+**4.4 Nettoyage** : config.yaml purgé (35→12 clés), embeddings.py supprimé, semantic_memory supprimée du schéma.
+**4.5 Sécurité** : XML boundary delimiters, _sanitize_concept(), infer_architecture_family() durci, input validation.
+**4.6 Solana** : Transaction building, account deserialization, PDA validation, queries memcmp, mock mode déterministe.
+
+---
+
+## Dépendances critiques
+
+```
+orchestrator.py
+  ├── cycle_manager.py
+  │     ├── cycle_prompts.py
+  │     └── multi_provider_rotator.py  ← provider-agnostique
+  ├── gap_detector.py
+  ├── cochain_builder.py
+  └── coverage_analyzer.py
+
+triplet_extractor.py
+  ├── multi_provider_rotator.py  ← provider-agnostique
+  ├── triplet_validator.py
+  ├── consensus_engine.py
+  └── prompts.py
+
+engine.py (ISpaceDB)
+  ├── pool.py
+  ├── graph_delta.py
+  └── schema.sql
+
+cli/epp_cli.py
+  ├── services/esmm/pipeline.py  ← pont ESMM → cristallisation
+  │     ├── services/esmm/attestation.py
+  │     └── services/esmm/run_logger.py
+  ├── services/solana/config.py
+  ├── services/solana/metrological_frame.py
+  ├── services/solana/bridge.py
+  └── services/solana/client.py
+        └── programs/epp/ (Anchor, Rust)
+```
+
+---
+
+## Stack technique
+
+- **Python** 3.11+, async/await
+- **FastAPI** + uvicorn
+- **SQLite** WAL mode via aiosqlite
+- **httpx** pour appels HTTP async
+- **Pydantic** v2 pour validation
+- **tenacity** pour retry
+- **Ollama** comme provider LLM local (à abstraire)
+- **Solana CLI** 3.0+ / **Anchor** 0.32+ / **Rust** 1.70+ (couche on-chain)
+- **Click** pour CLI EPP

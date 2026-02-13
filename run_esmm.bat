@@ -15,7 +15,7 @@ setlocal enabledelayedexpansion
 
 REM Configuration par defaut
 set "API_URL=http://127.0.0.1:8000"
-set "MODELS=llama3.1:8b,gpt-oss:20b"
+set "MODELS=mistral,gpt-oss:20b"
 set "SEED_TYPE=standard"
 set "DIVERGENT=3"
 set "DEBATE=2"

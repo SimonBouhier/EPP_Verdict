@@ -1,0 +1,1291 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.11, pytest-9.0.1, pluggy-1.6.0 -- C:\Users\simon\PROJECTS\EPP_Verdict\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\simon\PROJECTS\EPP_Verdict
+plugins: anyio-4.11.0
+collecting ... collected 435 items
+
+tests/test_ab_metrics.py::TestMetricsVariability::test_coherence_varies_with_context_weight PASSED [  0%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_coherence_varies_with_num_concepts PASSED [  0%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_pressure_varies_with_tau_c PASSED [  0%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_pressure_varies_with_delta_r PASSED [  0%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_fit_varies_with_response_length PASSED [  1%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_tension_varies_with_coherence PASSED [  1%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_stability_varies PASSED [  1%]
+tests/test_ab_metrics.py::TestMetricsVariability::test_all_metrics_not_constant PASSED [  1%]
+tests/test_ab_metrics.py::TestMetricsEdgeCases::test_zero_concepts PASSED [  2%]
+tests/test_ab_metrics.py::TestMetricsEdgeCases::test_extreme_values PASSED [  2%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_normalize_concept_name_basic PASSED [  2%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_normalize_concept_name_invalid PASSED [  2%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_normalize_concept_name_special_chars PASSED [  2%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_load_topics_file PASSED [  3%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_load_topics_file_not_found PASSED [  3%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_serialize_deserialize_embedding PASSED [  3%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_populate_from_file_empty_db FAILED [  3%]
+tests/test_esmm_phase1.py::TestGraphPopulator::test_get_population_stats FAILED [  4%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_cosine_similarity_identical PASSED [  4%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_cosine_similarity_orthogonal PASSED [  4%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_cosine_similarity_opposite PASSED [  4%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_cosine_similarity_empty PASSED [  5%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_cosine_similarity_batch PASSED [  5%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_find_similar_concepts_no_embedding FAILED [  5%]
+tests/test_esmm_phase1.py::TestRelationGenerator::test_get_generation_stats FAILED [  5%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_available_seeds PASSED [  5%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_seed_structure PASSED  [  6%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_get_available_seeds PASSED [  6%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_inject_seed_unknown_type FAILED [  6%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_inject_seed_minimal FAILED [  6%]
+tests/test_esmm_phase1.py::TestSeedInjector::test_get_seed_status FAILED [  7%]
+tests/test_esmm_phase1.py::TestESMMPhase1Integration::test_full_phase1_workflow ERROR [  7%]
+tests/test_graph_delta.py::test_apply_add_edge_delta ERROR               [  7%]
+tests/test_graph_delta.py::test_rollback_restores_state ERROR            [  7%]
+tests/test_graph_delta.py::test_kappa_recalculated_after_edge ERROR      [  8%]
+tests/test_graph_delta.py::test_mutation_limit_respected ERROR           [  8%]
+tests/test_graph_delta.py::test_kappa_calculator_ollivier PASSED         [  8%]
+tests/test_graph_delta.py::test_kappa_calculator_jaccard PASSED          [  8%]
+tests/test_graph_delta.py::test_kappa_calculator_hybrid PASSED           [  8%]
+tests/test_graph_delta.py::test_graph_delta_validation PASSED            [  9%]
+tests/test_graph_delta.py::test_delta_batch_validation PASSED            [  9%]
+tests/test_phase02_decoupling.py::TestSemanticMemoryDimensions::test_memory_accepts_768d PASSED [  9%]
+tests/test_phase02_decoupling.py::TestSemanticMemoryDimensions::test_memory_accepts_1024d PASSED [  9%]
+tests/test_phase02_decoupling.py::TestSemanticMemoryDimensions::test_memory_accepts_custom_dimension PASSED [ 10%]
+tests/test_phase02_decoupling.py::TestSemanticMemoryDimensions::test_memory_rejects_empty PASSED [ 10%]
+tests/test_phase02_decoupling.py::TestSemanticMemoryDimensions::test_memory_rejects_none_embeddings PASSED [ 10%]
+tests/test_phase02_decoupling.py::TestCosineSimlarity::test_cosine_rejects_mixed_dimensions PASSED [ 10%]
+tests/test_phase02_decoupling.py::TestCosineSimlarity::test_cosine_same_dimension_works PASSED [ 11%]
+tests/test_phase02_decoupling.py::TestCosineSimlarity::test_cosine_orthogonal_vectors PASSED [ 11%]
+tests/test_phase02_decoupling.py::TestAddConceptEmbeddingModel::test_add_concept_requires_model_with_embedding PASSED [ 11%]
+tests/test_phase02_decoupling.py::TestAddConceptEmbeddingModel::test_add_concept_without_embedding_no_model_ok PASSED [ 11%]
+tests/test_phase02_decoupling.py::TestAddConceptEmbeddingModel::test_add_concept_writes_to_both_tables PASSED [ 11%]
+tests/test_phase02_decoupling.py::TestAddConceptEmbeddingModel::test_add_concept_dimension_calculated_correctly PASSED [ 12%]
+tests/test_phase02_decoupling.py::TestLegacyDeprecation::test_legacy_embeddings_deprecation_warning PASSED [ 12%]
+tests/test_phase02_migration.py::TestStoreGetConceptEmbedding::test_store_concept_embedding PASSED [ 12%]
+tests/test_phase02_migration.py::TestStoreGetConceptEmbedding::test_get_concept_embedding PASSED [ 12%]
+tests/test_phase02_migration.py::TestStoreGetConceptEmbedding::test_store_is_idempotent PASSED [ 13%]
+tests/test_phase02_migration.py::TestConceptsNeedingMigration::test_concepts_needing_migration PASSED [ 13%]
+tests/test_phase02_migration.py::TestConceptsNeedingMigration::test_concepts_needing_migration_with_limit PASSED [ 13%]
+tests/test_phase02_migration.py::TestMigrationEntry::test_create_embedding_migration PASSED [ 13%]
+tests/test_phase02_migration.py::TestMigrationEntry::test_update_embedding_migration PASSED [ 14%]
+tests/test_phase02_migration.py::TestMigrationEntry::test_migration_logging PASSED [ 14%]
+tests/test_phase02_migration.py::TestFinalizeMigration::test_finalize_copies_to_concepts PASSED [ 14%]
+tests/test_phase02_migration.py::TestFinalizeMigration::test_finalize_refuses_if_failures PASSED [ 14%]
+tests/test_phase02_migration.py::TestRollbackMigration::test_rollback_deletes_embeddings PASSED [ 14%]
+tests/test_phase02_migration.py::TestMigrationIdempotency::test_migration_is_idempotent PASSED [ 15%]
+tests/test_phase02_schema.py::TestSchemaCreation::test_concept_embeddings_table_exists PASSED [ 15%]
+tests/test_phase02_schema.py::TestSchemaCreation::test_embedding_migrations_table_exists PASSED [ 15%]
+tests/test_phase02_schema.py::TestSchemaCreation::test_concept_embeddings_indexes_exist PASSED [ 15%]
+tests/test_phase02_schema.py::TestEmbeddingMigration::test_existing_embeddings_copied PASSED [ 16%]
+tests/test_phase02_schema.py::TestEmbeddingMigration::test_copy_is_idempotent PASSED [ 16%]
+tests/test_phase02_schema.py::TestEmbeddingMigration::test_embeddings_blob_preserved PASSED [ 16%]
+tests/test_phase02_schema.py::TestUniqueConstraint::test_unique_constraint PASSED [ 16%]
+tests/test_phase02_schema.py::TestUniqueConstraint::test_same_concept_different_models_allowed PASSED [ 17%]
+tests/test_phase02_schema.py::TestEmbeddingMigrationsTable::test_migrations_table_columns PASSED [ 17%]
+tests/test_phase02_schema.py::TestEmbeddingMigrationsTable::test_create_migration_entry PASSED [ 17%]
+tests/test_phase02_search.py::TestGetEmbeddingsForModel::test_get_embeddings_for_specific_model PASSED [ 17%]
+tests/test_phase02_search.py::TestGetEmbeddingsForModel::test_get_embeddings_respects_limit PASSED [ 17%]
+tests/test_phase02_search.py::TestGetEmbeddingsForModel::test_get_embeddings_default_uses_legacy PASSED [ 18%]
+tests/test_phase02_search.py::TestGetEmbeddingsForModel::test_get_embeddings_with_model_id_parameter PASSED [ 18%]
+tests/test_phase02_search.py::TestNoCrossDimensionMixing::test_no_cross_dimension_comparison PASSED [ 18%]
+tests/test_phase02_search.py::TestEmbeddingsConfig::test_config_has_embeddings_section PASSED [ 18%]
+tests/test_phase02_search.py::TestEmbeddingsConfig::test_config_active_model_is_string PASSED [ 19%]
+tests/test_phase02_search.py::TestEmbeddingsConfig::test_config_fallback_reembed_is_bool PASSED [ 19%]
+tests/test_phase02_search.py::TestEmbeddingsConfig::test_config_similarity_min_score_is_number PASSED [ 19%]
+tests/test_phase02_search.py::TestFallbackDisabled::test_fallback_disabled_returns_none_for_missing_model PASSED [ 19%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_is_deterministic PASSED [ 20%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_is_case_insensitive PASSED [ 20%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_strips_whitespace PASSED [ 20%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_differs_with_frame PASSED [ 20%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_differs_without_frame PASSED [ 20%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_is_sha256 PASSED [ 21%]
+tests/test_phase03_attestation.py::TestComputeClaimHash::test_hash_different_triplets PASSED [ 21%]
+tests/test_phase03_attestation.py::TestSignature5D::test_to_vector PASSED [ 21%]
+tests/test_phase03_attestation.py::TestSignature5D::test_validation_bounds PASSED [ 21%]
+tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_low FAILED [ 22%]
+tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_medium FAILED [ 22%]
+tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_high FAILED [ 22%]
+tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_verified FAILED [ 22%]
+tests/test_phase03_attestation.py::TestCrystallize::test_crystallize_produces_attestation FAILED [ 22%]
+tests/test_phase03_attestation.py::TestCrystallize::test_crystallize_with_frame PASSED [ 23%]
+tests/test_phase03_attestation.py::TestCrystallize::test_crystallize_revalidation PASSED [ 23%]
+tests/test_phase03_attestation.py::TestPortableJSON::test_portable_json_is_valid PASSED [ 23%]
+tests/test_phase03_attestation.py::TestPortableJSON::test_portable_json_is_deterministic PASSED [ 23%]
+tests/test_phase03_attestation.py::TestPortableJSON::test_compact_dict_excludes_votes PASSED [ 24%]
+tests/test_phase03_attestation.py::TestPortableJSON::test_portable_json_sorted_keys PASSED [ 24%]
+tests/test_phase03_attestation.py::TestAttestationValidation::test_invalid_epistemic_type PASSED [ 24%]
+tests/test_phase03_attestation.py::TestAttestationValidation::test_invalid_confidence_tier PASSED [ 24%]
+tests/test_phase03_audit.py::TestESMMDecoupling::test_no_forbidden_imports PASSED [ 25%]
+tests/test_phase03_audit.py::TestESMMDecoupling::test_no_hardcoded_urls PASSED [ 25%]
+tests/test_phase03_audit.py::TestESMMDecoupling::test_no_hardcoded_model_names PASSED [ 25%]
+tests/test_phase03_audit.py::TestESMMDecoupling::test_esmm_files_exist PASSED [ 25%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_end_to_end_crystallization PASSED [ 25%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_run_logger_captures_phases PASSED [ 26%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_revalidation_input_from_stored_attestations PASSED [ 26%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_deterministic_hash_across_runs PASSED [ 26%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_portable_json_determinism PASSED [ 26%]
+tests/test_phase03_integration.py::TestCrystallizationPipeline::test_all_confidence_tiers FAILED [ 27%]
+tests/test_phase03_integration.py::TestPhase03Complete::test_complete_workflow PASSED [ 27%]
+tests/test_phase03_logging.py::TestRunLogger::test_init PASSED           [ 27%]
+tests/test_phase03_logging.py::TestRunLogger::test_phase_lifecycle PASSED [ 27%]
+tests/test_phase03_logging.py::TestRunLogger::test_model_response PASSED [ 28%]
+tests/test_phase03_logging.py::TestRunLogger::test_triplet_extracted PASSED [ 28%]
+tests/test_phase03_logging.py::TestRunLogger::test_crystallization PASSED [ 28%]
+tests/test_phase03_logging.py::TestRunLogger::test_error_logging PASSED  [ 28%]
+tests/test_phase03_logging.py::TestRunLogger::test_get_summary PASSED    [ 28%]
+tests/test_phase03_logging.py::TestRunLogger::test_summary_with_errors PASSED [ 29%]
+tests/test_phase03_logging.py::TestPhaseEvent::test_default_timestamp PASSED [ 29%]
+tests/test_phase03_logging.py::TestPhaseEvent::test_custom_data PASSED   [ 29%]
+tests/test_phase03_logging.py::TestPhaseEvent::test_empty_data_default PASSED [ 29%]
+tests/test_phase03_revalidation.py::TestRevalidationInput::test_serialization PASSED [ 30%]
+tests/test_phase03_revalidation.py::TestRevalidationInput::test_required_fields PASSED [ 30%]
+tests/test_phase03_revalidation.py::TestRevalidationInput::test_default_created_at PASSED [ 30%]
+tests/test_phase03_revalidation.py::TestRevalidationInput::test_optional_fields PASSED [ 30%]
+tests/test_phase03_revalidation.py::TestConvergenceComparison::test_same_triplet_same_hash PASSED [ 31%]
+tests/test_phase03_revalidation.py::TestConvergenceComparison::test_convergence_detection PASSED [ 31%]
+tests/test_phase03_revalidation.py::TestConvergenceComparison::test_divergence_detection FAILED [ 31%]
+tests/test_phase03_revalidation.py::TestConvergenceComparison::test_revalidation_input_stores_in_db PASSED [ 31%]
+tests/test_phase03_revalidation.py::TestConvergenceReport::test_stable_claim_detection FAILED [ 31%]
+tests/test_phase03_revalidation.py::TestConvergenceReport::test_improved_claim_detection FAILED [ 32%]
+tests/test_phase03_revalidation.py::TestConvergenceReport::test_degraded_claim_detection FAILED [ 32%]
+tests/test_phase03_revalidation.py::TestConvergenceReport::test_new_claim_in_revalidation PASSED [ 32%]
+tests/test_phase03_revalidation.py::TestConvergenceReport::test_lost_claim_in_revalidation PASSED [ 32%]
+tests/test_phase03_storage.py::TestStoreAttestation::test_store_and_retrieve FAILED [ 33%]
+tests/test_phase03_storage.py::TestStoreAttestation::test_store_preserves_signature_5d PASSED [ 33%]
+tests/test_phase03_storage.py::TestStoreAttestation::test_store_preserves_model_votes PASSED [ 33%]
+tests/test_phase03_storage.py::TestQueryAttestations::test_get_by_subject PASSED [ 33%]
+tests/test_phase03_storage.py::TestQueryAttestations::test_get_by_subject_min_consensus PASSED [ 34%]
+tests/test_phase03_storage.py::TestQueryAttestations::test_get_nonexistent_hash PASSED [ 34%]
+tests/test_phase03_storage.py::TestAttestationHistory::test_history_returns_all_validations PASSED [ 34%]
+tests/test_phase03_storage.py::TestTableExists::test_attestations_table_exists PASSED [ 34%]
+tests/test_phase1_bridge.py::TestFloatU16::test_zero PASSED              [ 34%]
+tests/test_phase1_bridge.py::TestFloatU16::test_one PASSED               [ 35%]
+tests/test_phase1_bridge.py::TestFloatU16::test_middle PASSED            [ 35%]
+tests/test_phase1_bridge.py::TestFloatU16::test_precision PASSED         [ 35%]
+tests/test_phase1_bridge.py::TestFloatU16::test_roundtrip PASSED         [ 35%]
+tests/test_phase1_bridge.py::TestFloatU16::test_out_of_range_raises PASSED [ 36%]
+tests/test_phase1_bridge.py::TestFloatU16::test_u16_out_of_range_raises PASSED [ 36%]
+tests/test_phase1_bridge.py::TestStringBytes::test_basic PASSED          [ 36%]
+tests/test_phase1_bridge.py::TestStringBytes::test_exact_length PASSED   [ 36%]
+tests/test_phase1_bridge.py::TestStringBytes::test_truncation PASSED     [ 37%]
+tests/test_phase1_bridge.py::TestStringBytes::test_roundtrip PASSED      [ 37%]
+tests/test_phase1_bridge.py::TestStringBytes::test_unicode PASSED        [ 37%]
+tests/test_phase1_bridge.py::TestStringBytes::test_empty_string PASSED   [ 37%]
+tests/test_phase1_bridge.py::TestHexBytes::test_valid_hash PASSED        [ 37%]
+tests/test_phase1_bridge.py::TestHexBytes::test_none_gives_zeros PASSED  [ 38%]
+tests/test_phase1_bridge.py::TestHexBytes::test_empty_gives_zeros PASSED [ 38%]
+tests/test_phase1_bridge.py::TestHexBytes::test_wrong_length_raises PASSED [ 38%]
+tests/test_phase1_bridge.py::TestProtocolVersion::test_v0_3 PASSED       [ 38%]
+tests/test_phase1_bridge.py::TestProtocolVersion::test_v1_0 PASSED       [ 39%]
+tests/test_phase1_bridge.py::TestProtocolVersion::test_roundtrip PASSED  [ 39%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_basic_conversion PASSED [ 39%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_signature_5d_encoding PASSED [ 39%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_enum_encoding PASSED [ 40%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_claim_hash_matches PASSED [ 40%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_challenge_defaults PASSED [ 40%]
+tests/test_phase1_bridge.py::TestAttestationToAnchorArgs::test_roundtrip_summary PASSED [ 40%]
+tests/test_phase1_cli.py::TestCLIParsing::test_cli_help PASSED           [ 40%]
+tests/test_phase1_cli.py::TestCLIParsing::test_cli_version PASSED        [ 41%]
+tests/test_phase1_cli.py::TestCLIParsing::test_ask_help PASSED           [ 41%]
+tests/test_phase1_cli.py::TestCLIParsing::test_submit_help PASSED        [ 41%]
+tests/test_phase1_cli.py::TestCLIParsing::test_query_help PASSED         [ 41%]
+tests/test_phase1_cli.py::TestCLIParsing::test_graph_stats_help PASSED   [ 42%]
+tests/test_phase1_cli.py::TestCLIParsing::test_frame_list_help PASSED    [ 42%]
+tests/test_phase1_cli.py::TestAskCommand::test_ask_basic PASSED          [ 42%]
+tests/test_phase1_cli.py::TestAskCommand::test_ask_with_models PASSED    [ 42%]
+tests/test_phase1_cli.py::TestAskCommand::test_ask_with_frame PASSED     [ 42%]
+tests/test_phase1_cli.py::TestAskCommand::test_ask_invalid_frame PASSED  [ 43%]
+tests/test_phase1_cli.py::TestAskCommand::test_ask_json_output PASSED    [ 43%]
+tests/test_phase1_cli.py::TestSubmitCommand::test_submit_requires_devnet_flag PASSED [ 43%]
+tests/test_phase1_cli.py::TestSubmitCommand::test_submit_with_devnet PASSED [ 43%]
+tests/test_phase1_cli.py::TestSubmitCommand::test_submit_dry_run PASSED  [ 44%]
+tests/test_phase1_cli.py::TestQueryCommand::test_query_basic PASSED      [ 44%]
+tests/test_phase1_cli.py::TestQueryCommand::test_query_with_min_confidence PASSED [ 44%]
+tests/test_phase1_cli.py::TestFrameCommands::test_frame_list PASSED      [ 44%]
+tests/test_phase1_cli.py::TestFrameCommands::test_frame_show_valid PASSED [ 45%]
+tests/test_phase1_cli.py::TestFrameCommands::test_frame_show_invalid PASSED [ 45%]
+tests/test_phase1_cli.py::TestFrameCommands::test_frame_show_json PASSED [ 45%]
+tests/test_phase1_cli.py::TestGraphCommands::test_graph_stats PASSED     [ 45%]
+tests/test_phase1_cli.py::TestHelpers::test_get_frame_valid PASSED       [ 45%]
+tests/test_phase1_cli.py::TestHelpers::test_get_frame_invalid PASSED     [ 46%]
+tests/test_phase1_cli.py::TestHelpers::test_predefined_frames_not_empty PASSED [ 46%]
+tests/test_phase1_client.py::TestClientUnit::test_client_refuses_mainnet PASSED [ 46%]
+tests/test_phase1_client.py::TestClientUnit::test_client_accepts_devnet PASSED [ 46%]
+tests/test_phase1_client.py::TestClientUnit::test_client_accepts_localnet PASSED [ 47%]
+tests/test_phase1_client.py::TestClientUnit::test_derive_pda_deterministic PASSED [ 47%]
+tests/test_phase1_client.py::TestClientUnit::test_derive_pda_changes_with_claim_hash PASSED [ 47%]
+tests/test_phase1_client.py::TestClientUnit::test_derive_pda_changes_with_submitter PASSED [ 47%]
+tests/test_phase1_client.py::TestClientUnit::test_client_not_ready_without_keypair PASSED [ 48%]
+tests/test_phase1_client.py::TestClientUnit::test_explorer_url_devnet PASSED [ 48%]
+tests/test_phase1_client.py::TestClientUnit::test_explorer_url_localnet PASSED [ 48%]
+tests/test_phase1_client.py::TestClientMock::test_mock_submit_returns_signature FAILED [ 48%]
+tests/test_phase1_client.py::TestClientMock::test_mock_query_returns_empty FAILED [ 48%]
+tests/test_phase1_client.py::TestClientLocalnet::test_submit_and_read_back SKIPPED [ 49%]
+tests/test_phase1_client.py::TestClientLocalnet::test_query_by_claim_hash SKIPPED [ 49%]
+tests/test_phase1_client.py::TestClientLocalnet::test_two_submitters_same_claim SKIPPED [ 49%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_create_blockchain_tps_frame PASSED [ 49%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_hash_deterministic PASSED [ 50%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_hash_changes_with_content PASSED [ 50%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_hash_ignores_created_at PASSED [ 50%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_hash_is_sha256 PASSED [ 50%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_id_validation_rejects_uppercase PASSED [ 51%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_id_validation_rejects_spaces PASSED [ 51%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_canonical_json_is_valid PASSED [ 51%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_governance_defaults PASSED [ 51%]
+tests/test_phase1_frame.py::TestMetrologicalFrame::test_frame_hash_32_bytes PASSED [ 51%]
+tests/test_phase1_frame.py::TestSolanaConfig::test_devnet_allowed PASSED [ 52%]
+tests/test_phase1_frame.py::TestSolanaConfig::test_localnet_allowed PASSED [ 52%]
+tests/test_phase1_frame.py::TestSolanaConfig::test_no_mainnet_enum PASSED [ 52%]
+tests/test_phase1_frame.py::TestSolanaConfig::test_validate_cluster_devnet PASSED [ 52%]
+tests/test_phase1_frame.py::TestSolanaConfig::test_config_commitment_default PASSED [ 53%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_full_flow_mock PASSED [ 53%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_claim_hash_determinism PASSED [ 53%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_claim_hash_changes_with_content PASSED [ 53%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_bridge_roundtrip_integrity PASSED [ 54%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_frame_hash_matches PASSED [ 54%]
+tests/test_phase1_integration.py::TestIntegrationMock::test_pda_derivation_consistent PASSED [ 54%]
+tests/test_phase1_integration.py::TestEndToEnd::test_full_flow_localnet SKIPPED [ 54%]
+tests/test_phase1_integration.py::TestEndToEnd::test_challenge_flow SKIPPED [ 54%]
+tests/test_phase1_integration.py::TestEndToEnd::test_claim_hash_determinism SKIPPED [ 55%]
+tests/test_phase1_integration.py::TestEndToEnd::test_db_updated_with_tx SKIPPED [ 55%]
+tests/test_phase1_integration.py::TestEndToEnd::test_frame_hash_on_chain SKIPPED [ 55%]
+tests/test_phase1_integration.py::TestEndToEnd::test_devnet_guard_in_flow SKIPPED [ 55%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_sandbox_low_consensus PASSED [ 56%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_sandbox_single_model PASSED [ 56%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_proposition_basic PASSED [ 56%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_proposition_not_enough_models PASSED [ 56%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_validated_basic PASSED [ 57%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_validated_needs_3_models PASSED [ 57%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_validated_needs_architecture_diversity PASSED [ 57%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_verified_with_source_anchor PASSED [ 57%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_verified_with_revalidation PASSED [ 57%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_verified_needs_validated_conditions PASSED [ 58%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_verified_needs_source_or_revalidation PASSED [ 58%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_boundary_040 PASSED [ 58%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_boundary_070 PASSED [ 58%]
+tests/test_phase2_confidence.py::TestDeriveConfidenceTier::test_boundary_085 PASSED [ 59%]
+tests/test_phase2_confidence.py::TestLegacyCompatibility::test_legacy_mapping PASSED [ 59%]
+tests/test_phase2_confidence.py::TestLegacyCompatibility::test_tiers_tuple PASSED [ 59%]
+tests/test_phase2_confidence.py::TestCrystallizeWithNewTiers::test_crystallize_sandbox PASSED [ 59%]
+tests/test_phase2_confidence.py::TestCrystallizeWithNewTiers::test_crystallize_proposition PASSED [ 60%]
+tests/test_phase2_confidence.py::TestCrystallizeWithNewTiers::test_crystallize_validated PASSED [ 60%]
+tests/test_phase2_confidence.py::TestCrystallizeWithNewTiers::test_crystallize_verified_with_anchor PASSED [ 60%]
+tests/test_phase2_config.py::TestConfigYaml::test_config_loads PASSED    [ 60%]
+tests/test_phase2_config.py::TestConfigYaml::test_no_lyra_references PASSED [ 60%]
+tests/test_phase2_config.py::TestConfigYaml::test_esmm_section_exists PASSED [ 61%]
+tests/test_phase2_config.py::TestConfigYaml::test_confidence_section_exists PASSED [ 61%]
+tests/test_phase2_config.py::TestConfigYaml::test_solana_section_exists PASSED [ 61%]
+tests/test_phase2_config.py::TestConfigYaml::test_track_record_section_exists PASSED [ 61%]
+tests/test_phase2_config.py::TestConfigYaml::test_database_path_is_epp PASSED [ 62%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_mistral PASSED [ 62%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_mixtral PASSED [ 62%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_llama PASSED [ 62%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_deepseek PASSED [ 62%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_gpt PASSED [ 63%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_claude PASSED [ 63%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_unknown PASSED [ 63%]
+tests/test_phase2_diversity.py::TestArchitectureFamilyInference::test_diversity_count PASSED [ 63%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_metrological_frames_table PASSED [ 64%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_model_track_record_table PASSED [ 64%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_tier_transitions_table PASSED [ 64%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_brier_score_view PASSED [ 64%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_frames_indexes PASSED [ 65%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_track_record_indexes PASSED [ 65%]
+tests/test_phase2_frames_db.py::TestSchemaHasFramesTables::test_transitions_indexes PASSED [ 65%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_store_frame_exists PASSED [ 65%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_get_frame_exists PASSED [ 65%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_list_frames_exists PASSED [ 66%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_record_model_prediction_exists PASSED [ 66%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_resolve_prediction_exists PASSED [ 66%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_get_model_brier_score_exists PASSED [ 66%]
+tests/test_phase2_frames_db.py::TestEngineFrameMethods::test_log_tier_transition_exists PASSED [ 67%]
+tests/test_phase2_integration.py::TestScenarioStructure::test_pipeline_import PASSED [ 67%]
+tests/test_phase2_integration.py::TestScenarioStructure::test_confidence_tier_import PASSED [ 67%]
+tests/test_phase2_integration.py::TestScenarioStructure::test_architecture_family_import PASSED [ 67%]
+tests/test_phase2_pipeline.py::TestPipelineConfig::test_defaults PASSED  [ 68%]
+tests/test_phase2_pipeline.py::TestPipelineConfig::test_custom_config PASSED [ 68%]
+tests/test_phase2_pipeline.py::TestPipelineResult::test_result_structure PASSED [ 68%]
+tests/test_phase2_track_record.py::TestModelTrackRecord::test_brier_score_perfect_prediction PASSED [ 68%]
+tests/test_phase2_track_record.py::TestModelTrackRecord::test_brier_score_worst_prediction PASSED [ 68%]
+tests/test_phase2_track_record.py::TestModelTrackRecord::test_brier_score_uncertain PASSED [ 69%]
+tests/test_phase2_track_record.py::TestModelTrackRecord::test_brier_score_slightly_wrong PASSED [ 69%]
+tests/test_phase2_track_record.py::TestTierTransitions::test_valid_tiers PASSED [ 69%]
+tests/test_phase2_track_record.py::TestTierTransitions::test_promotion_order PASSED [ 69%]
+tests/test_phase3_cli.py::TestAskCommandExists::test_ask_command_exists PASSED [ 70%]
+tests/test_phase3_cli.py::TestAskCommandExists::test_query_command_exists PASSED [ 70%]
+tests/test_phase3_cli.py::TestAskCommandExists::test_submit_command_exists PASSED [ 70%]
+tests/test_phase3_cli.py::TestQueryReadsDB::test_query_reads_db PASSED   [ 70%]
+tests/test_phase3_cli.py::TestQueryReadsDB::test_query_empty_results PASSED [ 71%]
+tests/test_phase3_cli.py::TestGraphStatsReturnsNumbers::test_graph_stats_returns_numbers PASSED [ 71%]
+tests/test_phase3_cli.py::TestSubmitQueuesAttestation::test_submit_queues_attestation PASSED [ 71%]
+tests/test_phase3_cli.py::TestSubmitQueuesAttestation::test_submit_without_hash_uses_latest PASSED [ 71%]
+tests/test_phase3_cli.py::TestSubmitQueuesAttestation::test_submit_no_attestation_error PASSED [ 71%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_load_from_explicit_path PASSED [ 72%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_get_config_is_singleton PASSED [ 72%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_get_section_returns_section PASSED [ 72%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_get_section_returns_default_if_missing PASSED [ 72%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_reset_config_clears_singleton PASSED [ 73%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_missing_config_returns_empty PASSED [ 73%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_env_variable_override PASSED [ 73%]
+tests/test_phase3_config_loader.py::TestConfigLoader::test_get_value PASSED [ 73%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_pipeline_imports PASSED [ 74%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_orchestrator_imports PASSED [ 74%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_mock_provider_imports PASSED [ 74%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_config_loader_imports PASSED [ 74%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_adapter_imports PASSED [ 74%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_seeder_imports PASSED [ 75%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_hook_imports PASSED [ 75%]
+tests/test_phase3_integration.py::TestImportsConsistency::test_attestation_imports PASSED [ 75%]
+tests/test_phase3_integration.py::TestEndToEndPipelineWithMocks::test_full_pipeline_produces_attestations PASSED [ 75%]
+tests/test_phase3_integration.py::TestEndToEndPipelineWithMocks::test_attestations_stored_in_db PASSED [ 76%]
+tests/test_phase3_integration.py::TestEndToEndPipelineWithMocks::test_graph_enriched_after_pipeline PASSED [ 76%]
+tests/test_phase3_integration.py::TestEndToEndPipelineWithMocks::test_multiple_questions_grow_graph PASSED [ 76%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_generate PASSED [ 76%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_cycles_responses PASSED [ 77%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_metadata PASSED [ 77%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_different_response_sets PASSED [ 77%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_health_check PASSED [ 77%]
+tests/test_phase3_mock_provider.py::TestMockProvider::test_mock_provider_list_models PASSED [ 77%]
+tests/test_phase3_mock_provider.py::TestSyntheticTriplets::test_synthetic_triplets_default PASSED [ 78%]
+tests/test_phase3_mock_provider.py::TestSyntheticTriplets::test_synthetic_triplets_custom_count PASSED [ 78%]
+tests/test_phase3_mock_provider.py::TestSyntheticTriplets::test_synthetic_triplets_unique_hashes PASSED [ 78%]
+tests/test_phase3_mock_provider.py::TestSyntheticTriplets::test_synthetic_triplets_deterministic PASSED [ 78%]
+tests/test_phase3_mock_provider.py::TestSyntheticTriplets::test_synthetic_triplets_custom_models PASSED [ 79%]
+tests/test_phase3_orchestrator.py::TestESMMRunResultEnrichment::test_esmm_run_result_has_consensus_triplets PASSED [ 79%]
+tests/test_phase3_orchestrator.py::TestESMMRunResultEnrichment::test_consensus_triplets_default_empty PASSED [ 79%]
+tests/test_phase3_orchestrator.py::TestESMMRunResultEnrichment::test_consensus_triplets_accepts_list PASSED [ 79%]
+tests/test_phase3_orchestrator.py::TestCycleManagerFactory::test_create_cycle_manager_accepts_providers PASSED [ 80%]
+tests/test_phase3_orchestrator.py::TestCycleManagerFactory::test_create_cycle_manager_providers_is_optional PASSED [ 80%]
+tests/test_phase3_pipeline.py::TestPipelineImports::test_pipeline_imports PASSED [ 80%]
+tests/test_phase3_pipeline.py::TestPipelineImports::test_pipeline_has_providers_param PASSED [ 80%]
+tests/test_phase3_pipeline.py::TestPipelineWithMockedExtraction::test_pipeline_produces_attestations PASSED [ 80%]
+tests/test_phase3_pipeline.py::TestPipelineWithMockedExtraction::test_pipeline_no_double_run PASSED [ 81%]
+tests/test_phase3_pipeline.py::TestPipelineWithMockedExtraction::test_pipeline_stores_attestations_in_db PASSED [ 81%]
+tests/test_phase3_pipeline.py::TestPipelineWithMockedExtraction::test_pipeline_enriches_graph PASSED [ 81%]
+tests/test_phase3_pipeline.py::TestPipelineWithMockedExtraction::test_pipeline_calls_post_crystallization_hook PASSED [ 81%]
+tests/test_phase3_post_crystallization.py::TestPostCrystallizationHook::test_hook_records_all_votes PASSED [ 82%]
+tests/test_phase3_post_crystallization.py::TestPostCrystallizationHook::test_hook_logs_tier_transition PASSED [ 82%]
+tests/test_phase3_post_crystallization.py::TestPostCrystallizationHook::test_hook_no_transition_if_same_tier PASSED [ 82%]
+tests/test_phase3_post_crystallization.py::TestPostCrystallizationHook::test_hook_handles_db_error_gracefully PASSED [ 82%]
+tests/test_phase3_question_seeder.py::TestExtractSeedConcepts::test_extract_seed_concepts PASSED [ 82%]
+tests/test_phase3_question_seeder.py::TestExtractSeedConcepts::test_stop_words_filtered PASSED [ 83%]
+tests/test_phase3_question_seeder.py::TestExtractSeedConcepts::test_short_words_filtered PASSED [ 83%]
+tests/test_phase3_question_seeder.py::TestExtractSeedConcepts::test_duplicates_removed PASSED [ 83%]
+tests/test_phase3_question_seeder.py::TestExtractSeedConcepts::test_empty_question PASSED [ 83%]
+tests/test_phase3_question_seeder.py::TestSeedGraphFromQuestion::test_seed_graph_on_empty FAILED [ 84%]
+tests/test_phase3_question_seeder.py::TestSeedGraphFromQuestion::test_seed_graph_skips_if_not_empty PASSED [ 84%]
+tests/test_phase3_track_record.py::TestRecordModelPrediction::test_record_model_prediction_signature PASSED [ 84%]
+tests/test_phase3_track_record.py::TestRecordModelPrediction::test_record_model_prediction_is_async PASSED [ 84%]
+tests/test_phase3_track_record.py::TestLogTierTransition::test_log_tier_transition_signature PASSED [ 85%]
+tests/test_phase3_track_record.py::TestLogTierTransition::test_log_tier_transition_is_async PASSED [ 85%]
+tests/test_phase3_track_record.py::TestBrierScoreView::test_brier_score_view_exists PASSED [ 85%]
+tests/test_phase3_track_record.py::TestBrierScoreView::test_brier_score_view_is_create_view PASSED [ 85%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_adapt_single_triplet PASSED [ 85%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_relation_becomes_predicate PASSED [ 86%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_votes_from_contributing_models PASSED [ 86%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_signature_5d_present PASSED [ 86%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_adapt_all PASSED [ 86%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_cochain_entry_overrides_signature PASSED [ 87%]
+tests/test_phase3_triplet_adapter.py::TestTripletAdapter::test_infer_provider_id_with_prefix PASSED [ 87%]
+tests/test_providers.py::TestABCContracts::test_model_provider_not_instantiable PASSED [ 87%]
+tests/test_providers.py::TestABCContracts::test_embedding_provider_not_instantiable PASSED [ 87%]
+tests/test_providers.py::TestABCContracts::test_mock_provider_is_valid PASSED [ 88%]
+tests/test_providers.py::TestABCContracts::test_mock_embedding_is_valid PASSED [ 88%]
+tests/test_providers.py::TestStructuredDataclasses::test_structured_query_defaults PASSED [ 88%]
+tests/test_providers.py::TestStructuredDataclasses::test_structured_query_keep_alive PASSED [ 88%]
+tests/test_providers.py::TestStructuredDataclasses::test_structured_response_success PASSED [ 88%]
+tests/test_providers.py::TestStructuredDataclasses::test_structured_response_failure PASSED [ 89%]
+tests/test_providers.py::TestStructuredDataclasses::test_model_metadata PASSED [ 89%]
+tests/test_providers.py::TestOllamaProvider::test_generate_success FAILED [ 89%]
+tests/test_providers.py::TestOllamaProvider::test_generate_empty_response FAILED [ 89%]
+tests/test_providers.py::TestOllamaProvider::test_generate_http_error FAILED [ 90%]
+tests/test_providers.py::TestOllamaProvider::test_generate_network_error FAILED [ 90%]
+tests/test_providers.py::TestOllamaProvider::test_generate_retry_on_failure FAILED [ 90%]
+tests/test_providers.py::TestOllamaProvider::test_generate_no_retry_on_404 FAILED [ 90%]
+tests/test_providers.py::TestOllamaProvider::test_list_models FAILED     [ 91%]
+tests/test_providers.py::TestOllamaProvider::test_health_check_healthy FAILED [ 91%]
+tests/test_providers.py::TestOllamaProvider::test_health_check_unhealthy FAILED [ 91%]
+tests/test_providers.py::TestOllamaProvider::test_preload_model FAILED   [ 91%]
+tests/test_providers.py::TestOllamaProvider::test_unload_model FAILED    [ 91%]
+tests/test_providers.py::TestOllamaProvider::test_metadata PASSED        [ 92%]
+tests/test_providers.py::TestOllamaProvider::test_no_model_raises FAILED [ 92%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_success FAILED [ 92%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_auto_dimension FAILED [ 92%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_batch FAILED [ 93%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_empty_text FAILED [ 93%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_known_dimensions PASSED [ 93%]
+tests/test_providers.py::TestOllamaEmbeddingProvider::test_provider_id PASSED [ 93%]
+tests/test_providers.py::TestProviderRegistry::test_register_and_get_model PASSED [ 94%]
+tests/test_providers.py::TestProviderRegistry::test_register_and_get_embedding PASSED [ 94%]
+tests/test_providers.py::TestProviderRegistry::test_get_unknown_raises PASSED [ 94%]
+tests/test_providers.py::TestProviderRegistry::test_get_unknown_embedding_raises PASSED [ 94%]
+tests/test_providers.py::TestProviderRegistry::test_list_model_providers PASSED [ 94%]
+tests/test_providers.py::TestProviderRegistry::test_list_embedding_providers PASSED [ 95%]
+tests/test_providers.py::TestProviderRegistry::test_overwrite_warning PASSED [ 95%]
+tests/test_providers.py::TestProviderRegistry::test_unregister_model PASSED [ 95%]
+tests/test_providers.py::TestProviderRegistry::test_get_stats PASSED     [ 95%]
+tests/test_providers.py::TestProviderRegistry::test_close_all FAILED     [ 96%]
+tests/test_providers.py::TestProviderRegistry::test_clear_all PASSED     [ 96%]
+tests/test_providers.py::TestProviderRegistry::test_convenience_get_provider PASSED [ 96%]
+tests/test_rotator.py::TestMultiProviderRotator::test_init FAILED        [ 96%]
+tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_success FAILED [ 97%]
+tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_unknown_provider FAILED [ 97%]
+tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_provider_fails FAILED [ 97%]
+tests/test_rotator.py::TestMultiProviderRotator::test_rotate_and_process FAILED [ 97%]
+tests/test_rotator.py::TestMultiProviderRotator::test_rotate_and_process_with_failure FAILED [ 97%]
+tests/test_rotator.py::TestMultiProviderRotator::test_rotate_stop_on_first_success FAILED [ 98%]
+tests/test_rotator.py::TestMultiProviderRotator::test_rotate_with_system_prompt FAILED [ 98%]
+tests/test_rotator.py::TestMultiProviderRotator::test_batch_process FAILED [ 98%]
+tests/test_rotator.py::TestMultiProviderRotator::test_batch_process_unknown_provider FAILED [ 98%]
+tests/test_rotator.py::TestMultiProviderRotator::test_batch_sequential_providers FAILED [ 99%]
+tests/test_rotator.py::TestMultiProviderRotator::test_vram_unload_on_rotation FAILED [ 99%]
+tests/test_rotator.py::TestMultiProviderRotator::test_vram_preload_on_batch FAILED [ 99%]
+tests/test_rotator.py::TestMultiProviderRotator::test_no_vram_on_cloud_provider FAILED [ 99%]
+tests/test_rotator.py::TestMultiProviderRotator::test_generate_count_tracking FAILED [100%]
+
+=================================== ERRORS ====================================
+____ ERROR at setup of TestESMMPhase1Integration.test_full_phase1_workflow ____
+.venv\lib\site-packages\_pytest\runner.py:353: in from_call
+    result: TResult | None = func()
+.venv\lib\site-packages\_pytest\runner.py:245: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\_pytest\logging.py:843: in pytest_runtest_setup
+    yield
+.venv\lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\runner.py:165: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv\lib\site-packages\_pytest\runner.py:523: in setup
+    col.setup()
+.venv\lib\site-packages\_pytest\python.py:1723: in setup
+    self._request._fillfixtures()
+.venv\lib\site-packages\_pytest\fixtures.py:707: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:539: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:627: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv\lib\site-packages\_pytest\fixtures.py:1110: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+.venv\lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+.venv\lib\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\fixtures.py:1188: in pytest_fixture_setup
+    warnings.warn(
+E   pytest.PytestRemovedIn9Warning: 'test_full_phase1_workflow' requested an async fixture 'real_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_________________ ERROR at setup of test_apply_add_edge_delta _________________
+.venv\lib\site-packages\_pytest\runner.py:353: in from_call
+    result: TResult | None = func()
+.venv\lib\site-packages\_pytest\runner.py:245: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\_pytest\logging.py:843: in pytest_runtest_setup
+    yield
+.venv\lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\runner.py:165: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv\lib\site-packages\_pytest\runner.py:523: in setup
+    col.setup()
+.venv\lib\site-packages\_pytest\python.py:1723: in setup
+    self._request._fillfixtures()
+.venv\lib\site-packages\_pytest\fixtures.py:707: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:539: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:627: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv\lib\site-packages\_pytest\fixtures.py:1110: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+.venv\lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+.venv\lib\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\fixtures.py:1188: in pytest_fixture_setup
+    warnings.warn(
+E   pytest.PytestRemovedIn9Warning: 'test_apply_add_edge_delta' requested an async fixture 'db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_______________ ERROR at setup of test_rollback_restores_state ________________
+.venv\lib\site-packages\_pytest\runner.py:353: in from_call
+    result: TResult | None = func()
+.venv\lib\site-packages\_pytest\runner.py:245: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\_pytest\logging.py:843: in pytest_runtest_setup
+    yield
+.venv\lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\runner.py:165: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv\lib\site-packages\_pytest\runner.py:523: in setup
+    col.setup()
+.venv\lib\site-packages\_pytest\python.py:1723: in setup
+    self._request._fillfixtures()
+.venv\lib\site-packages\_pytest\fixtures.py:707: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:539: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:627: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv\lib\site-packages\_pytest\fixtures.py:1110: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+.venv\lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+.venv\lib\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\fixtures.py:1188: in pytest_fixture_setup
+    warnings.warn(
+E   pytest.PytestRemovedIn9Warning: 'test_rollback_restores_state' requested an async fixture 'db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+____________ ERROR at setup of test_kappa_recalculated_after_edge _____________
+.venv\lib\site-packages\_pytest\runner.py:353: in from_call
+    result: TResult | None = func()
+.venv\lib\site-packages\_pytest\runner.py:245: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\_pytest\logging.py:843: in pytest_runtest_setup
+    yield
+.venv\lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\runner.py:165: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv\lib\site-packages\_pytest\runner.py:523: in setup
+    col.setup()
+.venv\lib\site-packages\_pytest\python.py:1723: in setup
+    self._request._fillfixtures()
+.venv\lib\site-packages\_pytest\fixtures.py:707: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:539: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:627: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv\lib\site-packages\_pytest\fixtures.py:1110: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+.venv\lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+.venv\lib\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\fixtures.py:1188: in pytest_fixture_setup
+    warnings.warn(
+E   pytest.PytestRemovedIn9Warning: 'test_kappa_recalculated_after_edge' requested an async fixture 'db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_______________ ERROR at setup of test_mutation_limit_respected _______________
+.venv\lib\site-packages\_pytest\runner.py:353: in from_call
+    result: TResult | None = func()
+.venv\lib\site-packages\_pytest\runner.py:245: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\_pytest\logging.py:843: in pytest_runtest_setup
+    yield
+.venv\lib\site-packages\_pytest\capture.py:895: in pytest_runtest_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\runner.py:165: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv\lib\site-packages\_pytest\runner.py:523: in setup
+    col.setup()
+.venv\lib\site-packages\_pytest\python.py:1723: in setup
+    self._request._fillfixtures()
+.venv\lib\site-packages\_pytest\fixtures.py:707: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:539: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+.venv\lib\site-packages\_pytest\fixtures.py:627: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv\lib\site-packages\_pytest\fixtures.py:1110: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv\lib\site-packages\pluggy\_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+.venv\lib\site-packages\pluggy\_callers.py:53: in run_old_style_hookwrapper
+    return result.get_result()
+.venv\lib\site-packages\pluggy\_callers.py:38: in run_old_style_hookwrapper
+    res = yield
+.venv\lib\site-packages\_pytest\setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+.venv\lib\site-packages\_pytest\fixtures.py:1188: in pytest_fixture_setup
+    warnings.warn(
+E   pytest.PytestRemovedIn9Warning: 'test_mutation_limit_respected' requested an async fixture 'db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+================================== FAILURES ===================================
+_____________ TestGraphPopulator.test_populate_from_file_empty_db _____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________________ TestGraphPopulator.test_get_population_stats _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestRelationGenerator.test_find_similar_concepts_no_embedding ________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestRelationGenerator.test_get_generation_stats _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestSeedInjector.test_inject_seed_unknown_type ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__________________ TestSeedInjector.test_inject_seed_minimal __________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________________ TestSeedInjector.test_get_seed_status ____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________________ TestDeriveConfidenceTier.test_low ______________________
+tests\test_phase03_attestation.py:110: in test_low
+    assert derive_confidence_tier(0.2) == "low"
+E   AssertionError: assert 'sandbox' == 'low'
+E     
+E     - low
+E     + sandbox
+____________________ TestDeriveConfidenceTier.test_medium _____________________
+tests\test_phase03_attestation.py:115: in test_medium
+    assert derive_confidence_tier(0.4) == "medium"
+E   AssertionError: assert 'sandbox' == 'medium'
+E     
+E     - medium
+E     + sandbox
+_____________________ TestDeriveConfidenceTier.test_high ______________________
+tests\test_phase03_attestation.py:120: in test_high
+    assert derive_confidence_tier(0.7) == "high"
+E   AssertionError: assert 'sandbox' == 'high'
+E     
+E     - high
+E     + sandbox
+___________________ TestDeriveConfidenceTier.test_verified ____________________
+tests\test_phase03_attestation.py:125: in test_verified
+    assert derive_confidence_tier(0.9) == "verified"
+E   AssertionError: assert 'sandbox' == 'verified'
+E     
+E     - verified
+E     + sandbox
+____________ TestCrystallize.test_crystallize_produces_attestation ____________
+tests\test_phase03_attestation.py:169: in test_crystallize_produces_attestation
+    assert att.confidence_tier == "high"
+E   AssertionError: assert 'proposition' == 'high'
+E     
+E     - high
+E     + proposition
+____________ TestCrystallizationPipeline.test_all_confidence_tiers ____________
+tests\test_phase03_integration.py:364: in test_all_confidence_tiers
+    assert att.confidence_tier == expected_tier, f"Expected {expected_tier} for consensus {consensus}"
+E   AssertionError: Expected low for consensus 0.2
+E   assert 'sandbox' == 'low'
+E     
+E     - low
+E     + sandbox
+_____________ TestConvergenceComparison.test_divergence_detection _____________
+tests\test_phase03_revalidation.py:129: in test_divergence_detection
+    assert att1.confidence_tier != att2.confidence_tier
+E   AssertionError: assert 'sandbox' != 'sandbox'
+E    +  where 'sandbox' = EpistemicAttestation(claim_hash='d40a254286ef876e1164bce6a7231eb22cafafe098eed86ae632a26545581eec', subject='X', predicate='is_a', object='Y', consensus_score=0.9, models_consulted=1, models_agreeing=1, model_votes=[ModelVote(model_id='m1', provider_id='p', agreed=True, confidence=0.9, weight=1.0)], signature_5d=Signature5D(agreement=0.9, semantic_consistency=0.8, centrality=0.7, stability=0.6, relation_diversity=0.5), epistemic_type='foundational', confidence_tier='sandbox', metrological_frame=None, source_anchor=None, run_id=None, question=None, timestamp=1770731773.6875033, protocol_version='0.3', validation_count=1, previous_hash=None).confidence_tier
+E    +  and   'sandbox' = EpistemicAttestation(claim_hash='d40a254286ef876e1164bce6a7231eb22cafafe098eed86ae632a26545581eec', subject='X', predicate='is_a', object='Y', consensus_score=0.3, models_consulted=1, models_agreeing=0, model_votes=[ModelVote(model_id='m2', provider_id='p', agreed=False, confidence=0.3, weight=1.0)], signature_5d=Signature5D(agreement=0.3, semantic_consistency=0.4, centrality=0.5, stability=0.3, relation_diversity=0.4), epistemic_type='foundational', confidence_tier='sandbox', metrological_frame=None, source_anchor=None, run_id=None, question=None, timestamp=1770731773.6875033, protocol_version='0.3', validation_count=1, previous_hash=None).confidence_tier
+______________ TestConvergenceReport.test_stable_claim_detection ______________
+tests\test_phase03_revalidation.py:187: in test_stable_claim_detection
+    assert att1.confidence_tier == att2.confidence_tier == "high"
+E   AssertionError: assert 'sandbox' == 'high'
+E     
+E     - high
+E     + sandbox
+_____________ TestConvergenceReport.test_improved_claim_detection _____________
+tests\test_phase03_revalidation.py:195: in test_improved_claim_detection
+    assert att1.confidence_tier == "medium"
+E   AssertionError: assert 'sandbox' == 'medium'
+E     
+E     - medium
+E     + sandbox
+_____________ TestConvergenceReport.test_degraded_claim_detection _____________
+tests\test_phase03_revalidation.py:204: in test_degraded_claim_detection
+    assert att1.confidence_tier == "high"
+E   AssertionError: assert 'sandbox' == 'high'
+E     
+E     - high
+E     + sandbox
+________________ TestStoreAttestation.test_store_and_retrieve _________________
+tests\test_phase03_storage.py:98: in test_store_and_retrieve
+    asyncio.run(run())
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\asyncio\runners.py:44: in run
+    return loop.run_until_complete(main)
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\asyncio\base_events.py:649: in run_until_complete
+    return future.result()
+tests\test_phase03_storage.py:94: in run
+    assert retrieved["confidence_tier"] == "high"
+E   AssertionError: assert 'proposition' == 'high'
+E     
+E     - high
+E     + proposition
+---------------------------- Captured stdout call -----------------------------
+[ISpaceDB] Initialized at C:\Users\simon\AppData\Local\Temp\pytest-of-simon\pytest-27\test_store_and_retrieve0\test.db (pool: 10 connections)
+______________ TestClientMock.test_mock_submit_returns_signature ______________
+tests\test_phase1_client.py:135: in test_mock_submit_returns_signature
+    asyncio.get_event_loop().run_until_complete(client.connect())
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\asyncio\events.py:656: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+________________ TestClientMock.test_mock_query_returns_empty _________________
+tests\test_phase1_client.py:151: in test_mock_query_returns_empty
+    asyncio.get_event_loop().run_until_complete(client.connect())
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\asyncio\events.py:656: in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+E   RuntimeError: There is no current event loop in thread 'MainThread'.
+_____________ TestSeedGraphFromQuestion.test_seed_graph_on_empty ______________
+tests\test_phase3_question_seeder.py:69: in test_seed_graph_on_empty
+    assert count >= 4  # at least solana, effective, tps, exceeds, 3000
+E   assert 0 >= 4
+---------------------------- Captured stdout call -----------------------------
+[ISpaceDB] Initialized at C:\Users\simon\AppData\Local\Temp\tmpbnqhrgmq\test_seed.db (pool: 10 connections)
+__________________ TestOllamaProvider.test_generate_success ___________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestOllamaProvider.test_generate_empty_response _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestOllamaProvider.test_generate_http_error _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestOllamaProvider.test_generate_network_error ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestOllamaProvider.test_generate_retry_on_failure ______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestOllamaProvider.test_generate_no_retry_on_404 _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________________ TestOllamaProvider.test_list_models _____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________________ TestOllamaProvider.test_health_check_healthy _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestOllamaProvider.test_health_check_unhealthy ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________________ TestOllamaProvider.test_preload_model ____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________________ TestOllamaProvider.test_unload_model _____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________________ TestOllamaProvider.test_no_model_raises ___________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestOllamaEmbeddingProvider.test_embed_success ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________ TestOllamaEmbeddingProvider.test_embed_auto_dimension ____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________________ TestOllamaEmbeddingProvider.test_embed_batch _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestOllamaEmbeddingProvider.test_embed_empty_text ______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________________ TestProviderRegistry.test_close_all _____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________________ TestMultiProviderRotator.test_init ______________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________ TestMultiProviderRotator.test_generate_single_success ____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______ TestMultiProviderRotator.test_generate_single_unknown_provider ________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestMultiProviderRotator.test_generate_single_provider_fails _________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestMultiProviderRotator.test_rotate_and_process _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestMultiProviderRotator.test_rotate_and_process_with_failure ________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________ TestMultiProviderRotator.test_rotate_stop_on_first_success __________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________ TestMultiProviderRotator.test_rotate_with_system_prompt ___________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestMultiProviderRotator.test_batch_process _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestMultiProviderRotator.test_batch_process_unknown_provider _________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__________ TestMultiProviderRotator.test_batch_sequential_providers ___________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________ TestMultiProviderRotator.test_vram_unload_on_rotation ____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________ TestMultiProviderRotator.test_vram_preload_on_batch _____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________ TestMultiProviderRotator.test_no_vram_on_cloud_provider ___________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+____________ TestMultiProviderRotator.test_generate_count_tracking ____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+============================== warnings summary ===============================
+services\esmm\populate_graph.py:24
+  C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\populate_graph.py:24: DeprecationWarning: embeddings.py is deprecated. Use OllamaEmbeddingProvider via EmbeddingProvider interface.
+    from app.embeddings import get_embeddings, EMBEDDING_DIM
+
+tests\test_esmm_phase1.py:154
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:154: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:173
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:173: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:267
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:267: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:277
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:277: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:345
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:345: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:356
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:356: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:378
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:378: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:423
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:423: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_esmm_phase1.py:424
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_esmm_phase1.py:424: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+..\lyra_clean_bis\tests\test_graph_delta.py:19
+  C:\Users\simon\PROJECTS\lyra_clean_bis\tests\test_graph_delta.py:19: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+..\lyra_clean_bis\tests\test_graph_delta.py:49
+  C:\Users\simon\PROJECTS\lyra_clean_bis\tests\test_graph_delta.py:49: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+..\lyra_clean_bis\tests\test_graph_delta.py:79
+  C:\Users\simon\PROJECTS\lyra_clean_bis\tests\test_graph_delta.py:79: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+..\lyra_clean_bis\tests\test_graph_delta.py:98
+  C:\Users\simon\PROJECTS\lyra_clean_bis\tests\test_graph_delta.py:98: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_client.py:165
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_client.py:165: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_client.py:172
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_client.py:172: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_client.py:177
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_client.py:177: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:169
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:169: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:183
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:183: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:193
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:193: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:202
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:202: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:212
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:212: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_phase1_integration.py:220
+  C:\Users\simon\PROJECTS\EPP_Verdict\tests\test_phase1_integration.py:220: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:132
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:132: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:154
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:154: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:172
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:172: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:192
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:192: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:205
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:235
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:235: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:262
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:262: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:281
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:281: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:298
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:298: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:310
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:310: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:324
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:324: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:346
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:346: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:373
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:373: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:389
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:389: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:404
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:404: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:420
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:420: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_providers.py:536
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_providers.py:536: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+tests\test_rotator.py:17
+  c:\Users\simon\PROJECTS\EPP_Verdict\tests\test_rotator.py:17: PytestUnknownMarkWarning: Unknown pytest.mark.asyncio - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.asyncio
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_esmm_phase1.py::TestGraphPopulator::test_populate_from_file_empty_db
+FAILED tests/test_esmm_phase1.py::TestGraphPopulator::test_get_population_stats
+FAILED tests/test_esmm_phase1.py::TestRelationGenerator::test_find_similar_concepts_no_embedding
+FAILED tests/test_esmm_phase1.py::TestRelationGenerator::test_get_generation_stats
+FAILED tests/test_esmm_phase1.py::TestSeedInjector::test_inject_seed_unknown_type
+FAILED tests/test_esmm_phase1.py::TestSeedInjector::test_inject_seed_minimal
+FAILED tests/test_esmm_phase1.py::TestSeedInjector::test_get_seed_status - Fa...
+FAILED tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_low
+FAILED tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_medium
+FAILED tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_high
+FAILED tests/test_phase03_attestation.py::TestDeriveConfidenceTier::test_verified
+FAILED tests/test_phase03_attestation.py::TestCrystallize::test_crystallize_produces_attestation
+FAILED tests/test_phase03_integration.py::TestCrystallizationPipeline::test_all_confidence_tiers
+FAILED tests/test_phase03_revalidation.py::TestConvergenceComparison::test_divergence_detection
+FAILED tests/test_phase03_revalidation.py::TestConvergenceReport::test_stable_claim_detection
+FAILED tests/test_phase03_revalidation.py::TestConvergenceReport::test_improved_claim_detection
+FAILED tests/test_phase03_revalidation.py::TestConvergenceReport::test_degraded_claim_detection
+FAILED tests/test_phase03_storage.py::TestStoreAttestation::test_store_and_retrieve
+FAILED tests/test_phase1_client.py::TestClientMock::test_mock_submit_returns_signature
+FAILED tests/test_phase1_client.py::TestClientMock::test_mock_query_returns_empty
+FAILED tests/test_phase3_question_seeder.py::TestSeedGraphFromQuestion::test_seed_graph_on_empty
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_success - F...
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_empty_response
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_http_error
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_network_error
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_retry_on_failure
+FAILED tests/test_providers.py::TestOllamaProvider::test_generate_no_retry_on_404
+FAILED tests/test_providers.py::TestOllamaProvider::test_list_models - Failed...
+FAILED tests/test_providers.py::TestOllamaProvider::test_health_check_healthy
+FAILED tests/test_providers.py::TestOllamaProvider::test_health_check_unhealthy
+FAILED tests/test_providers.py::TestOllamaProvider::test_preload_model - Fail...
+FAILED tests/test_providers.py::TestOllamaProvider::test_unload_model - Faile...
+FAILED tests/test_providers.py::TestOllamaProvider::test_no_model_raises - Fa...
+FAILED tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_success
+FAILED tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_auto_dimension
+FAILED tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_batch
+FAILED tests/test_providers.py::TestOllamaEmbeddingProvider::test_embed_empty_text
+FAILED tests/test_providers.py::TestProviderRegistry::test_close_all - Failed...
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_init - Failed: a...
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_success
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_unknown_provider
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_generate_single_provider_fails
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_rotate_and_process
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_rotate_and_process_with_failure
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_rotate_stop_on_first_success
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_rotate_with_system_prompt
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_batch_process - ...
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_batch_process_unknown_provider
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_batch_sequential_providers
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_vram_unload_on_rotation
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_vram_preload_on_batch
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_no_vram_on_cloud_provider
+FAILED tests/test_rotator.py::TestMultiProviderRotator::test_generate_count_tracking
+ERROR tests/test_esmm_phase1.py::TestESMMPhase1Integration::test_full_phase1_workflow
+ERROR tests/test_graph_delta.py::test_apply_add_edge_delta - pytest.PytestRem...
+ERROR tests/test_graph_delta.py::test_rollback_restores_state - pytest.Pytest...
+ERROR tests/test_graph_delta.py::test_kappa_recalculated_after_edge - pytest....
+ERROR tests/test_graph_delta.py::test_mutation_limit_respected - pytest.Pytes...
+====== 53 failed, 368 passed, 9 skipped, 41 warnings, 5 errors in 17.08s ======

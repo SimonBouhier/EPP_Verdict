@@ -86,7 +86,8 @@ class SemanticMemory(AdaptiveConsciousness):
         if self.level < 3:
             return None
         
-        if not content or not embeddings or len(embeddings) != 1024:
+        # Phase 0.2: Accept any valid dimension (checked by caller via EmbeddingProvider.get_dimension())
+        if not content or not embeddings or len(embeddings) < 1:
             return None
         
         # Créer entrée
