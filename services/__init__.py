@@ -1,5 +1,5 @@
 """
-Services package for Lyra Clean.
+Services package for EPP_Verdict.
 
 Exports:
 - ContextInjector: Semantic context injection
@@ -7,7 +7,6 @@ Exports:
 - SessionStorage: Save/load session management
 - EntityResolver: Semantic entity resolution (ESMM)
 - RelationNormalizer: Canonical relation mapping (ESMM)
-- KappaWorker: Deferred kappa calculation (ESMM)
 """
 from .injector import (
     ContextInjector,
@@ -31,10 +30,6 @@ from .relation_normalizer import (
     RelationNormalizer,
     get_relation_normalizer
 )
-from .kappa_worker import (
-    KappaWorker,
-    run_kappa_worker_once
-)
 
 __all__ = [
     # Context & Memory
@@ -55,7 +50,4 @@ __all__ = [
     # ESMM: Relation Normalization
     'RelationNormalizer',
     'get_relation_normalizer',
-    # ESMM: Kappa Worker
-    'KappaWorker',
-    'run_kappa_worker_once'
 ]

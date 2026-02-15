@@ -1,0 +1,299 @@
+=== FROM APP ===
+                                                                                                           
+./.venv/Lib/site-packages/numpy/lib/_function_base_impl.py:493:    numpy.result_type : Returns the type that results from applying the
+./.venv/Lib/site-packages/numpy/_core/multiarray.py:695:    Returns the type that results from applying the NumPy
+./.venv/Lib/site-packages/starlette/middleware/base.py:168:                    raise app_exc from app_exc.__cause__ or app_exc.__context__
+./.venv/Lib/site-packages/_pytest/_code/code.py:1515:# Relative paths that we use to filter traceback entries from appearing to the user;
+./app/api/chat.py:15:from app.models import ChatRequest, ChatResponse, ErrorResponse
+./app/api/chat.py:16:from app.llm_client import get_ollama_client, OllamaClient
+./app/api/graph.py:22:from app.models import (
+./app/api/multimodel.py:13:from app.models import (
+./app/api/multimodel.py:18:from app.llm_client import get_multi_model_client, MultiModelClient
+./app/api/sessions.py:15:from app.models import (
+./app/main.py:27:from app.api import chat, sessions, graph, multimodel
+./app/main.py:28:from app.models import HealthResponse, StatsResponse, ErrorResponse
+./app/main.py:29:from app.llm_client import get_ollama_client, close_ollama_client, get_multi_model_client, close_multi_model_client
+PS C:\Users\simon\PROJECTS\EPP_Verdict> bash -c "echo '=== FROM DATABASE ===' && grep -rn 'from database' --include='*.py' . | grep -v __pycache__"
+=== FROM DATABASE ===
+./app/api/chat.py:18:from database import get_db, ISpaceDB
+./app/api/graph.py:33:from database import (
+./app/api/multimodel.py:19:from database import get_db, ISpaceDB
+./app/api/sessions.py:23:from database import get_db, ISpaceDB
+./app/main.py:30:from database import get_db, close_db
+./cli/epp_cli.py:133:    from database.engine import get_db
+./cli/epp_cli.py:182:    from database.engine import get_db
+./cli/epp_cli.py:238:    from database.engine import get_db
+./cli/epp_cli.py:275:    from database.engine import get_db
+./core/physics/bezier.py:295:        Create engine from database profile.
+./core/security.py:357:    from database.pool import get_logger
+./database/engine.py:24:from database.graph_delta import (
+./database/engine.py:28:from database.pool import SQLiteConnectionPool, get_pool, close_pool
+./demos/scenario_1.py:20:from database.engine import ISpaceDB
+./demos/scenario_1.py:21:from database.pool import close_pool
+./demos/scenario_2.py:19:from database.engine import ISpaceDB
+./demos/scenario_2.py:20:from database.pool import close_pool
+./demos/scenario_3.py:16:from database.engine import ISpaceDB
+./demos/scenario_3.py:17:from database.pool import close_pool
+./services/entity_resolver.py:19:from database.engine import ISpaceDB, get_db
+./services/esmm/cochain_builder.py:29:    from database.engine import ISpaceDB
+./services/esmm/coverage_analyzer.py:25:    from database.engine import ISpaceDB
+./services/esmm/cycle_manager.py:39:    from database.engine import ISpaceDB
+./services/esmm/gap_detector.py:30:    from database.engine import ISpaceDB
+./services/esmm/orchestrator.py:40:    from database.engine import ISpaceDB
+./services/esmm/pipeline.py:31:    from database.engine import ISpaceDB
+./services/esmm/post_crystallization.py:9:    from database.engine import ISpaceDB
+./services/esmm/question_seeder.py:13:    from database.engine import ISpaceDB
+./services/esmm/relation_generator.py:27:from database.graph_delta import GraphDelta, DeltaOperation
+./services/esmm/seed_injector.py:26:from database.graph_delta import GraphDelta, DeltaOperation
+./services/esmm/triplet_extractor.py:609:                from database import get_db
+./services/injector.py:27:from database.engine import ISpaceDB
+./services/injector.py:386:        - Fetch last N messages from database
+./services/kappa_worker.py:14:from database.engine import ISpaceDB, get_db
+./services/kappa_worker.py:15:from database.graph_delta import KappaCalculator
+./services/relation_normalizer.py:13:from database.engine import ISpaceDB, get_db
+./tests/conftest.py:217:        from database.pool import close_pool
+./tests/test_esmm_phase1.py:411:        from database import ISpaceDB
+./tests/test_esmm_phase1.py:412:        from database.pool import close_pool
+./tests/test_graph_delta.py:7:from database import get_db, GraphDelta, DeltaOperation, DeltaBatch
+./tests/test_graph_delta.py:8:from database.graph_delta import KappaCalculator, MutationLimitExceededError        
+./tests/test_phase02_decoupling.py:19:from database.engine import ISpaceDB
+./tests/test_phase02_decoupling.py:37:        from database.pool import close_pool
+./tests/test_phase02_migration.py:20:from database.engine import ISpaceDB
+./tests/test_phase02_migration.py:37:        from database.pool import close_pool
+./tests/test_phase02_schema.py:18:from database.engine import ISpaceDB
+./tests/test_phase02_schema.py:84:        from database.pool import close_pool
+./tests/test_phase02_search.py:16:from database.engine import ISpaceDB
+./tests/test_phase02_search.py:33:        from database.pool import close_pool
+./tests/test_phase03_integration.py:18:from database.engine import ISpaceDB
+./tests/test_phase03_integration.py:19:from database.pool import close_pool
+./tests/test_phase03_revalidation.py:140:            from database.engine import ISpaceDB
+./tests/test_phase03_revalidation.py:141:            from database.pool import close_pool
+./tests/test_phase03_storage.py:19:from database.engine import ISpaceDB
+./tests/test_phase03_storage.py:37:        from database.pool import close_pool
+./tests/test_phase2_frames_db.py:52:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:56:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:60:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:64:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:68:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:72:        from database.engine import ISpaceDB
+./tests/test_phase2_frames_db.py:76:        from database.engine import ISpaceDB
+./tests/test_phase3_integration.py:22:    from database.engine import ISpaceDB
+./tests/test_phase3_integration.py:23:    from database.pool import close_pool
+./tests/test_phase3_integration.py:36:    from database.pool import close_pool
+./tests/test_phase3_pipeline.py:15:    from database.engine import ISpaceDB
+./tests/test_phase3_post_crystallization.py:46:    from database.engine import ISpaceDB
+./tests/test_phase3_question_seeder.py:61:        from database.engine import ISpaceDB
+./tests/test_phase3_question_seeder.py:73:        from database.engine import ISpaceDB
+./tests/test_phase3_track_record.py:19:        from database.engine import ISpaceDB
+./tests/test_phase3_track_record.py:31:        from database.engine import ISpaceDB
+./tests/test_phase3_track_record.py:39:        from database.engine import ISpaceDB
+./tests/test_phase3_track_record.py:50:        from database.engine import ISpaceDB
+./tests/test_phase4_runtime_fixes.py:10:from database.engine import ISpaceDB
+./tests/test_phase4_runtime_fixes.py:269:        from database.engine import get_db, close_db
+./tools/migrate_embeddings.py:34:from database.engine import ISpaceDB
+./tools/migrate_embeddings.py:270:            from database.pool import close_pool
+./tools/migrate_embeddings.py:305:            from database.pool import close_pool
+./tools/migrate_embeddings.py:331:            from database.pool import close_pool
+./tools/migrate_embeddings.py:366:            from database.pool import close_pool
+PS C:\Users\simon\PROJECTS\EPP_Verdict> bash -c "echo '=== FROM SERVICES ===' && grep -rn 'from services' --include='*.py' . | grep -v __pycache__"
+=== FROM SERVICES ===
+./app/api/chat.py:17:from services.providers.ollama_embeddings import get_ollama_embedding_provider
+./app/api/chat.py:20:from services import ContextInjector, ConversationMemory, build_system_prompt
+./app/api/chat.py:21:from services.consciousness.metrics import ConsciousnessMonitor
+./app/api/chat.py:22:from services.consciousness.adaptation import AdaptiveConsciousness
+./app/api/chat.py:23:from services.consciousness.memory import get_semantic_memory
+./app/api/graph.py:37:from services.esmm import (
+./app/api/graph.py:422:    from services.esmm import SeedInjector
+./app/api/graph.py:646:from services.esmm.orchestrator import (
+./app/api/graph.py:650:from services.esmm.gap_detector import create_gap_detector
+./app/api/graph.py:651:from services.esmm.coverage_analyzer import CoverageAnalyzer
+./app/api/sessions.py:25:from services.session_storage import get_session_storage, SessionStorage
+./app/llm_client.py:626:        from services.esmm.model_rotator import get_model_rotator, BatchModelResult       
+./app/main.py:33:from services.providers import (
+./app/models.py:694:        from services.esmm.triplet_extractor import ALLOWED_MODELS
+./cli/epp_cli.py:26:from services.solana.config import SolanaConfig, SolanaCluster
+./cli/epp_cli.py:27:from services.solana.client import EppSolanaClient
+./cli/epp_cli.py:28:from services.solana.metrological_frame import (
+./cli/epp_cli.py:33:from services.esmm.attestation import (
+./cli/epp_cli.py:134:    from services.esmm.pipeline import run_pipeline, PipelineConfig
+./database/engine.py:137:                    from services.solana.metrological_frame import (
+./database/engine.py:1074:                    from services.consciousness.metrics import ConsciousnessMetrics     
+./database/engine.py:3168:                from services.config_loader import get_value
+./demos/scenario_1.py:22:from services.esmm.pipeline import run_pipeline, PipelineConfig
+./demos/scenario_1.py:23:from services.providers.mock_provider import make_synthetic_triplets
+./demos/scenario_1.py:24:from services.esmm.triplet_adapter import adapt_all
+./demos/scenario_2.py:21:from services.esmm.pipeline import run_pipeline, PipelineConfig
+./demos/scenario_2.py:22:from services.providers.mock_provider import make_synthetic_triplets
+./demos/scenario_2.py:23:from services.esmm.triplet_adapter import adapt_all
+./demos/scenario_3.py:18:from services.esmm.pipeline import run_pipeline, PipelineConfig
+./demos/scenario_3.py:19:from services.providers.mock_provider import make_synthetic_triplets
+./demos/scenario_3.py:20:from services.esmm.triplet_adapter import adapt_all
+./services/config_loader.py:8:    from services.config_loader import get_config, get_section
+./services/entity_resolver.py:147:        from services.providers.ollama_embeddings import get_ollama_embedding_provider
+./services/entity_resolver.py:182:        from services.providers.ollama_embeddings import get_ollama_embedding_provider
+./services/esmm/cycle_manager.py:878:        from services.providers.ollama import OllamaProvider
+./services/esmm/multi_provider_rotator.py:16:from services.providers.base import ModelProvider, StructuredQuery, StructuredResponse
+./services/esmm/pipeline.py:65:        from services.config_loader import get_section
+./services/esmm/populate_graph.py:8:    from services.esmm import GraphPopulator
+./services/esmm/populate_graph.py:25:from services.providers.ollama_embeddings import get_ollama_embedding_provider
+./services/esmm/relation_generator.py:8:    from services.esmm import RelationGenerator
+./services/esmm/seed_injector.py:13:    from services.esmm import SeedInjector
+./services/esmm/seed_injector.py:28:from services.providers.ollama_embeddings import get_ollama_embedding_provider
+./services/esmm/triplet_adapter.py:24:            from services.providers.base import infer_architecture_family   
+./services/esmm/triplet_extractor.py:42:from services.providers.registry import ProviderRegistry
+./services/esmm/triplet_extractor.py:171:                    from services.entity_resolver import get_entity_resolver
+./services/esmm/triplet_extractor.py:182:                    from services.relation_normalizer import get_relation_normalizer
+./services/esmm/triplet_extractor.py:301:        from services.providers.ollama import OllamaProvider
+./services/providers/anthropic.py:12:from services.providers.base import (
+./services/providers/mock_provider.py:161:    from services.esmm.consensus_engine import ConsensusTriplet
+./services/providers/ollama.py:14:from services.providers.base import (
+./services/providers/ollama_embeddings.py:11:from services.providers.base import EmbeddingProvider
+./services/providers/openai_compat.py:16:from services.providers.base import (
+./services/providers/registry.py:10:from services.providers.base import ModelProvider, EmbeddingProvider
+./services/providers/__init__.py:11:from services.providers.base import (
+./services/providers/__init__.py:19:from services.providers.ollama import OllamaProvider, get_ollama_provider     
+./services/providers/__init__.py:20:from services.providers.openai_compat import (
+./services/providers/__init__.py:26:from services.providers.anthropic import AnthropicProvider, create_anthropic_provider
+./services/providers/__init__.py:27:from services.providers.ollama_embeddings import (
+./services/providers/__init__.py:31:from services.providers.registry import ProviderRegistry, get_provider, health_check_all
+./services/solana/bridge.py:21:from services.esmm.attestation import EpistemicAttestation, Signature5D
+./services/solana/client.py:23:from services.solana.config import SolanaConfig, SolanaCluster, validate_cluster   
+./services/solana/client.py:24:from services.solana.bridge import (
+./services/solana/client.py:30:from services.esmm.attestation import EpistemicAttestation
+./services/solana/client.py:388:        from services.solana.bridge import (
+./services/solana/client.py:513:        from services.solana.bridge import string_to_fixed_bytes
+./tests/conftest.py:9:from services.providers.base import (
+./tests/conftest.py:16:from services.providers.registry import ProviderRegistry
+./tests/conftest.py:239:        from services.config_loader import reset_config
+./tests/conftest.py:267:        from services.consciousness.memory import clear_semantic_memory
+./tests/test_ab_metrics.py:15:from services.consciousness.metrics import ConsciousnessMetrics, ConsciousnessMonitor
+./tests/test_bridge_solana_compat.py:16:    from services.solana.bridge import SCORE_SCALE
+./tests/test_bridge_solana_compat.py:29:    from services.solana.bridge import MAX_SUBJECT_LEN, MAX_PREDICATE_LEN, MAX_OBJECT_LEN
+./tests/test_bridge_solana_compat.py:48:    from services.solana.bridge import float_to_u16, u16_to_float
+./tests/test_bridge_solana_compat.py:61:    from services.solana.bridge import float_to_u16
+./tests/test_bridge_solana_compat.py:71:    from services.esmm.attestation import compute_claim_hash
+./tests/test_bridge_solana_compat.py:80:    from services.solana.bridge import string_to_fixed_bytes
+./tests/test_bridge_solana_compat.py:94:    from services.solana.bridge import string_to_fixed_bytes, fixed_bytes_to_string
+./tests/test_esmm_phase1.py:22:from services.esmm.populate_graph import GraphPopulator, PopulationResult
+./tests/test_esmm_phase1.py:23:from services.esmm.relation_generator import RelationGenerator, RelationGenerationResult
+./tests/test_esmm_phase1.py:24:from services.esmm.seed_injector import SeedInjector, SeedInjectionResult, SEED_TYPES
+./tests/test_phase02_decoupling.py:20:from services.consciousness.memory import SemanticMemory, clear_semantic_memory
+./tests/test_phase03_attestation.py:24:from services.esmm.attestation import (
+./tests/test_phase03_integration.py:20:from services.esmm.attestation import (
+./tests/test_phase03_integration.py:28:from services.esmm.run_logger import RunLogger, PhaseEvent
+./tests/test_phase03_logging.py:17:from services.esmm.run_logger import RunLogger, PhaseEvent
+./tests/test_phase03_revalidation.py:15:from services.esmm.attestation import (
+./tests/test_phase03_storage.py:20:from services.esmm.attestation import (
+./tests/test_phase1_bridge.py:6:from services.solana.bridge import (
+./tests/test_phase1_bridge.py:14:from services.esmm.attestation import (
+./tests/test_phase1_cli.py:16:from services.esmm.pipeline import PipelineResult
+./tests/test_phase1_client.py:7:from services.solana.config import SolanaCluster, SolanaConfig
+./tests/test_phase1_client.py:8:from services.solana.client import (
+./tests/test_phase1_client.py:13:from services.esmm.attestation import (
+./tests/test_phase1_frame.py:7:from services.solana.metrological_frame import (
+./tests/test_phase1_frame.py:13:from services.solana.config import (
+./tests/test_phase1_integration.py:12:from services.solana.config import SolanaCluster, SolanaConfig
+./tests/test_phase1_integration.py:13:from services.solana.client import EppSolanaClient, derive_attestation_pda  
+./tests/test_phase1_integration.py:14:from services.solana.bridge import attestation_to_anchor_args, anchor_data_to_attestation_summary
+./tests/test_phase1_integration.py:15:from services.solana.metrological_frame import create_blockchain_tps_frame  
+./tests/test_phase1_integration.py:16:from services.esmm.attestation import (
+./tests/test_phase2_confidence.py:5:from services.esmm.attestation import (
+./tests/test_phase2_diversity.py:3:from services.providers.base import infer_architecture_family, ARCHITECTURE_FAMILIES
+./tests/test_phase2_integration.py:10:        from services.esmm.pipeline import run_pipeline, PipelineConfig, PipelineResult
+./tests/test_phase2_integration.py:14:        from services.esmm.attestation import derive_confidence_tier, CONFIDENCE_TIERS
+./tests/test_phase2_integration.py:18:        from services.providers.base import infer_architecture_family       
+./tests/test_phase2_pipeline.py:7:from services.esmm.pipeline import (
+./tests/test_phase2_pipeline.py:12:from services.esmm.attestation import EpistemicAttestation
+./tests/test_phase3_config_loader.py:8:from services.config_loader import (
+./tests/test_phase3_integration.py:44:        from services.esmm.pipeline import run_pipeline, PipelineConfig, PipelineResult
+./tests/test_phase3_integration.py:48:        from services.esmm.orchestrator import ESMMOrchestrator, ESMMRunConfig, ESMMRunResult
+./tests/test_phase3_integration.py:52:        from services.providers.mock_provider import MockProvider, make_synthetic_triplets
+./tests/test_phase3_integration.py:56:        from services.config_loader import get_config, get_section, load_config, reset_config
+./tests/test_phase3_integration.py:60:        from services.esmm.triplet_adapter import adapt_consensus_triplet, adapt_all
+./tests/test_phase3_integration.py:64:        from services.esmm.question_seeder import extract_seed_concepts     
+./tests/test_phase3_integration.py:68:        from services.esmm.post_crystallization import post_crystallization_hook
+./tests/test_phase3_integration.py:72:        from services.esmm.attestation import (
+./tests/test_phase3_integration.py:110:        from services.esmm.pipeline import run_pipeline, PipelineConfig    
+./tests/test_phase3_integration.py:138:        from services.esmm.pipeline import run_pipeline, PipelineConfig    
+./tests/test_phase3_integration.py:168:        from services.esmm.pipeline import run_pipeline, PipelineConfig    
+./tests/test_phase3_integration.py:201:        from services.esmm.pipeline import run_pipeline, PipelineConfig    
+./tests/test_phase3_mock_provider.py:6:from services.providers.mock_provider import MockProvider, make_synthetic_triplets, RESPONSE_SETS
+./tests/test_phase3_mock_provider.py:7:from services.providers.base import StructuredQuery, StructuredResponse, ModelMetadata
+./tests/test_phase3_orchestrator.py:6:from services.esmm.orchestrator import ESMMRunResult
+./tests/test_phase3_orchestrator.py:36:        from services.providers.mock_provider import make_synthetic_triplets
+./tests/test_phase3_orchestrator.py:62:        from services.esmm.cycle_manager import create_cycle_manager       
+./tests/test_phase3_orchestrator.py:69:        from services.esmm.cycle_manager import create_cycle_manager       
+./tests/test_phase3_pipeline.py:8:from services.esmm.pipeline import run_pipeline, PipelineConfig, PipelineResult 
+./tests/test_phase3_pipeline.py:9:from services.providers.mock_provider import make_synthetic_triplets
+./tests/test_phase3_pipeline.py:10:from services.esmm.triplet_adapter import adapt_all
+./tests/test_phase3_pipeline.py:40:        from services.esmm.pipeline import run_pipeline, PipelineConfig, PipelineResult
+./tests/test_phase3_post_crystallization.py:8:from services.esmm.attestation import crystallize, ModelVote, Signature5D
+./tests/test_phase3_post_crystallization.py:9:from services.esmm.post_crystallization import post_crystallization_hook
+./tests/test_phase3_question_seeder.py:7:from services.esmm.question_seeder import extract_seed_concepts, seed_graph_from_question
+./tests/test_phase3_triplet_adapter.py:4:from services.providers.mock_provider import make_synthetic_triplets     
+./tests/test_phase3_triplet_adapter.py:5:from services.esmm.triplet_adapter import adapt_consensus_triplet, adapt_all
+./tests/test_phase3_triplet_adapter.py:78:        from services.esmm.triplet_adapter import _infer_provider_id    
+./tests/test_phase4_runtime_fixes.py:113:        from services.session_storage import SessionStorage
+./tests/test_phase4_runtime_fixes.py:288:        from services.config_loader import load_config, get_config, reset_config
+./tests/test_phase4_security.py:41:        from services.esmm.cycle_manager import _sanitize_concept
+./tests/test_phase4_security.py:51:        from services.esmm.cycle_manager import _sanitize_concept
+./tests/test_phase4_security.py:62:        from services.esmm.cycle_manager import _sanitize_concept, _MAX_CONCEPT_LEN
+./tests/test_phase4_security.py:70:        from services.esmm.cycle_manager import _sanitize_concept
+./tests/test_phase4_security.py:78:        from services.esmm.cycle_manager import _sanitize_concept
+./tests/test_phase4_security.py:97:        from services.providers.base import infer_architecture_family
+./tests/test_phase4_security.py:109:        from services.providers.base import infer_architecture_family
+./tests/test_phase4_security.py:116:        from services.providers.base import infer_architecture_family
+./tests/test_phase4_security.py:130:        from services.providers.base import infer_architecture_family
+./tests/test_phase4_security.py:138:        from services.providers.base import infer_architecture_family
+./tests/test_phase4_security.py:159:        from services.esmm.pipeline import run_pipeline
+./tests/test_phase4_security.py:166:        from services.esmm.pipeline import run_pipeline
+./tests/test_phase4_security.py:173:        from services.esmm.pipeline import run_pipeline, MAX_QUESTION_LENGTH  
+./tests/test_phase4_security.py:181:        from services.esmm.pipeline import run_pipeline, MAX_FRAME_LENGTH     
+./tests/test_phase4_security.py:193:        from services.esmm.pipeline import run_pipeline
+./tests/test_phase4_solana.py:9:from services.solana.config import SolanaConfig, SolanaCluster
+./tests/test_phase4_solana.py:10:from services.solana.client import (
+./tests/test_phase4_solana.py:17:from services.solana.bridge import (
+./tests/test_phase4_solana.py:26:from services.esmm.attestation import (
+./tests/test_phase4_solana.py:273:        from services.solana.config import SolanaCluster
+./tests/test_providers.py:12:from services.providers.base import (
+./tests/test_providers.py:19:from services.providers.ollama import OllamaProvider
+./tests/test_providers.py:20:from services.providers.ollama_embeddings import OllamaEmbeddingProvider
+./tests/test_providers.py:21:from services.providers.registry import ProviderRegistry, get_provider, health_check_all
+./tests/test_rotator.py:8:from services.esmm.multi_provider_rotator import (
+./tools/migrate_embeddings.py:35:from services.providers.registry import ProviderRegistry
+./tools/migrate_embeddings.py:36:from services.providers.base import EmbeddingProvider
+./tools/migrate_embeddings.py:60:        from services.providers.ollama_embeddings import OllamaEmbeddingProvider 
+PS C:\Users\simon\PROJECTS\EPP_Verdict> bash -c "echo '=== FROM CLI ===' && grep -rn 'from cli' --include='*.py' . | grep -v __pycache__"
+=== FROM CLI ===
+./.venv/Lib/site-packages/click/core.py:1283:        from click.shell_completion import CompletionItem
+./.venv/Lib/site-packages/click/core.py:1944:        from click.shell_completion import CompletionItem
+./.venv/Lib/site-packages/click/core.py:2632:                from click.shell_completion import CompletionItem    
+./.venv/Lib/site-packages/click/types.py:388:        from click.shell_completion import CompletionItem
+./.venv/Lib/site-packages/click/types.py:870:        from click.shell_completion import CompletionItem
+./.venv/Lib/site-packages/click/types.py:1054:        from click.shell_completion import CompletionItem
+./.venv/Lib/site-packages/pandas/core/frame.py:557:    read_clipboard : Read text from clipboard into DataFrame.  
+./.venv/Lib/site-packages/pandas/core/generic.py:3225:        read_clipboard : Read text from clipboard and pass to read_csv.
+./.venv/Lib/site-packages/pandas/io/clipboards.py:29:    Read text from clipboard and pass to :func:`~pandas.read_csv`.
+./.venv/Lib/site-packages/pandas/io/clipboards.py:79:        raise NotImplementedError("reading from clipboard only supports utf-8 encoding")
+./.venv/Lib/site-packages/setuptools/_distutils/text_file.py:89:        # set values for all options -- either from client option hash
+./.venv/Lib/site-packages/uvicorn/protocols/websockets/websockets_sansio_impl.py:231:                self.logger.exception("Invalid UTF-8 sequence received from client.")
+./tests/test_phase1_cli.py:5:from click.testing import CliRunner
+./tests/test_phase1_cli.py:15:from cli.epp_cli import cli, get_frame, PREDEFINED_FRAMES
+./tests/test_phase3_cli.py:5:from click.testing import CliRunner
+./tests/test_phase3_cli.py:14:from cli.epp_cli import cli
+PS C:\Users\simon\PROJECTS\EPP_Verdict> bash -c "echo '=== IMPORT APP ===' && grep -rn 'import app' --include='*.py' . | grep -v __pycache__"
+=== IMPORT APP ===
+./.venv/Lib/site-packages/exceptiongroup/_formatting.py:393:    import apport_python_hook
+./.venv/Lib/site-packages/matplotlib/tests/test_compare_images.py:5:from pytest import approx
+./.venv/Lib/site-packages/numpy/lib/tests/test_regression.py:174:        from numpy.lib.recfunctions import append_fields
+./.venv/Lib/site-packages/pip/_internal/configuration.py:27:from pip._internal.utils import appdirs
+./.venv/Lib/site-packages/pip/_internal/locations/base.py:10:from pip._internal.utils import appdirs
+./.venv/Lib/site-packages/pip/_vendor/pygments/lexer.py:15:from pip._vendor.pygments.filter import apply_filters, Filter
+./.venv/Lib/site-packages/pkg_resources/__init__.py:80:from pkg_resources.extern import appdirs
+./.venv/Lib/site-packages/pygments/lexer.py:15:from pygments.filter import apply_filters, Filter
+./.venv/Lib/site-packages/pytest/__init__.py:62:from _pytest.python_api import approx
+./.venv/Lib/site-packages/setuptools/config/pyprojecttoml.py:16:from ._apply_pyprojecttoml import apply as _apply 
+./.venv/Lib/site-packages/_pytest/doctest.py:41:from _pytest.python_api import approx
+./.venv/Lib/site-packages/_pytest/python_api.py:591:        >>> from pytest import approx
+./.venv/Lib/site-packages/_pytest/warnings.py:11:from _pytest.config import apply_warning_filters
+./tests/conftest.py:306:        import app.llm_client as llm_mod
