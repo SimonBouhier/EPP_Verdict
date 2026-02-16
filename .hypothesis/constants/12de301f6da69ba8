@@ -1,0 +1,4 @@
+# file: c:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\prompts.py
+# hypothesis_version: 6.151.6
+
+[', ', 'after', 'antonym_of', 'apres', 'associated_with', 'avant', 'before', 'cause', 'caused_by', 'causes', 'comes_from', 'component_of', 'composed_of', 'connected_to', 'consists_of', 'consumes', 'contains', 'contradicts', 'contraire_de', 'contrary_to', 'creates', 'depends_on', 'element_of', 'enables', 'entraine', 'equivalent_to', 'est_un', 'est_une', 'follows', 'generates', 'has_a', 'has_part', 'implies', 'includes', 'indicates', 'instance_of', 'is_a', 'is_caused_by', 'kind_of', 'leads_to', 'lie_a', 'like', 'linked_to', 'makes', 'means', 'membre_de', 'mene_a', 'necessite', 'needs', 'next', 'opposite_of', 'outputs', 'part_of', 'precedes', 'prevents', 'produces', 'produit', 'provoque', 'related_to', 'relates_to', 'requires', 'resembles', 'results_from', 'results_in', 'similar', 'similar_to', 'suggests', 'supports', 'then', 'type_of', 'uses']

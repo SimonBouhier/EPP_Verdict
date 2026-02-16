@@ -67,9 +67,9 @@ def _sanitize_concept(value: str) -> str:
 
 # AUDIT[A8-006] 🟡 FRAGILE: timeouts hardcodés — config.yaml::esmm.timeout_per_cycle_seconds ignoré.
 CYCLE_TIMEOUTS = {
-    CycleType.DIVERGENT: 30,   # Exploration simple
+    CycleType.DIVERGENT: 60,   # Exploration simple (60s: cold models need warmup)
     CycleType.DEBATE: 60,      # Dialectique complexe
-    CycleType.META: 45         # Meta-reflexion
+    CycleType.META: 60         # Meta-reflexion
 }
 
 
@@ -98,6 +98,11 @@ class CycleResult:
     consensus_triplets: List[ConsensusTriplet]
     exploration_metrics: Dict[str, float]
     duration_ms: float
+    # ADR-010: diagnostics threading
+    vote_entropy: float = 0.0
+    semantic_dispersion: Optional[float] = None
+    triplets_before_consensus: int = 0
+    triplets_after_consensus: int = 0
 
 
 class ExplorationCycleManager:
@@ -175,7 +180,8 @@ class ExplorationCycleManager:
         self,
         cycle_type: CycleType,
         iteration: int,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        model_weights: Optional[Dict[str, float]] = None,
     ) -> CycleResult:
         """
         Execute un cycle d'exploration complet.
@@ -213,48 +219,55 @@ class ExplorationCycleManager:
         timeout = self._get_timeout(cycle_type)
         responses = await self._query_models(question, cycle_type, timeout)
 
-        # 3b. RETRY LOGIC pour cycles META vides
+        # 3b. RETRY LOGIC pour cycles META vides (max 3 retries)
+        META_MAX_RETRIES = 3
         if not responses and cycle_type == CycleType.META:
-            logger.warning(
-                "=" * 60 + "\n"
-                "[CycleManager] RETRY TRIGGERED - Empty response on META cycle\n"
-                "=" * 60,
-                extra={"iteration": iteration, "original_question": question[:100]}
-            )
-
-            # Retry avec prompt simplifie
-            retry_responses = await self._retry_with_simplified_prompt(
-                question, cycle_type, timeout
-            )
-
-            if retry_responses:
-                # SUCCESS - Alerte visible
-                logger.info(
-                    "\n" + "=" * 60 + "\n"
-                    ">>> RETRY SUCCESS <<< Meta cycle recovered with simplified prompt\n"
-                    "=" * 60,
-                    extra={
-                        "iteration": iteration,
-                        "responses_count": len(retry_responses),
-                        "retry_method": "simplified_prompt",
-                        "models_responded": list(retry_responses.keys())
-                    }
+            for retry_attempt in range(1, META_MAX_RETRIES + 1):
+                logger.warning(
+                    f"[CycleManager] RETRY {retry_attempt}/{META_MAX_RETRIES} "
+                    f"- Empty response on META cycle",
+                    extra={"iteration": iteration, "attempt": retry_attempt}
                 )
-                self._stats["retry_successes"] = self._stats.get("retry_successes", 0) + 1
-                responses = retry_responses
+
+                retry_responses = await self._retry_with_simplified_prompt(
+                    question, cycle_type, timeout
+                )
+
+                if retry_responses:
+                    logger.info(
+                        f"[CycleManager] RETRY SUCCESS (attempt {retry_attempt}/"
+                        f"{META_MAX_RETRIES})",
+                        extra={
+                            "iteration": iteration,
+                            "responses_count": len(retry_responses),
+                            "models_responded": list(retry_responses.keys())
+                        }
+                    )
+                    self._stats["retry_successes"] = self._stats.get("retry_successes", 0) + 1
+                    responses = retry_responses
+                    break
             else:
-                # FAILURE - Alerte visible
                 logger.error(
-                    "\n" + "=" * 60 + "\n"
-                    "[CycleManager] RETRY FAILED - Still no response after simplified prompt\n"
-                    "=" * 60,
+                    f"[CycleManager] RETRY EXHAUSTED after {META_MAX_RETRIES} attempts",
                     extra={"iteration": iteration}
                 )
                 self._stats["retry_failures"] = self._stats.get("retry_failures", 0) + 1
 
+        # 3c. COMMIT — hash responses before debate (R-2.2.3)
+        if responses and self.run_id:
+            import hashlib as _hashlib
+            for model_id, response_text in responses.items():
+                try:
+                    response_hash = _hashlib.sha256(response_text.encode()).hexdigest()
+                    await self.db.store_commit(
+                        self.run_id, model_id, cycle_type.value, response_hash
+                    )
+                except Exception as e:
+                    logger.warning(f"Commit store failed for {model_id}: {e}")
+
         # 4. Extraction et consensus
         extraction_result = await self._extract_triplets_from_responses(
-            responses, cycle_type, context
+            responses, cycle_type, context, model_weights=model_weights
         )
 
         # 5. Logging du cycle dans la DB
@@ -289,7 +302,11 @@ class ExplorationCycleManager:
                 "responses_count": len(responses),
                 "timeout_seconds": timeout
             },
-            duration_ms=round(duration_ms, 2)
+            duration_ms=round(duration_ms, 2),
+            vote_entropy=extraction_result.get("vote_entropy", 0.0),
+            semantic_dispersion=extraction_result.get("semantic_dispersion"),
+            triplets_before_consensus=extraction_result.get("triplets_before_consensus", 0),
+            triplets_after_consensus=extraction_result.get("triplets_after_consensus", 0),
         )
 
         logger.info(
@@ -684,7 +701,8 @@ class ExplorationCycleManager:
         self,
         responses: Dict[str, str],
         cycle_type: CycleType,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
+        model_weights: Optional[Dict[str, float]] = None,
     ) -> Dict[str, Any]:
         """
         Extrait les triplets des reponses avec consensus.
@@ -715,7 +733,8 @@ class ExplorationCycleManager:
             result = await self.triplet_extractor.extract_from_text(
                 text=combined_text,
                 cycle_id=None,  # Sera set plus tard
-                inject_to_graph=True
+                inject_to_graph=True,
+                model_weights=model_weights,
             )
 
             return {
@@ -723,7 +742,11 @@ class ExplorationCycleManager:
                 "consensus_triplets": result.consensus_triplets,
                 "triplets_injected": result.triplets_injected,
                 "new_concepts": result.new_concepts_created,
-                "models_contributed": list(responses.keys())
+                "models_contributed": list(responses.keys()),
+                "vote_entropy": result.vote_entropy,
+                "semantic_dispersion": result.semantic_dispersion,
+                "triplets_before_consensus": result.triplets_before_consensus,
+                "triplets_after_consensus": result.triplets_after_consensus,
             }
 
         # AUDIT[A2-013] 🟡 FRAGILE: échecs d'extraction individuels accumulés sans arrêt.
@@ -850,6 +873,7 @@ async def create_cycle_manager(
     run_id: int,
     models: List[str] = None,
     providers: Dict = None,
+    min_consensus: float = 0.5,
 ) -> ExplorationCycleManager:
     """
     Factory function pour ExplorationCycleManager.
@@ -882,7 +906,7 @@ async def create_cycle_manager(
             providers[provider_id] = OllamaProvider(model=model, timeout=120.0)
 
     model_rotator = MultiProviderRotator(providers=providers)
-    triplet_extractor = await get_triplet_extractor(models=models)
+    triplet_extractor = await get_triplet_extractor(models=models, min_consensus=min_consensus)
 
     return ExplorationCycleManager(
         db=db,

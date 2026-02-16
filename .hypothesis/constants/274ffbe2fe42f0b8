@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\solana\metrological_frame.py
+# hypothesis_version: 6.151.6
+
+[',', '1.0', '10min_rolling', ':', 'ambiguity_handling', 'block_explorers', 'blockchain_metrics', 'blockchain_tps_v1.0', 'created_at', 'current', 'dao_vote', 'downtime_gt_30s', 'exclusions', 'factual_accuracy', 'flag_as_contested', 'founding_team', 'frame_id', 'general_knowledge', 'include_votes', 'measurement_sources', 'minimum_sources', 'public_sources', 'rpc_nodes', 'success_only', 'temporal_scope', 'utf-8', 'verification_type', 'window']

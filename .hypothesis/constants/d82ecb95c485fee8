@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\session_storage.py
+# hypothesis_version: 6.151.6
+
+[0.0, 1.0, 1024, '%Y%m%d_%H%M%S', '*.json', '/', '1.0.0', ':', 'File not found', '\\', '_', 'adjustments', 'adjustments_imported', 'assistant', 'balanced', 'content', 'deleted', 'deleted_at', 'delta_r', 'error', 'event_id', 'event_type', 'export_format', 'exported_at', 'filename', 'filepath', 'graph_weight', 'id', 'imported_at', 'imported_message', 'injected_concepts', 'kappa', 'latency_ms', 'lyra_version', 'message_count', 'messages', 'messages_imported', 'metrics', 'model', 'model_dir', 'original_model', 'original_session_id', 'path', 'profile', 'r', 'rho', 'role', 'save_count', 'saves', 'session_id', 'session_short_id', 'size_bytes', 'size_kb', 'success', 't', 'tau_c', 'timestamp', 'total_tokens', 'trajectories', 'trajectory_id', 'turn_number', 'user', 'utf-8', 'v1', 'w', '{}']

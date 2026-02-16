@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\database\models.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.5, 1.0, 100, 255, 'Densite statique', 'Identifiant unique', 'after', 'alias', 'balanced', 'bridge', 'canonical_id', 'cause', 'caused_by', 'completed', 'contradicts', 'cooccurs_with', 'debate', 'different_from', 'divergent', 'embedding', 'equivalent_to', 'extra', 'extracted', 'failed', 'follows', 'forbid', 'from_attributes', 'generalist', 'greater_than', 'has_part', 'has_property', 'hybrid', 'id', 'implies', 'initializing', 'is_a', 'isolated', 'jaccard', 'less_than', 'manual', 'merged', 'meta', 'ollivier', 'opposite_of', 'part_of', 'paused', 'precedes', 'produces', 'related_to', 'requires', 'running', 'seed', 'similar_to', 'source', 'specialized', 'standard', 'supports', 'system', 'target', 'transforms_into', 'unstable', 'used_for', 'v2', 'validate_assignment']

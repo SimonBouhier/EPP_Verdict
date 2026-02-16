@@ -164,7 +164,7 @@ EPP_Verdict/
 │   ├── engine.py           # ISpaceDB (~80 methodes)
 │   ├── pool.py             # Pool connexions async, cache LRU, concurrency limiter
 │   ├── graph_delta.py      # GraphDelta + KappaCalculator (Ollivier + Jaccard)
-│   └── schema.sql          # 22 tables SQLite
+│   └── schema.sql          # 23 tables SQLite
 ├── core/physics/bezier.py  # Moteur trajectoires
 ├── scripts/esmm_cli.py     # CLI ESMM
 ├── tools/                  # Utilitaires (hydrate/migrate embeddings)
@@ -193,7 +193,7 @@ python -m cli.epp_cli graph stats
 
 ## Tests
 
-**425 passed, 0 failed, 10 skipped** (10 fevrier 2026)
+**548 passed, 0 failed, 11 skipped** (16 fevrier 2026)
 
 ```bash
 # Executer tous les tests

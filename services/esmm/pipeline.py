@@ -29,6 +29,7 @@ from .run_logger import RunLogger
 
 if TYPE_CHECKING:
     from database.engine import ISpaceDB
+    from .orchestrator import ESMMRunConfig
 
 logger = logging.getLogger("esmm.pipeline")
 
@@ -77,6 +78,8 @@ async def run_pipeline(
     config: Optional[PipelineConfig] = None,
     metrological_frame: Optional[str] = None,
     providers: Optional[Dict] = None,
+    model_weights: Optional[Dict[str, float]] = None,
+    esmm_config: Optional["ESMMRunConfig"] = None,
 ) -> PipelineResult:
     """
     Execute le pipeline complet : question -> ESMM -> attestations -> graphe.
@@ -124,12 +127,32 @@ async def run_pipeline(
         run_logger.phase_start("pipeline", question=question)
 
         # Extract triplets via real orchestrator (D1, D2, D3)
-        extracted_triplets, run_id = await _extract_triplets_from_question(
-            question, db, models, run_logger, config.metrological_frame, providers
+        extract_result = await _extract_triplets_from_question(
+            question, db, models, run_logger, config.metrological_frame, providers,
+            model_weights=model_weights, esmm_config=esmm_config,
+        )
+
+        # Backward compat: mocks may return 2-tuple, real code returns 3-tuple
+        if len(extract_result) == 3:
+            extracted_triplets, run_id, esmm_result = extract_result
+        else:
+            extracted_triplets, run_id = extract_result
+            esmm_result = None
+
+        # ADR-010: Build consensus_meta from ESMMRunResult + config
+        consensus_meta = await _build_consensus_meta(
+            esmm_config, esmm_result, model_weights, providers=providers
         )
 
         # Update run_logger with real run_id
         run_logger = RunLogger(run_id=run_id, question=question)
+
+        # COMMUNITY_DECISION_REQUIRED: The treatment of CONTESTED consensus
+        # (ambiguity_detected=True) is deliberately left open. Possible future
+        # policies include: cap confidence_tier, reduce diversity_bonus, require
+        # additional debate cycles, or flag for human review. This decision
+        # should be made by the open-source community, not by the founding team.
+        # See ADR-009 (pending) for context.
 
         # Cristalliser chaque triplet ayant un consensus suffisant
         for triplet in extracted_triplets:
@@ -171,6 +194,7 @@ async def run_pipeline(
                 question=question,
                 metrological_frame=config.metrological_frame,
                 architecture_families=len(families),
+                consensus_meta=consensus_meta,
             )
 
             # Stocker en DB
@@ -232,6 +256,76 @@ async def run_pipeline(
     )
 
 
+async def _build_consensus_meta(
+    esmm_config: Optional[Any],
+    esmm_result: Optional[Any],
+    model_weights: Optional[Dict[str, float]],
+    providers: Optional[Dict] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    ADR-010: Assemble consensus_meta from ESMMRunConfig + ESMMRunResult.
+
+    Returns None if no ESMMRunResult is available (e.g. mocked extraction).
+    """
+    if esmm_result is None:
+        return None
+
+    from .consensus_engine import SEMANTIC_MERGE_THRESHOLD
+
+    # Section 1: methodology
+    methodology = {
+        "consensus_method": "hash_exact_v2+semantic_merge_v1",
+        "normalization_version": "normalize_triplet_v2_synonyms",
+        "weighting_strategy": "brier_weighted" if model_weights else "uniform",
+        "merge_threshold": SEMANTIC_MERGE_THRESHOLD,
+        "min_consensus": getattr(esmm_config, "min_consensus", 0.5) if esmm_config else 0.5,
+    }
+
+    # Section 2: conditions
+    models_info = {}
+    if model_weights:
+        for model_id, weight in model_weights.items():
+            models_info[model_id] = {"resolved_version": None, "weight": weight}
+    elif esmm_config and hasattr(esmm_config, "models"):
+        for model_id in esmm_config.models:
+            models_info[model_id] = {"resolved_version": None, "weight": 1.0}
+
+    # ADR-010 / SP-7: Resolve model versions via providers (best effort)
+    if providers and models_info:
+        for provider in providers.values():
+            if hasattr(provider, "resolve_model_version"):
+                for model_id in list(models_info.keys()):
+                    try:
+                        version = await provider.resolve_model_version(model_id)
+                        if version:
+                            models_info[model_id]["resolved_version"] = version
+                    except Exception:
+                        pass  # Best effort — ADR-010 §2
+
+    conditions = {
+        "models": models_info,
+        "embedding_model": None,
+        "cycles_completed": getattr(esmm_result, "cycles_completed", 0),
+        "cycle_sequence": list(getattr(esmm_config, "cycle_sequence", [])) if esmm_config else [],
+    }
+
+    # Section 3: diagnostics
+    diagnostics = {
+        "vote_entropy": getattr(esmm_result, "vote_entropy", 0.0),
+        "semantic_dispersion": getattr(esmm_result, "semantic_dispersion", None),
+        "ambiguity_detected": False,
+        "variations": [],
+        "triplets_before_consensus": getattr(esmm_result, "triplets_before_consensus", 0),
+        "triplets_after_consensus": getattr(esmm_result, "triplets_after_consensus", 0),
+    }
+
+    return {
+        "methodology": methodology,
+        "conditions": conditions,
+        "diagnostics": diagnostics,
+    }
+
+
 async def _extract_triplets_from_question(
     question: str,
     db: "ISpaceDB",
@@ -239,7 +333,9 @@ async def _extract_triplets_from_question(
     run_logger: RunLogger,
     metrological_frame: Optional[str] = None,
     providers: Optional[Dict] = None,
-) -> Tuple[List[Dict[str, Any]], int]:
+    model_weights: Optional[Dict[str, float]] = None,
+    esmm_config: Optional["ESMMRunConfig"] = None,
+) -> Tuple[List[Dict[str, Any]], int, Any]:
     """
     Extrait les triplets via l'orchestrateur ESMM complet.
 
@@ -249,7 +345,7 @@ async def _extract_triplets_from_question(
     D7: Le graphe est seede depuis la question si vide.
 
     Returns:
-        Tuple (triplets adaptes en dicts, run_id)
+        Tuple (triplets adaptes en dicts, run_id, ESMMRunResult)
     """
     from .question_seeder import seed_graph_from_question
     from .triplet_adapter import adapt_all
@@ -262,7 +358,10 @@ async def _extract_triplets_from_question(
 
     # D1, D3: Configure et lance l'orchestrateur complet
     effective_models = models or _get_default_models()
-    esmm_config = ESMMRunConfig(models=effective_models)
+    if esmm_config is None:
+        esmm_config = ESMMRunConfig(models=effective_models)
+    elif not esmm_config.models:
+        esmm_config.models = effective_models
 
     orchestrator = ESMMOrchestrator(db=db, config=esmm_config, providers=providers)
 
@@ -270,7 +369,7 @@ async def _extract_triplets_from_question(
 
     # The orchestrator flow: initialize -> execute -> finalize
     run_id = await orchestrator.initialize_run()
-    await orchestrator.execute_cycles(run_id)
+    await orchestrator.execute_cycles(run_id, model_weights=model_weights)
     result = await orchestrator.finalize_run(run_id)
 
     run_logger.phase_end(
@@ -282,7 +381,7 @@ async def _extract_triplets_from_question(
     # D4: Adapt ConsensusTriplet -> dict pipeline
     adapted = adapt_all(result.consensus_triplets)
 
-    return adapted, result.run_id
+    return adapted, result.run_id, result
 
 
 async def _inject_triplet_to_graph(

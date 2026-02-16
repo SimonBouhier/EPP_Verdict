@@ -282,6 +282,53 @@ async def _run_graph_stats():
 
 
 @cli.group()
+def models():
+    """Model performance and statistics."""
+    pass
+
+
+@models.command("stats")
+def models_stats():
+    """Display model Brier scores and computed weights.
+
+    Example:
+        epp models stats
+    """
+    click.echo("Model Performance Dashboard")
+    click.echo("=" * 72)
+    click.echo()
+
+    stats = asyncio.run(_run_models_stats())
+
+    if not stats:
+        click.echo("  No resolved predictions yet. Models start with weight 1.0 (cold start).")
+        click.echo()
+        return
+
+    # Table header
+    click.echo(f"  {'Model':<25} | {'Predictions':>11} | {'Resolved':>8} | {'Avg Brier':>9} | {'Weight':>6}")
+    click.echo(f"  {'-'*25}-+-{'-'*11}-+-{'-'*8}-+-{'-'*9}-+-{'-'*6}")
+
+    for s in stats:
+        model_display = s["model_id"][:25]
+        click.echo(
+            f"  {model_display:<25} | {s['total_predictions']:>11} | "
+            f"{s['resolved_predictions']:>8} | {s['avg_brier_score']:>9.4f} | "
+            f"{s['weight']:>6.2f}"
+        )
+
+    click.echo()
+
+
+async def _run_models_stats():
+    """Get all model Brier stats from DB."""
+    from database.engine import get_db
+
+    db = await get_db()
+    return await db.get_all_model_brier_scores()
+
+
+@cli.group()
 def frame():
     """Metrological frame management."""
     pass

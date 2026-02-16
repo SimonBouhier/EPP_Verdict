@@ -15,6 +15,7 @@ from services.providers.base import (
     StructuredQuery,
     StructuredResponse,
     ModelMetadata,
+    infer_architecture_family,
 )
 from services.providers.ollama import OllamaProvider
 from services.providers.ollama_embeddings import OllamaEmbeddingProvider
@@ -595,3 +596,30 @@ class TestProviderRegistry:
         # Should raise if not found in either
         with pytest.raises(KeyError):
             get_provider("nonexistent")
+
+
+# ============================================================================
+# TEST ARCHITECTURE FAMILY COHERENCE (Phase 4.7 — Bloc A)
+# ============================================================================
+
+class TestArchitectureFamilyCoherence:
+    """Verify all providers delegate architecture_family to infer_architecture_family()."""
+
+    def test_ollama_provider_uses_infer(self):
+        """OllamaProvider.get_metadata() delegates to infer_architecture_family()."""
+        provider = OllamaProvider(base_url="http://localhost:11434", model="mistral:7b")
+        meta = provider.get_metadata()
+        expected = infer_architecture_family("mistral:7b")
+        assert meta.architecture_family == expected == "transformer_dense"
+
+    def test_ollama_provider_moe_model(self):
+        """OllamaProvider detects MoE architecture via infer_architecture_family()."""
+        provider = OllamaProvider(base_url="http://localhost:11434", model="mixtral:8x7b")
+        meta = provider.get_metadata()
+        assert meta.architecture_family == "transformer_moe"
+
+    def test_ollama_provider_unknown_model(self):
+        """OllamaProvider returns 'unknown' for unrecognized models."""
+        provider = OllamaProvider(base_url="http://localhost:11434", model="custom-model:latest")
+        meta = provider.get_metadata()
+        assert meta.architecture_family == "unknown"

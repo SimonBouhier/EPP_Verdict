@@ -834,11 +834,21 @@ CREATE TABLE IF NOT EXISTS attestations (
     -- Sérialisation complète
     portable_json TEXT,                      -- JSON déterministe complet (pour vérification)
 
+    -- Diversité architecturale (R-2.2.1 — bonus post-crystallize, ADR-005/007 safe)
+    adjusted_consensus_score REAL,           -- consensus_score × diversity_bonus_factor (cap 1.0)
+    diversity_bonus_factor REAL DEFAULT 1.0, -- 1.0=mono-famille, 1.1=multi-famille (≥2)
+
+    -- Commit-reveal (R-2.2.3 — intégrité des réponses)
+    commit_reveal_verified INTEGER,          -- NULL=pas de commit-reveal, 1=intègre, 0=mismatch
+
     -- Ancrage on-chain (Phase 1 — NULL jusqu'à implémentation Solana)
     solana_tx_signature TEXT,                -- Signature transaction Solana
     solana_slot INTEGER,                     -- Slot Solana
     anchored_at REAL,                        -- Timestamp ancrage
     submission_status TEXT DEFAULT 'pending', -- 'pending' | 'submitted' | 'confirmed' | 'failed'
+
+    -- Traçabilité méthodologique (ADR-010)
+    consensus_meta TEXT,                     -- JSON: methodology + conditions + diagnostics
 
     FOREIGN KEY (run_id) REFERENCES esmm_runs(run_id) ON DELETE SET NULL
 );
@@ -986,6 +996,27 @@ WHERE created_at > unixepoch('now') - (90 * 86400)
   AND actual_outcome IS NOT NULL
 GROUP BY model_id, provider_id
 ORDER BY avg_brier_score ASC;
+
+
+-- ============================================================================
+-- TABLE 23: COMMIT_REVEAL (R-2.2.3 — Intégrité des réponses modèles)
+-- ============================================================================
+-- Hash committé AVANT le débat, vérifié APRÈS le consensus.
+-- Prouve que les réponses n'ont pas été manipulées post-hoc.
+
+CREATE TABLE IF NOT EXISTS commit_reveal (
+    commit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    model_id TEXT NOT NULL,
+    phase TEXT NOT NULL,                     -- 'divergent' | 'debate' | 'meta'
+    response_hash TEXT NOT NULL,             -- SHA-256 de la réponse brute
+    committed_at REAL NOT NULL DEFAULT (unixepoch('now')),
+    revealed_at REAL,                        -- NULL jusqu'au reveal
+    verified INTEGER,                        -- NULL=pending, 1=match, 0=mismatch
+    FOREIGN KEY (run_id) REFERENCES esmm_runs(run_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_commit_reveal_run ON commit_reveal(run_id, model_id, phase);
 
 
 -- ============================================================================

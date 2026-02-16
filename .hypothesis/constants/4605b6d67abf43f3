@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\app\llm_client.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.4, 0.6, 0.9, 1.0, 30.0, 180.0, 404, 1000, 4096, 8192, '/', '8192', 'LYRA_MODEL', 'LYRA_NUM_CTX', 'LYRA_OLLAMA_URL', 'available', 'avg_latency_ms', 'completion', 'connected', 'content', 'error', 'frequency_penalty', 'gpt-oss:20b', 'latency_ms', 'length_variance', 'message', 'messages', 'model', 'model_weights', 'models', 'name', 'num_ctx', 'num_models', 'num_predict', 'num_successful', 'options', 'prompt', 'repeat_penalty', 'response_lengths', 'stream', 'success', 'temperature', 'text', 'tokens', 'top_k', 'top_p', 'total']

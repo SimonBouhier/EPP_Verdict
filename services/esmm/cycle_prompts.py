@@ -2,11 +2,11 @@
 ESMM Phase 3 - CYCLE PROMPTS
 ============================
 
-Templates de questions pour les trois types de cycles d'exploration.
-Chaque type de cycle a des objectifs différents:
-- DIVERGENT: Exploration large, découverte de relations
-- DEBATE: Dialectique, synthèse de contradictions
-- META: Réflexion sur connaissances extraites, détection lacunes
+Question templates for the three exploration cycle types.
+Each cycle type has different objectives:
+- DIVERGENT: Broad exploration, relationship discovery
+- DEBATE: Dialectic, contradiction synthesis
+- META: Reflection on extracted knowledge, gap detection
 
 Author: Lyra-ACE ESMM Protocol
 """
@@ -17,115 +17,115 @@ from enum import Enum
 
 
 class CycleType(str, Enum):
-    """Types de cycles d'exploration."""
-    DIVERGENT = "divergent"   # Exploration large depuis concepts seed
-    DEBATE = "debate"         # Dialectique sur contradictions
-    META = "meta"             # Réflexion sur connaissances extraites
+    """Exploration cycle types."""
+    DIVERGENT = "divergent"   # Broad exploration from seed concepts
+    DEBATE = "debate"         # Dialectic on contradictions
+    META = "meta"             # Reflection on extracted knowledge
 
 
 # ============================================================================
-# TEMPLATES DIVERGENT - Exploration large
+# TEMPLATES DIVERGENT - Broad exploration
 # ============================================================================
 
 DIVERGENT_TEMPLATES: List[str] = [
-    # Relations fondamentales
-    "Quelles sont les relations fondamentales entre {concept} et d'autres concepts? "
-    "Liste les connexions causales, hiérarchiques et associatives.",
+    # Fundamental relations
+    "What are the fundamental relationships between {concept} and other concepts? "
+    "List causal, hierarchical, and associative connections.",
 
-    # Propriétés essentielles
-    "Décris les propriétés essentielles de {concept}. "
-    "Quels attributs le caractérisent et le distinguent?",
+    # Essential properties
+    "Describe the essential properties of {concept}. "
+    "What attributes characterize and distinguish it?",
 
-    # Causalité
-    "Quels concepts sont causalement liés à {concept}? "
-    "Identifie les causes et les effets directs.",
+    # Causality
+    "What concepts are causally linked to {concept}? "
+    "Identify direct causes and effects.",
 
-    # Taxonomie
-    "Comment {concept} s'inscrit-il dans une taxonomie? "
-    "Quels sont ses hyperonymes, hyponymes et concepts frères?",
+    # Taxonomy
+    "How does {concept} fit within a taxonomy? "
+    "What are its hypernyms, hyponyms, and sibling concepts?",
 
-    # Contexte d'usage
-    "Dans quels domaines et contextes {concept} est-il pertinent? "
-    "Quelles relations le lient à ces domaines?",
+    # Usage context
+    "In which domains and contexts is {concept} relevant? "
+    "What relationships link it to these domains?",
 
     # Analogies
-    "Quels concepts sont analogues ou similaires à {concept}? "
-    "Explique les bases de ces similarités.",
+    "What concepts are analogous or similar to {concept}? "
+    "Explain the basis for these similarities.",
 
-    # Composants
-    "De quoi {concept} est-il composé? Quels sont ses constituants "
-    "et comment interagissent-ils?",
+    # Components
+    "What is {concept} composed of? What are its constituents "
+    "and how do they interact?",
 
-    # Fonctions
-    "Quelles fonctions ou rôles {concept} remplit-il? "
-    "Dans quels processus est-il impliqué?",
+    # Functions
+    "What functions or roles does {concept} fulfill? "
+    "In which processes is it involved?",
 ]
 
 
 # ============================================================================
-# TEMPLATES DEBATE - Dialectique
+# TEMPLATES DEBATE - Dialectic
 # ============================================================================
 
 DEBATE_TEMPLATES: List[str] = [
-    # Thesis/Antithesis classique
-    "Compare et contraste {thesis} avec {antithesis}. "
-    "Quelles sont leurs relations, tensions et complémentarités?",
+    # Classic thesis/antithesis
+    "Compare and contrast {thesis} with {antithesis}. "
+    "What are their relationships, tensions, and complementarities?",
 
-    # Synthèse
-    "Y a-t-il une synthèse possible entre {concept_a} et {concept_b}? "
-    "Comment réconcilier ces perspectives apparemment opposées?",
+    # Synthesis
+    "Is there a possible synthesis between {concept_a} and {concept_b}? "
+    "How can these seemingly opposed perspectives be reconciled?",
 
-    # Limites mutuelles
-    "Quelles sont les limites de {thesis} que {antithesis} révèle, "
-    "et vice-versa? Explore les angles morts de chaque concept.",
+    # Mutual limitations
+    "What are the limitations of {thesis} that {antithesis} reveals, "
+    "and vice-versa? Examine the blind spots of each concept.",
 
-    # Contextes de validité
-    "Dans quels contextes {thesis} est-il plus approprié que {antithesis}, "
-    "et inversement? Identifie les conditions de validité de chacun.",
+    # Validity contexts
+    "In which contexts is {thesis} more appropriate than {antithesis}, "
+    "and vice-versa? Identify the validity conditions of each.",
 
-    # Évolution historique
-    "Comment la relation entre {concept_a} et {concept_b} a-t-elle évolué? "
-    "Y a-t-il eu des inversions de perspective?",
+    # Historical evolution
+    "How has the relationship between {concept_a} and {concept_b} evolved? "
+    "Have there been perspective reversals?",
 
-    # Médiation
-    "Quels concepts peuvent servir de médiateurs entre {thesis} et {antithesis}? "
-    "Identifie les ponts conceptuels possibles.",
+    # Mediation
+    "What concepts can serve as mediators between {thesis} and {antithesis}? "
+    "Identify possible conceptual bridges.",
 ]
 
 
 # ============================================================================
-# TEMPLATES META - Réflexion
+# TEMPLATES META - Reflection
 # ============================================================================
 
 META_TEMPLATES: List[str] = [
-    # Analyse de lacunes
-    "En analysant ces relations: {recent_triplets}, quelles lacunes identifies-tu? "
-    "Quels concepts ou relations manquent pour compléter ce réseau?",
+    # Gap analysis
+    "Analyzing these relationships: {recent_triplets}, what gaps do you identify? "
+    "What concepts or relationships are missing to complete this network?",
 
-    # Concepts fondamentaux manquants
-    "Quels concepts fondamentaux manquent pour comprendre {domain}? "
-    "Identifie les présupposés implicites non explorés.",
+    # Missing fundamental concepts
+    "What fundamental concepts are missing to understand {domain}? "
+    "Identify unexplored implicit assumptions.",
 
-    # Cohérence du réseau
-    "Le réseau de connaissances suivant est-il cohérent: {recent_triplets}? "
-    "Y a-t-il des contradictions ou des incohérences?",
+    # Network coherence
+    "Is the following knowledge network coherent: {recent_triplets}? "
+    "Are there contradictions or inconsistencies?",
 
-    # Généralisations possibles
-    "À partir de ces relations: {recent_triplets}, quelles généralisations "
-    "ou patterns peux-tu identifier?",
+    # Possible generalizations
+    "From these relationships: {recent_triplets}, what generalizations "
+    "or patterns can you identify?",
 
-    # Questions ouvertes
-    "Quelles questions importantes restent sans réponse dans ce domaine: {domain}? "
-    "Identifie les zones d'incertitude.",
+    # Open questions
+    "What important questions remain unanswered in this domain: {domain}? "
+    "Identify areas of uncertainty.",
 
-    # Connexions manquantes
-    "Quels liens entre domaines distincts manquent dans: {recent_triplets}? "
-    "Y a-t-il des ponts interdisciplinaires à établir?",
+    # Missing connections
+    "What cross-domain links are missing in: {recent_triplets}? "
+    "Are there interdisciplinary bridges to establish?",
 ]
 
 
 # ============================================================================
-# MAPPING PAR TYPE DE CYCLE
+# MAPPING BY CYCLE TYPE
 # ============================================================================
 
 CYCLE_TEMPLATES: Dict[CycleType, List[str]] = {
@@ -136,36 +136,45 @@ CYCLE_TEMPLATES: Dict[CycleType, List[str]] = {
 
 
 # ============================================================================
-# SYSTEM PROMPTS PAR TYPE
+# SYSTEM PROMPTS BY TYPE
 # ============================================================================
 
 SYSTEM_PROMPTS: Dict[CycleType, str] = {
-    CycleType.DIVERGENT: """Tu es un expert en analyse conceptuelle. Ta tâche est d'explorer
-les relations sémantiques autour d'un concept donné. Identifie les relations de type:
-- Causalité (cause, effet, permet, empêche)
-- Hiérarchie (est_un, partie_de, contient)
-- Association (lié_à, similaire_à, contraire_de)
-- Propriété (a_pour_propriété, caractérisé_par)
+    CycleType.DIVERGENT: """You are an expert in conceptual analysis. Your task is to explore
+the semantic relationships around a given concept. Identify relations of type:
+- Causality (cause, effect, enables, prevents)
+- Hierarchy (is_a, part_of, contains)
+- Association (related_to, similar_to, opposite_of)
+- Property (has_a, characterized_by)
 
-Réponds de manière structurée en listant les triplets (sujet, relation, objet).""",
+CRITICAL: Regardless of the user's input language, ALL output keys and values
+in the JSON (subjects, relations, objects) MUST be in English.
 
-    CycleType.DEBATE: """Tu es un dialecticien expert. Ta tâche est d'analyser les tensions
-et complémentarités entre concepts apparemment opposés. Pour chaque paire:
-- Identifie les points de tension
-- Trouve les complémentarités
-- Propose des synthèses ou médiations
-- Extrais les relations qui émergent de cette dialectique
+Respond in a structured manner by listing triplets (subject, relation, object).""",
 
-Réponds en listant les triplets (sujet, relation, objet) qui capturent ces dynamiques.""",
+    CycleType.DEBATE: """You are an expert dialectician. Your task is to analyze the tensions
+and complementarities between seemingly opposed concepts. For each pair:
+- Identify points of tension
+- Find complementarities
+- Suggest syntheses or mediations
+- Extract the relationships that emerge from this dialectic
 
-    CycleType.META: """Tu es un épistémologue. Ta tâche est d'analyser un réseau de
-connaissances pour identifier:
-- Les lacunes conceptuelles
-- Les présupposés implicites
-- Les connexions manquantes
-- Les incohérences potentielles
+CRITICAL: Regardless of the user's input language, ALL output keys and values
+in the JSON (subjects, relations, objects) MUST be in English.
 
-Propose des triplets (sujet, relation, objet) qui combleraient ces lacunes.""",
+Respond by listing triplets (subject, relation, object) that capture these dynamics.""",
+
+    CycleType.META: """You are an epistemologist. Your task is to analyze a knowledge network
+to identify:
+- Conceptual gaps
+- Implicit assumptions
+- Missing connections
+- Potential inconsistencies
+
+CRITICAL: Regardless of the user's input language, ALL output keys and values
+in the JSON (subjects, relations, objects) MUST be in English.
+
+Suggest triplets (subject, relation, object) that would fill these gaps.""",
 }
 
 
@@ -175,14 +184,14 @@ Propose des triplets (sujet, relation, objet) qui combleraient ces lacunes.""",
 
 def get_template(cycle_type: CycleType, index: int = 0) -> str:
     """
-    Récupère un template pour un type de cycle donné.
+    Retrieve a template for a given cycle type.
 
     Args:
-        cycle_type: Type de cycle (DIVERGENT, DEBATE, META)
-        index: Index du template (sera modulé par le nombre de templates)
+        cycle_type: Cycle type (DIVERGENT, DEBATE, META)
+        index: Template index (will be modulo'd by template count)
 
     Returns:
-        Template de question
+        Question template
     """
     templates = CYCLE_TEMPLATES[cycle_type]
     return templates[index % len(templates)]
@@ -190,44 +199,44 @@ def get_template(cycle_type: CycleType, index: int = 0) -> str:
 
 def get_system_prompt(cycle_type: CycleType) -> str:
     """
-    Récupère le system prompt pour un type de cycle.
+    Retrieve the system prompt for a cycle type.
 
     Args:
-        cycle_type: Type de cycle
+        cycle_type: Cycle type
 
     Returns:
-        System prompt approprié
+        Appropriate system prompt
     """
     return SYSTEM_PROMPTS[cycle_type]
 
 
 def format_triplets_for_prompt(triplets: List) -> str:
     """
-    Formate une liste de triplets pour insertion dans un prompt.
+    Format a list of triplets for insertion into a prompt.
 
     Args:
-        triplets: Liste de triplets (objets avec subject, relation, object)
+        triplets: List of triplets (objects with subject, relation, object)
 
     Returns:
-        Chaîne formatée "subject→relation→object; ..."
+        Formatted string "subject->relation->object; ..."
     """
     formatted = []
-    for t in triplets[:10]:  # Limite à 10 pour éviter prompts trop longs
+    for t in triplets[:10]:  # Limit to 10 to avoid overly long prompts
         subject = getattr(t, 'subject', t.get('subject', '?'))
         relation = getattr(t, 'relation', t.get('relation', '?'))
         obj = getattr(t, 'object', t.get('object', '?'))
-        formatted.append(f"{subject}→{relation}→{obj}")
+        formatted.append(f"{subject}->{relation}->{obj}")
     return "; ".join(formatted)
 
 
 def get_template_count(cycle_type: CycleType) -> int:
     """
-    Retourne le nombre de templates disponibles pour un type de cycle.
+    Return the number of available templates for a cycle type.
 
     Args:
-        cycle_type: Type de cycle
+        cycle_type: Cycle type
 
     Returns:
-        Nombre de templates
+        Number of templates
     """
     return len(CYCLE_TEMPLATES[cycle_type])

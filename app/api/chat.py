@@ -6,6 +6,7 @@ Chat completion endpoints with physics-driven generation.
 """
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 import traceback
@@ -22,6 +23,7 @@ from services.consciousness.metrics import ConsciousnessMonitor
 from services.consciousness.adaptation import AdaptiveConsciousness
 from services.consciousness.memory import get_semantic_memory
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -175,7 +177,7 @@ async def chat_message(
                             delta_r=adapted_params['delta_r'],
                             kappa=physics_state.kappa
                         )
-                        print(f"[Consciousness] Adaptive adjustments applied: {adaptive_adjustments.get('reason', 'N/A')}")
+                        logger.info("Adaptive adjustments applied: %s", adaptive_adjustments.get('reason', 'N/A'))
 
             except Exception as e:
                 import logging
@@ -191,7 +193,7 @@ async def chat_message(
             session_id=session_id,
             max_messages=request.max_history
         )
-        print(f"[Chat] Session {session_id[:8]}... - Retrieved {len(conversation_history)} history messages (max_history={request.max_history})")
+        logger.info("Session %s... - Retrieved %d history messages (max_history=%s)", session_id[:8], len(conversation_history), request.max_history)
 
         # ====================================================================
         # STEP 4: SEMANTIC CONTEXT EXTRACTION
@@ -297,10 +299,10 @@ async def chat_message(
                         "content": esmm_injection
                     })
 
-                    print(f"[ESMM] Injected {len(triplets_used)} triplets with avg consensus {avg_consensus:.2f}")
+                    logger.info("ESMM injected %d triplets with avg consensus %.2f", len(triplets_used), avg_consensus)
                 else:
                     esmm_context = {"enabled": True, "triplets_used": 0, "avg_consensus": 0.0}
-                    print("[ESMM] No high-confidence triplets found for query")
+                    logger.info("ESMM: no high-confidence triplets found for query")
 
             except Exception as e:
                 import logging
@@ -456,9 +458,7 @@ async def chat_message(
         raise
 
     except Exception as e:
-        # Print full traceback for debugging
-        print("[ERROR] Chat endpoint exception:")
-        traceback.print_exc()
+        logger.error("Chat endpoint exception:", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"

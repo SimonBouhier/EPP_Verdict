@@ -9,7 +9,7 @@ from services.solana.bridge import (
     hex_to_bytes32, protocol_version_to_u16, u16_to_protocol_version,
     attestation_to_anchor_args, anchor_data_to_attestation_summary,
     SCORE_SCALE, MAX_SUBJECT_LEN, MAX_PREDICATE_LEN, MAX_OBJECT_LEN,
-    EPISTEMIC_TYPE_MAP, CONFIDENCE_TIER_MAP,
+    EPISTEMIC_TYPE_MAP, CONFIDENCE_TIER_MAP, CONFIDENCE_TIER_REVERSE,
 )
 from services.esmm.attestation import (
     EpistemicAttestation, Signature5D, ModelVote,
@@ -226,3 +226,76 @@ class TestAttestationToAnchorArgs:
         assert summary["epistemic_type"] == "foundational"
         assert summary["confidence_tier"] == "validated"
         assert summary["signature_5d"]["agreement"] == 0.85
+
+
+class TestAllTiersE2E:
+    """Test roundtrip serialization for all 4 confidence tiers."""
+
+    TIER_CONFIGS = [
+        # (tier, score, n_models, n_families, source_anchor)
+        ("sandbox", 0.20, 1, 1, None),
+        ("proposition", 0.50, 2, 1, None),
+        ("validated", 0.75, 3, 2, None),
+        ("verified", 0.90, 3, 2, "a" * 64),
+    ]
+
+    def _make_attestation_for_tier(self, score, n_models, n_families, source_anchor):
+        votes = [
+            ModelVote(model_id=f"test::model_{i}", provider_id="test", agreed=True, confidence=score)
+            for i in range(n_models)
+        ]
+        return crystallize(
+            subject="test_subject",
+            predicate="test_predicate",
+            object_="test_object",
+            consensus_score=score,
+            model_votes=votes,
+            signature_5d=Signature5D(
+                agreement=score,
+                semantic_consistency=0.50,
+                centrality=0.50,
+                stability=0.50,
+                relation_diversity=0.50,
+            ),
+            epistemic_type="foundational",
+            architecture_families=n_families,
+            source_anchor=source_anchor,
+        )
+
+    @pytest.mark.parametrize("tier,score,n_models,n_families,source_anchor", [
+        ("sandbox", 0.20, 1, 1, None),
+        ("proposition", 0.50, 2, 1, None),
+        ("validated", 0.75, 3, 2, None),
+        ("verified", 0.90, 3, 2, "a" * 64),
+    ])
+    def test_tier_roundtrip(self, tier, score, n_models, n_families, source_anchor):
+        """attestation(tier) -> anchor_args -> summary -> verify tier survives roundtrip."""
+        att = self._make_attestation_for_tier(score, n_models, n_families, source_anchor)
+        assert att.confidence_tier == tier, f"Expected {tier}, got {att.confidence_tier}"
+
+        args = attestation_to_anchor_args(att)
+        assert args.confidence_tier == CONFIDENCE_TIER_MAP[tier]
+
+        on_chain_data = {
+            "claim_hash": args.claim_hash,
+            "subject": list(args.subject),
+            "predicate": list(args.predicate),
+            "object": list(args.object_field),
+            "consensus_score": args.consensus_score,
+            "models_consulted": args.models_consulted,
+            "models_agreeing": args.models_agreeing,
+            "sig_agreement": args.sig_agreement,
+            "sig_semantic_consistency": args.sig_semantic_consistency,
+            "sig_centrality": args.sig_centrality,
+            "sig_stability": args.sig_stability,
+            "sig_relation_diversity": args.sig_relation_diversity,
+            "epistemic_type": args.epistemic_type,
+            "confidence_tier": args.confidence_tier,
+            "frame_hash": list(args.frame_hash),
+            "timestamp": args.timestamp,
+            "validation_count": args.validation_count,
+            "protocol_version": args.protocol_version,
+            "is_challenge": args.is_challenge,
+        }
+        summary = anchor_data_to_attestation_summary(on_chain_data)
+        assert summary["confidence_tier"] == tier

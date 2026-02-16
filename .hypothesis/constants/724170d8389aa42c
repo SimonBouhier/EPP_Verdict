@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\base.py
+# hypothesis_version: 6.151.6
+
+[0.7, 0.9, 1.0, 4096, 8192, '5m', '::', '[:\\-_./\\d]', 'anthropic_family', 'claude', 'deepseek', 'gemini', 'gemma', 'google_family', 'gpt', 'llama', 'mistral', 'mixtral', 'openai_family', 'phi', 'qwen', 'transformer_dense', 'transformer_moe', 'unknown']

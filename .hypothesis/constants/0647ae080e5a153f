@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\ollama_embeddings.py
+# hypothesis_version: 6.151.6
+
+[10.0, 60.0, 384, 404, 768, 1024, '/', 'LYRA_EMBEDDING_MODEL', 'LYRA_OLLAMA_URL', 'all-minilm', 'embedding', 'model', 'mxbai-embed-large', 'nomic-embed-text', 'ollama', 'prompt']

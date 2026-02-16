@@ -2,8 +2,8 @@
 
 ## Oracle Épistémique Décentralisé sur Solana
 
-**Version** : 2.3
-**Date** : 10 février 2026
+**Version** : 2.4
+**Date** : 15 février 2026
 **Statut** : Plan MVP — Hackathon Colosseum
 **Périmètre** : Exclusivement l'oracle épistémique. L'agent de trading est un projet privé séparé.
 
@@ -238,45 +238,55 @@ class ModelProvider(ABC):
 ### 3.3 — Structure d'une attestation on-chain
 
 ```rust
-// Programme Anchor (Solana)
+// Programme Anchor (Solana) — programmes/epp/programs/epp/src/state.rs
+// PDA seeds: [b"attestation", submitter, claim_hash]
 #[account]
 pub struct EpistemicAttestation {
-    // Identifiant
-    pub claim_hash: [u8; 32],           // SHA-256 du triplet + frame
+    // PDA
+    pub bump: u8,                            // 1 byte
+    pub submitter: Pubkey,                   // 32 bytes
 
-    // Contenu
-    pub subject: String,                 // max 64 chars
-    pub predicate: String,               // max 64 chars
-    pub object: String,                  // max 128 chars
+    // Identifiant
+    pub claim_hash: [u8; 32],                // SHA-256(subject|predicate|object|frame)
+
+    // Contenu (fixed-size, zero-padded UTF-8)
+    pub subject: [u8; 64],                   // MAX_SUBJECT_LEN
+    pub predicate: [u8; 64],                 // MAX_PREDICATE_LEN
+    pub object: [u8; 128],                   // MAX_OBJECT_LEN
 
     // Consensus
-    pub consensus_score: u16,            // 0-10000 (score × 10000)
+    pub consensus_score: u16,                // 0-10000 (score × 10000)
     pub models_consulted: u8,
     pub models_agreeing: u8,
 
     // Signature épistémique 5D (0-cochaine)
-    pub sig_agreement: u16,              // 0-10000
+    pub sig_agreement: u16,                  // 0-10000
     pub sig_semantic_consistency: u16,
     pub sig_centrality: u16,
     pub sig_stability: u16,
     pub sig_relation_diversity: u16,
 
-    // Métadonnées
-    pub epistemic_type: u8,              // 0=Foundational, 1=Bridge, 2=Specialized...
-    pub confidence_tier: u8,             // 0=Low, 1=Medium, 2=High, 3=Verified
-    pub metrological_frame: String,      // max 32 chars (frame_id)
-    pub source_anchor: Option<[u8; 32]>, // Hash de source vérifiable
+    // Classification
+    pub epistemic_type: u8,                  // 0=Foundational, 1=Bridge, 2=Specialized, 3=Generalist, 4=Hybrid
+    pub confidence_tier: u8,                 // 0=sandbox, 1=proposition, 2=validated, 3=verified
+
+    // Référence métrologique
+    pub frame_hash: [u8; 32],                // SHA-256 du MetrologicalFrame JSON (0x00 si absent)
+    pub source_anchor: [u8; 32],             // SHA-256 source vérifiable externe (0x00 si absent)
 
     // Temporel
     pub timestamp: i64,
     pub last_revalidated: i64,
-    pub validation_count: u16,           // Nombre de revalidations
+    pub validation_count: u16,
 
-    // Autorité
-    pub submitter: Pubkey,
-    pub bump: u8,
+    // Protocole
+    pub protocol_version: u16,               // Ex: 100 = v1.0.0
+
+    // Challenge
+    pub is_challenge: bool,
+    pub challenged_attestation: Pubkey,       // Pubkey::default() si pas un challenge
 }
-// Taille estimée : ~450 bytes → coût Solana ~0.003 SOL par attestation
+// Taille : 8 (discriminator) + 454 = 462 bytes → coût Solana ~0.003 SOL par attestation
 ```
 
 ### 3.4 — Coupures de régression
@@ -406,6 +416,10 @@ Niveau 0 : Consommateurs
 
 **Objectif** : Fiabiliser, enrichir le RAG, préparer la soumission hackathon.
 
+> **Note** : Les Phases 3-3.3 (pipeline E2E, audit, ADR) et 4.0-4.7 (corrections systématiques,
+> sécurité, Solana devnet complet, peaufinage) du CHANGELOG correspondent au travail de
+> robustesse de cette Phase 2 du plan. 487 tests, 0 failed, 8 ADR, 15 annotations AUDIT FIXED.
+
 #### 2.1 — Track record et calibration des modèles ✅ INFRASTRUCTURE PRÊTE
 
 - [x] Brier score par modèle → table `model_track_record` + vue `v_model_brier_scores`
@@ -419,6 +433,10 @@ Niveau 0 : Consommateurs
 #### 2.2 — Anti-Sybil et intégrité du consensus
 
 - [x] Diversité architecturale mesurée via `infer_architecture_family()`
+- [x] `infer_architecture_family()` durci : first-token match, provider prefix strip (Phase 4.5)
+- [x] Tous les providers (ollama, anthropic, openai_compat) délèguent à `infer_architecture_family()` (Phase 4.7)
+- [x] Prompt injection : XML boundary delimiters, `_sanitize_concept()` (Phase 4.5)
+- [x] Pipeline input validation : MAX_QUESTION_LENGTH=5000, control char stripping (Phase 4.5)
 - [ ] Protocole commit-reveal basique
 - [ ] Détection de réponses quasi-identiques (clustering d'embeddings)
 - [ ] Pondération par diversité mesurable, pas par nombre de voix
@@ -674,7 +692,10 @@ Niveau 0 : Consommateurs
 | **J4** | S+7 | CLI fonctionnel (ask → submit → query → frame → graph) | ✅ 06/02 |
 | **J5** | S+8 | Infrastructure track record + confidence tiers | ✅ 08/02 |
 | **J6** | S+8 | Pipeline E2E + 425 tests verts | ✅ 10/02 |
-| **J7** | S+9 | 5 scénarios de démo fonctionnels | ⬜ |
+| **J6.1** | S+9 | Audit interne 51 annotations + 8 ADR | ✅ 12/02 |
+| **J6.2** | S+9 | Corrections systématiques Phase 4 (470 tests) | ✅ 12/02 |
+| **J6.3** | S+10 | Peaufinage Phase 4.7 (487 tests, property-based, tier sync, §5.2/§5.3) | ✅ 15/02 |
+| **J7** | S+11 | 5 scénarios de démo fonctionnels | ⬜ |
 | **J8** | S+9 | Vidéos pitch + technique enregistrées | ⬜ |
 | **J9** | S+10 | Soumission Eternal effective | ⬜ |
 | **J10** | S+14 | 500+ triplets attestés dans le graphe | ⬜ |
@@ -698,8 +719,13 @@ Niveau 0 : Consommateurs
 | 08/02/2026 | Phase 2 infrastructure — Robustesse épistémique | Confidence tiers multi-critères, Brier scoring, tier transitions, pipeline.py, config_loader, 61 tests Phase 2 |
 | 10/02/2026 | Phase 3 terminée — Pipeline E2E + corrections | Pipeline complet CLI→orchestrator→crystallize→DB→graph, 3 démos, post_crystallization hook, 425 tests (0 failed) |
 | 10/02/2026 | Phase 3.1 — Corrections pool isolation + rollback | Fixture conftest reset singletons, get_pool() path detection, rollback_deltas applied_at fix, INSERT OR REPLACE |
+| 11/02/2026 | Phase 3.2 — Consolidation post-audit | 51 annotations AUDIT (9 CRITICAL, 31 FRAGILE, 11 ACCEPTED), schema completé, 425 tests |
+| 12/02/2026 | Phase 3.3 — ADR + conformité CLAUDE.md §5 | 7 ADR créés (ADR-001 à ADR-007), audit conformité 7 règles anti-dette IA |
+| 12/02/2026 | Phase 4.0-4.6 — Corrections systématiques | Isolation singletons, crashs runtime, corruption, sécurité, Solana devnet complet, ADR-008, 470 tests |
+| 15/02/2026 | Phase 4.7 — Peaufinage post-recette | ARCHITECTURE.md vérifié, 3 providers corrigés, 2 AUDIT FIXED, hypothesis + 3 tests property-based, 476 tests |
+| 15/02/2026 | Tier sync + conformité CLAUDE.md | state.rs aligné (sandbox/proposition/validated/verified), §5.2 print→logger (35 occ), §5.3 INSERT audités (0 violation), 487 tests |
 
 ---
 
 *Document vivant. Chaque décision majeure doit être consignée dans le journal ci-dessus.*
-*Dernière mise à jour : 10 février 2026*
+*Dernière mise à jour : 15 février 2026*

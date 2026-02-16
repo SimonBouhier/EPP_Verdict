@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\solana\bridge.py
+# hypothesis_version: 6.151.6
+
+[b'\x00', 0.0, 1.0, 100, 128, 10000, '.', 'agreement', 'bridge', 'centrality', 'claim_hash', 'confidence_tier', 'consensus_score', 'epistemic_type', 'foundational', 'frame_hash', 'generalist', 'high', 'hybrid', 'is_challenge', 'low', 'medium', 'models_agreeing', 'models_consulted', 'object', 'predicate', 'proposition', 'protocol_version', 'relation_diversity', 'replace', 'sandbox', 'semantic_consistency', 'sig_agreement', 'sig_centrality', 'sig_stability', 'signature_5d', 'specialized', 'stability', 'subject', 'timestamp', 'utf-8', 'validated', 'validation_count', 'verified']

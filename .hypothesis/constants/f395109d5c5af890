@@ -1,0 +1,4 @@
+# file: c:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\pipeline.py
+# hypothesis_version: 6.151.6
+
+[0.4, 0.5, 1000, 2000, 5000, 'ISpaceDB', 'agreed', 'agreement', 'architecture_family', 'centrality', 'confidence', 'consensus_score', 'epistemic_type', 'esmm', 'esmm.pipeline', 'esmm_orchestrator', 'extracted', 'foundational', 'llama3.1:8b', 'mistral:7b', 'model_id', 'model_source', 'models', 'object', 'pipeline', 'portable_json', 'predicate', 'provider_id', 'qwen2.5:7b', 'relation_diversity', 'relation_type', 'semantic_consistency', 'signature_5d', 'source', 'stability', 'subject', 'target', 'unknown', 'votes', 'weight']

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-02-15T17:03:52.564512",
+  "question": "What is the difference between proof of work and proof of stake?",
+  "models": [
+    "mistral:latest",
+    "llama3.1:8b",
+    "deepseek-r1:latest"
+  ],
+  "backup": "data/backups/epp_backup_20260215_170351.db",
+  "run": {
+    "status": "dry_run",
+    "question": "What is the difference between proof of work and proof of stake?",
+    "models": [
+      "mistral:latest",
+      "llama3.1:8b",
+      "deepseek-r1:latest"
+    ]
+  },
+  "verification": {
+    "verification": "skipped"
+  }
+}

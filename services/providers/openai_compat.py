@@ -18,6 +18,7 @@ from services.providers.base import (
     StructuredQuery,
     StructuredResponse,
     ModelMetadata,
+    infer_architecture_family,
 )
 
 logger = logging.getLogger(__name__)
@@ -234,15 +235,10 @@ class OpenAICompatProvider(ModelProvider):
         Returns:
             Metadata with provider and model info
         """
-        # Infer architecture family from model name (heuristic)
-        architecture = "transformer_dense"
-        if "mixtral" in self.model.lower() or "moe" in self.model.lower():
-            architecture = "transformer_moe"
-
         return ModelMetadata(
             provider_id="openai_compat",
             model_id=self.model,
-            architecture_family=architecture,
+            architecture_family=infer_architecture_family(self.model),
             context_window=8192,  # Default, should be configurable
             supports_vram_management=False,
         )

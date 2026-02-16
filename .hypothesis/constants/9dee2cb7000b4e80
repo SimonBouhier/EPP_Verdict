@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\injector.py
+# hypothesis_version: 6.151.6
+
+[-0.5, -0.3, 0.0, 0.1, 0.3, 0.5, 200, 1000, 4000, '\n\nStyle Guidelines:\n', ', ', '...', 'a', 'an', 'and', 'are', 'as', 'at', 'au', 'aux', 'avec', 'be', 'been', 'but', 'by', 'can', 'ce', 'ces', 'cet', 'cette', 'content', 'context', 'could', 'dans', 'de', 'des', 'did', 'do', 'does', 'dont', 'du', 'et', 'for', 'from', 'had', 'has', 'have', 'how', 'in', 'is', 'la', 'latency_ms', 'le', 'les', 'mais', 'may', 'messages', 'might', 'must', 'neighbor_concepts', 'of', 'on', 'or', 'ou', 'où', 'par', 'pour', 'que', 'query_keywords', 'qui', 'role', 'should', 'sur', 'system', 'that', 'the', 'these', 'this', 'those', 'to', 'total_weight', 'un', 'une', 'user', 'was', 'weight', 'were', 'what', 'when', 'where', 'which', 'who', 'why', 'will', 'with', 'would']

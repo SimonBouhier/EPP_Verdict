@@ -1,0 +1,4 @@
+# file: c:\Users\simon\PROJECTS\EPP_Verdict\cli\epp_cli.py
+# hypothesis_version: 6.151.6
+
+[0.0, '--claim-hash', '--devnet', '--dry-run', '--frame', '--local', '--min-confidence', '--models', '--on-chain', '--output', '-c', '-f', '-m', '-o', '0.1.0', '=', 'No attestation found', 'Search local DB', '__main__', 'attestations', 'blockchain_tps_v1.0', 'claim_hash', 'epp', 'frame_id', 'json', 'list', 'model_id', 'question', 'queued', 'show', 'stats', 'subject', 'text']

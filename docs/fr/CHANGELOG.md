@@ -4,6 +4,124 @@
 
 ---
 
+## [2026-02-16] ADR-010 — Traçabilité méthodologique du consensus
+
+- schema.sql: colonne `consensus_meta TEXT` dans attestations
+- engine.py: migration ALTER TABLE, sérialisation JSON dans store_attestation(), backfill_consensus_meta()
+- consensus_engine.py: `ConsensusResult` dataclass (remplace List[ConsensusTriplet]), `_compute_vote_entropy()` (Shannon), `semantic_dispersion` (mean pairwise cosine distance)
+- triplet_extractor.py: `ExtractionResult` enrichi (vote_entropy, semantic_dispersion, triplets_before/after)
+- cycle_manager.py: `CycleResult` enrichi, threading via dict
+- orchestrator.py: `ESMMRunResult` enrichi, accumulation max(entropy), sum(triplets)
+- ollama.py: `resolve_model_version()` via POST /api/show (parameter_size + quantization_level)
+- attestation.py: champ `consensus_meta` sur EpistemicAttestation, param dans crystallize()
+- pipeline.py: `_build_consensus_meta()` async (methodology + conditions + diagnostics), résolution version via providers, backward-compat 2/3-tuple
+- 26 tests RED→GREEN. Baseline: 522 → 548 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] Phase 4.8 — Neutralité linguistique ESMM
+
+- cycle_prompts.py: 3 SYSTEM_PROMPTS + 20 templates traduits en anglais
+- prompts.py: 4 prompts traduits ; exemples few-shot en anglais ; directive "MUST be in English"
+- consensus_engine.py: `compute_consensus()` async, accepte `embedding_provider` optionnel
+- consensus_engine.py: `_semantic_merge()` — Pass 2 clustering cosine > 0.85, ambiguity preservation
+- consensus_engine.py: `ConsensusTriplet` étendu (`variations`, `ambiguity_detected`)
+- Annotation COMMUNITY_DECISION_REQUIRED dans 3 fichiers (consensus, post_crystallization, pipeline)
+- ADR-009 créé : Language Neutrality in ESMM Protocol
+- 9 tests ajoutés. Baseline: 514 → 523 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] Live run — Normalisation triplets + correctifs pipeline
+
+- consensus_engine.py: normalize_triplet() — synonymes relation (10 groupes: USES, IS_A, HAS, PART_OF, CAUSES, ENABLES, PREVENTS, RELATES_TO, DEPENDS_ON, PROVIDES), entités (PoW→proof of work, etc.), word synonyms (computational→computing)
+- consensus_engine.py: `_hash_triplet()` appelle `normalize_triplet()` avant SHA-256
+- consensus_engine.py: fix dict/getattr — les triplets (dicts du validator) avaient confidence=0.0 via getattr ; tous filtrés avant consensus
+- consensus_engine.py: log INFO enrichi (processed/filtered/unique/passed)
+- cycle_manager.py: META retry capped à max_retries=3 (boucle for au lieu de retry unique)
+- cycle_manager.py: CYCLE_TIMEOUTS uniformisés à 60s (divergent était 30s, trop court pour modèles à froid)
+- cycle_manager.py: create_cycle_manager() accepte min_consensus, propagé à get_triplet_extractor()
+- orchestrator.py: min_consensus propagé de ESMMRunConfig aux 3 call sites de create_cycle_manager()
+- pipeline.py: run_pipeline() accepte esmm_config (Optional[ESMMRunConfig]) ; propagé à _extract_triplets_from_question()
+- orchestrator.py: import mort `from enum import Enum` supprimé
+- 5 tests RED→GREEN (test_r2_normalize_triplet: synonymes, IS_A, whitespace, différents, abréviations)
+- DB live migrée: 3 colonnes R2 ajoutées à attestations (ALTER TABLE)
+- Baseline: 509 → 514 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] R-2.2.3 — Commit-reveal complet
+
+- schema.sql: table commit_reveal (run_id, model_id, phase, response_hash, verified)
+- schema.sql: colonne commit_reveal_verified dans attestations
+- engine.py: 4 méthodes CRUD (store_commit, get_commit, verify_and_update_commit, update_attestation_commit_verified)
+- cycle_manager.py: hash SHA-256 des réponses stocké entre query_models et extraction (L256)
+- get_attestation_by_hash inclut commit_reveal_verified
+- 5 tests RED→GREEN (CRUD, altération détectée, schema check)
+- Baseline: 504 → 509 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] R-2.2.2 — Clustering embeddings (détection Sybil)
+
+- Nouveau module services/esmm/response_deduplicator.py: detect_similar_responses()
+- Similarité cosinus entre embeddings; seuil configurable (default 0.95)
+- Penalty factor 0.5 pour le second modèle d'une paire quasi-identique
+- MockDeterministicEmbeddingProvider dans les tests (hash-based, cosinus variable)
+- 3 tests RED→GREEN (identiques détectés, différents non pénalisés, seuil respecté)
+- Baseline: 501 → 504 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] R-2.2.1 — Diversité architecturale dans le consensus
+
+- schema.sql: 2 colonnes ajoutées à attestations (adjusted_consensus_score, diversity_bonus_factor)
+- post_crystallization.py: bonus diversité calculé APRÈS crystallize() (Option C, ADR-005/007 safe)
+- Factor 1.1 si ≥2 familles d'architecture, 1.0 sinon ; adjusted capped à 1.0
+- engine.py: update_attestation_diversity_bonus() + get_attestation_by_hash inclut les 2 colonnes
+- 3 tests RED→GREEN (TestDiversityBonusMultiFamily, TestDiversityBonusMonoFamily, TestConsensusScoreUnchanged)
+- Schema check OK, pytest 501 passed (1 flaky préexistant), 0 failed, 11 skipped
+- Baseline: 498 → 501 passed
+
+---
+
+## [2026-02-15] R-2.1.2 — Dashboard performance modèles
+
+- engine.py: get_all_model_brier_scores() via vue v_model_brier_scores (schéma existant)
+- cli/epp_cli.py: commande `epp models stats` — tableau Model/Predictions/Resolved/Avg Brier/Weight
+- Gestion cas vide (cold start message) + troncature model_id à 25 chars
+- 5 tests RED→GREEN (TestGetAllModelBrierScores, TestModelsStatsCLI)
+- Baseline: 493 → 498 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] R-2.1.1 — Pondération dynamique Brier des votes
+
+- consensus_engine.py: compute_consensus() accepte model_weights (Optional[Dict[str, float]])
+- Poids pondèrent agreement_ratio ET avg_confidence (weighted sum)
+- Formule: weight = max(0.0, 1.0 - avg_brier_score), cold start = 1.0
+- Option A: propagation par paramètre sur 7 signatures (consensus_engine → triplet_extractor → cycle_manager ×2 → orchestrator → pipeline ×2)
+- orchestrator._compute_model_weights(): auto-calcul des poids depuis DB Brier au lancement du run
+- 6 tests RED→GREEN (TestWeightedConsensus, TestColdStartWeight, TestBackwardCompat)
+- C1 grep: 17 appelants vérifiés, tous backward-compatible (default None)
+- Baseline: 487 → 493 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-15] Phase 4.7 — Peaufinage post-recette
+
+- ARCHITECTURE.md: 7/7 points verifies, note purge config ajoutee
+- Bloc A: 3 providers (ollama, anthropic, openai_compat) deleguent a infer_architecture_family(), 3 tests coherence
+- Bloc B: client.py complet (0 NotImplementedError, 5 methodes CHANGELOG confirmees)
+- Bloc D: 2 annotations AUDIT marquees FIXED (A4-002, A4-003), 15 FIXED total
+- Bloc E: hypothesis installe, 3 tests property-based (float↔u16 roundtrip ADR-001, claim hash ADR-006)
+- Sync confidence_tier Rust↔Python: state.rs commentaires + helper mis a jour, 11 tests tiers roundtrip
+- Conformite §5.2: print() → logger dans engine.py (3), main.py (27), chat.py (5)
+- Conformite §5.3: 17 INSERT bruts audites, 0 violations (tous proteges ou AUTOINCREMENT)
+- Baseline: 470 -> 487 passed, 0 failed, 11 skipped
+
+---
+
 ## [2026-02-12] Phase 4 — Correction systematique (v2)
 
 ### Phase 4.0 — Fondations

@@ -16,6 +16,7 @@ from services.providers.base import (
     StructuredQuery,
     StructuredResponse,
     ModelMetadata,
+    infer_architecture_family,
 )
 
 logger = logging.getLogger(__name__)
@@ -274,7 +275,7 @@ class OllamaProvider(ModelProvider):
         return ModelMetadata(
             provider_id="ollama",
             model_id=self.model or "unknown",
-            architecture_family="unknown",  # Ollama doesn't expose this
+            architecture_family=infer_architecture_family(self.model or "unknown"),
             context_window=self.num_ctx,
             supports_vram_management=True,
         )
@@ -314,6 +315,41 @@ class OllamaProvider(ModelProvider):
         except Exception as e:
             logger.warning(f"[OllamaProvider] Preload failed for {model}: {e}")
             return False
+
+    async def resolve_model_version(self, model: str) -> Optional[str]:
+        """
+        Resolve model version via Ollama /api/show (best effort).
+
+        Args:
+            model: Model name (e.g., "gemma3:latest")
+
+        Returns:
+            Version string like "4.3B_Q4_K_M" or None on failure.
+        """
+        await self._ensure_initialized()
+
+        try:
+            response = await self._client.post(
+                f"{self.base_url}/api/show",
+                json={"name": model},
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            details = data.get("details", {})
+            param_size = details.get("parameter_size")
+            quant_level = details.get("quantization_level")
+
+            if param_size and quant_level:
+                return f"{param_size}_{quant_level}"
+            elif param_size:
+                return param_size
+            else:
+                return None
+
+        except Exception as e:
+            logger.debug(f"[OllamaProvider] resolve_model_version({model}) failed: {e}")
+            return None
 
     async def unload_model(self, model: str) -> bool:
         """

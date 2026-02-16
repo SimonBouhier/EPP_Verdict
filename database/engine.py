@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import aiosqlite
 import json
+import logging
 import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
@@ -26,6 +27,8 @@ from database.graph_delta import (
     KappaCalculator, DeltaValidationError, MutationLimitExceededError
 )
 from database.pool import SQLiteConnectionPool, get_pool, close_pool
+
+logger = logging.getLogger(__name__)
 
 
 class ISpaceDB:
@@ -80,6 +83,7 @@ class ISpaceDB:
                 "ALTER TABLE concept_aliases ADD COLUMN is_active INTEGER DEFAULT 1",
                 "ALTER TABLE relations ADD COLUMN is_active INTEGER DEFAULT 1",
                 "ALTER TABLE knowledge_gaps ADD COLUMN suggested_question TEXT",
+                "ALTER TABLE attestations ADD COLUMN consensus_meta TEXT",
             ]
 
             # Phase 0.2: Migration embedding versioning
@@ -169,7 +173,7 @@ class ISpaceDB:
         # Initialize connection pool
         self._pool = await get_pool(str(self.db_path), pool_size=10)
 
-        print(f"[ISpaceDB] Initialized at {self.db_path} (pool: 10 connections)")
+        logger.info("Initialized at %s (pool: 10 connections)", self.db_path)
 
     @asynccontextmanager
     async def connection(self):
@@ -405,7 +409,7 @@ class ISpaceDB:
 
         now = time.time()
         async with self.connection() as conn:
-            # AUDIT[A4-002] 🔴 CRITICAL: INSERT OR REPLACE perd les métadonnées existantes (created_at, embeddings).
+            # AUDIT[A4-002] 🔴→✅ FIXED Phase 4.1: INSERT OR IGNORE préserve les métadonnées existantes.
             await conn.execute(
                 """
                 INSERT OR IGNORE INTO concepts
@@ -1173,7 +1177,7 @@ class ISpaceDB:
             await conn.execute("ANALYZE")
             await conn.commit()
 
-        print("[ISpaceDB] Database optimized (VACUUM + ANALYZE)")
+        logger.info("Database optimized (VACUUM + ANALYZE)")
 
     # ========================================================================
     # GRAPH DELTA OPERATIONS (Lyra-ACE)
@@ -2658,6 +2662,14 @@ class ISpaceDB:
                 separators=(",", ":"),
             )
 
+        # ADR-010: Serialize consensus_meta to JSON string
+        consensus_meta_raw = attestation.get("consensus_meta")
+        consensus_meta_json = (
+            json.dumps(consensus_meta_raw, sort_keys=True, ensure_ascii=False)
+            if consensus_meta_raw is not None
+            else None
+        )
+
         async with self.connection() as conn:
             cursor = await conn.execute(
                 """
@@ -2669,8 +2681,9 @@ class ISpaceDB:
                     epistemic_type, confidence_tier,
                     metrological_frame, source_anchor, run_id, question,
                     timestamp, protocol_version,
-                    validation_count, previous_hash, portable_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    validation_count, previous_hash, portable_json,
+                    consensus_meta
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     attestation["claim_hash"],
@@ -2697,10 +2710,165 @@ class ISpaceDB:
                     attestation.get("validation_count", 1),
                     attestation.get("previous_hash"),
                     portable_json,
+                    consensus_meta_json,
                 )
             )
             await conn.commit()
             return cursor.lastrowid
+
+    async def update_attestation_diversity_bonus(
+        self,
+        claim_hash: str,
+        diversity_bonus_factor: float,
+        adjusted_consensus_score: float,
+    ) -> None:
+        """Update diversity bonus fields for an attestation (R-2.2.1).
+
+        This is a post-hoc enrichment, NOT a modification of immutable
+        epistemic content (ADR-007 safe). The consensus_score and
+        confidence_tier remain unchanged.
+        """
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                UPDATE attestations
+                SET diversity_bonus_factor = ?,
+                    adjusted_consensus_score = ?
+                WHERE claim_hash = ?
+                """,
+                (round(diversity_bonus_factor, 4), round(adjusted_consensus_score, 4), claim_hash),
+            )
+            await conn.commit()
+
+    # ========================================================================
+    # ADR-010: BACKFILL PRE-ADR-010 ATTESTATIONS
+    # ========================================================================
+
+    async def backfill_consensus_meta(self) -> int:
+        """Backfill attestations that have no consensus_meta with a stub.
+
+        Returns the number of attestations updated.
+        """
+        stub = json.dumps({
+            "methodology": {
+                "consensus_method": "hash_exact_v1",
+                "note": "pre-ADR-010, metadata unavailable",
+            }
+        }, ensure_ascii=False)
+
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                "UPDATE attestations SET consensus_meta = ? WHERE consensus_meta IS NULL",
+                (stub,),
+            )
+            await conn.commit()
+            return cursor.rowcount
+
+    # ========================================================================
+    # COMMIT-REVEAL (R-2.2.3)
+    # ========================================================================
+
+    async def store_commit(
+        self,
+        run_id: int,
+        model_id: str,
+        phase: str,
+        response_hash: str,
+    ) -> int:
+        """Store a commit hash for a model response before reveal."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                INSERT INTO commit_reveal (run_id, model_id, phase, response_hash)
+                VALUES (?, ?, ?, ?)
+                """,
+                (run_id, model_id, phase, response_hash),
+            )
+            await conn.commit()
+            return cursor.lastrowid
+
+    async def get_commit(
+        self,
+        run_id: int,
+        model_id: str,
+        phase: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Get a commit record for a specific model/phase/run."""
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT commit_id, run_id, model_id, phase, response_hash,
+                       committed_at, revealed_at, verified
+                FROM commit_reveal
+                WHERE run_id = ? AND model_id = ? AND phase = ?
+                ORDER BY committed_at DESC LIMIT 1
+                """,
+                (run_id, model_id, phase),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return {
+                "commit_id": row[0],
+                "run_id": row[1],
+                "model_id": row[2],
+                "phase": row[3],
+                "response_hash": row[4],
+                "committed_at": row[5],
+                "revealed_at": row[6],
+                "verified": row[7],
+            }
+
+    async def verify_and_update_commit(
+        self,
+        run_id: int,
+        model_id: str,
+        phase: str,
+        revealed_response: str,
+    ) -> bool:
+        """Verify a commit by comparing hash of revealed response.
+
+        Returns True if hash matches, False otherwise. Updates the commit record.
+        """
+        import hashlib
+        import time
+
+        commit = await self.get_commit(run_id, model_id, phase)
+        if commit is None:
+            return False
+
+        revealed_hash = hashlib.sha256(revealed_response.encode()).hexdigest()
+        match = revealed_hash == commit["response_hash"]
+
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                UPDATE commit_reveal
+                SET revealed_at = ?, verified = ?
+                WHERE commit_id = ?
+                """,
+                (time.time(), 1 if match else 0, commit["commit_id"]),
+            )
+            await conn.commit()
+
+        return match
+
+    async def update_attestation_commit_verified(
+        self,
+        claim_hash: str,
+        verified: bool,
+    ) -> None:
+        """Update commit_reveal_verified column in attestations (R-2.2.3)."""
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                UPDATE attestations
+                SET commit_reveal_verified = ?
+                WHERE claim_hash = ?
+                """,
+                (1 if verified else 0, claim_hash),
+            )
+            await conn.commit()
 
     async def get_attestation_by_hash(self, claim_hash: str) -> Optional[Dict]:
         """
@@ -2725,7 +2893,9 @@ class ISpaceDB:
                     epistemic_type, confidence_tier,
                     metrological_frame, source_anchor, run_id, question,
                     timestamp, protocol_version,
-                    validation_count, previous_hash, portable_json
+                    validation_count, previous_hash, portable_json,
+                    adjusted_consensus_score, diversity_bonus_factor,
+                    commit_reveal_verified
                 FROM attestations
                 WHERE claim_hash = ?
                 ORDER BY timestamp DESC
@@ -2846,6 +3016,9 @@ class ISpaceDB:
             "validation_count": row[22],
             "previous_hash": row[23],
             "portable_json": row[24],
+            "adjusted_consensus_score": row[25] if len(row) > 25 else None,
+            "diversity_bonus_factor": row[26] if len(row) > 26 else 1.0,
+            "commit_reveal_verified": row[27] if len(row) > 27 else None,
         }
 
     # ========================================================================
@@ -3013,6 +3186,42 @@ class ISpaceDB:
                 "worst_brier": round(row[3], 4),
             }
 
+    async def get_all_model_brier_scores(
+        self,
+        window_days: int = 90,
+    ) -> List[Dict[str, Any]]:
+        """Return Brier stats + computed weight for all models with resolved predictions.
+
+        Uses the v_model_brier_scores view (schema.sql).
+        Weight formula: max(0.0, 1.0 - avg_brier_score). Cold start models
+        (no resolved predictions) do not appear — they get weight 1.0 by default
+        in the orchestrator.
+
+        Returns:
+            List of dicts sorted by avg_brier_score ascending, each containing:
+            model_id, provider_id, total_predictions, resolved_predictions,
+            avg_brier_score, best_brier, worst_brier, weight.
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT * FROM v_model_brier_scores"
+            )
+            rows = await cursor.fetchall()
+            results = []
+            for row in rows:
+                avg_brier = round(row[4], 4) if row[4] is not None else 0.0
+                results.append({
+                    "model_id": row[0],
+                    "provider_id": row[1],
+                    "total_predictions": row[2],
+                    "resolved_predictions": row[3],
+                    "avg_brier_score": avg_brier,
+                    "best_brier": round(row[5], 4) if row[5] is not None else None,
+                    "worst_brier": round(row[6], 4) if row[6] is not None else None,
+                    "weight": round(max(0.0, 1.0 - avg_brier), 4),
+                })
+            return results
+
     # ========================================================================
     # TIER TRANSITIONS
     # ========================================================================
@@ -3075,7 +3284,7 @@ class ISpaceDB:
             row = await cursor.fetchone()
             return row[0] if row else 0
 
-    # AUDIT[A4-003] 🔴 CRITICAL: submission_status manquait du schéma — ajouté Phase 3.2.
+    # AUDIT[A4-003] 🔴→✅ FIXED Phase 3.2: submission_status ajouté au schéma.
     async def update_attestation_submission_status(
         self,
         claim_hash: str,
@@ -3192,4 +3401,4 @@ async def close_db() -> None:
     await close_pool()
 
     _db_instance = None
-    print("[ISpaceDB] Connection and pool closed")
+    logger.info("Connection and pool closed")

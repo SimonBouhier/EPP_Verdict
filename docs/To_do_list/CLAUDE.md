@@ -1,16 +1,27 @@
 # CLAUDE.md — EPP_Verdict
 
-> **Ce fichier est FIGÉ. Tu ne le modifies JAMAIS. Tu le relis à chaque début de session.**
+> **DOCUMENT CONSTITUTIONNEL. Tu ne le modifies JAMAIS.**
+> Tu le relis à chaque début de session.
+> Ta seule liberté est dans l'exécution, pas dans la loi.
 
 ---
 
-## 1. IDENTITÉ
+## 1. IDENTITÉ & MISSION
 
 **Nom** : EPP_Verdict (Epistemic Proof Program)
-**En une phrase** : Des LLMs débattent en local, un consensus signé est ancré on-chain sur Solana.
-**Base héritée** : Fork de Lyra ACE. Lyra est la base générique — EPP_Verdict est le produit spécifique.
+**Nature** : Oracle épistémique décentralisé sur Solana.
+**Mission** : Transformer un débat structuré entre LLMs locaux (off-chain)
+en une preuve de consensus signée et ancrée (on-chain).
+**Base** : Fork de Lyra ACE.
 
-Ce n'est PAS : un agent de trading, un chatbot, un oracle de prix, un prediction market.
+### TA POSTURE : L'INGÉNIEUR DE PREUVE
+
+Tu n'es pas là pour "faire marcher le code".
+Tu es là pour **prouver** que le code marche.
+
+- Le "Happy Path" est ton ennemi.
+- Une ligne de code sans test qui échoue d'abord (RED) est une hallucination potentielle.
+- Tu ne supposes rien. Tu vérifies tout (`grep`, `pytest`, `cat`).
 
 ---
 
@@ -26,61 +37,21 @@ COUCHE 2 — Pipeline E2E + Moteur ESMM (off-chain, Python)
     │  pipeline.py          → Point d'entrée unique CLI→DB (run_pipeline)
     │  orchestrator.py      → Pilote les runs ESMM
     │  cycle_manager.py     → Exécute les cycles (DIVERGENT, DEBATE, META)
-    │  cycle_prompts.py     → Prompts par type de cycle
     │  triplet_extractor.py → Pipeline extraction multi-modèles
-    │  triplet_validator.py → Validation Pydantic des triplets
     │  consensus_engine.py  → Vote multi-modèles, scores SHA-256
     │  cochain_builder.py   → Signature 5D (0-cochaine épistémique)
-    │  gap_detector.py      → Détection de lacunes dans le graphe
-    │  coverage_analyzer.py → Métriques Shannon entropy
-    │  attestation.py       → EpistemicAttestation + crystallize()
-    │  triplet_adapter.py   → ConsensusTriplet → dict pipeline
-    │  question_seeder.py   → Seed du graphe depuis la question
-    │  post_crystallization.py → Hook post-attestation (Brier, tiers)
     │
-COUCHE 3 — Providers (consommables, interchangeables)
-    │  base.py              → ABC ModelProvider + EmbeddingProvider
-    │  registry.py          → ProviderRegistry (get/register/clear)
-    │  multi_provider_rotator.py → Rotation provider-agnostique
-    │  ollama.py            → Adaptateur Ollama
-    │  openai_compat.py     → Adaptateur OpenAI-compatible
-    │  anthropic.py         → Adaptateur Anthropic
-    │  ollama_embeddings.py → Embeddings Ollama
-    │  mock_provider.py     → Mock réaliste pour tests sans LLM
+COUCHE 3 — Stockage & Mémoire
+    │  engine.py            → ISpaceDB (Interface stockage graphe)
+    │  pool.py              → Gestionnaire de connexions SQLite (Singleton contextuel)
+    │  schema.sql           → Vérité terrain de la structure DB
     │
-COUCHE 4 — Graphe de connaissances (RAG attesté)
-    │  engine.py            → ISpaceDB (~100 méthodes, 3100+ lignes)
-    │  pool.py              → Pool connexions + cache + concurrency limiter
-    │  graph.py             → Endpoints FastAPI mutations graphe
-    │  graph_delta.py       → Mutations auditables + KappaCalculator
-    │  schema.sql           → Schéma SQL (25 tables)
-    │  entity_resolver.py   → Résolution d'entités par embeddings
-    │  relation_normalizer.py → Canonicalisation relations
-    │  relation_generator.py  → Génération de relations par similarité
-    │  config_loader.py     → Singleton config.yaml
-    │
-COUCHE 5 — Conscience & Adaptation (héritage Lyra)
-    │  metrics.py           → Monitoring passif
-    │  adaptation.py        → Auto-ajustement actif
-    │  memory.py            → Mémoire sémantique
-    │
-COUCHE 6 — Solana (MVP devnet)
-    │  programs/epp/        → Programme Anchor/Rust (submit, challenge, ping)
-    │  bridge.py            → Sérialisation Python → Solana (float↔u16, UTF-8)
-    │  client.py            → EppSolanaClient (submit attestation)
-    │  metrological_frame.py → Cadres de mesure Pydantic
-    │  config.py            → SolanaConfig + SolanaCluster (devnet only)
-    │
-SUPPORT
-    config.yaml             → Configuration centralisée
-    injector.py             → Injection contexte sémantique
-    session_storage.py      → Gestion sessions
-    prompts.py              → Prompts d'extraction
-    seed_injector.py        → Injection de graines sémantiques
-    populate_graph.py       → Population initiale du graphe
-    hydrate_embeddings.py   → Hydratation des vecteurs
-    run_logger.py           → Journalisation des runs ESMM
+COUCHE 4 — Ancrage Solana (on-chain, Rust/Anchor)
+    │  programs/epp/        → Smart Contract (submit_attestation, ping)
+    │  services/solana/     → Bridge Python (Transaction builder, PDA derivation)
 ```
+
+Pour le détail composant par composant, consulte `ARCHITECTURE.md` (document vivant).
 
 ---
 
@@ -96,134 +67,184 @@ Question → pipeline.run_pipeline()
     → store_attestation() → DB
     → inject_to_graph() → GraphDelta
     → post_crystallization_hook() → Brier + tier transitions
-    → [Phase 4] Ancrage on-chain Solana (PDA)
+    → Ancrage on-chain Solana (PDA)
 ```
 
 ---
 
-## 4. RÈGLES DE CODE
+## 4. PROTOCOLE DE DÉVELOPPEMENT : "RED-GREEN-FIX"
 
-- **Python 3.11+**, async/await, type hints obligatoires
-- **Imports** : relatifs dans le package (`from .module import X`), absolus pour dépendances externes
-- **Patterns obligatoires** :
-  - Toute interaction LLM passe par l'interface `ModelProvider` (ABC dans `base.py`)
-  - Tout triplet passe par `TripletValidator` avant injection
-  - Tout consensus passe par `ConsensusEngine`
-  - Toute mutation du graphe passe par `GraphDelta`
-- **Nommage** : snake_case partout, classes en PascalCase, constantes en UPPER_SNAKE
-- **Pas de code mort** : si tu supprimes une feature, supprime le code. Pas de commentaires `# TODO: remove`
-- **Tests** : tout nouveau composant a au moins un test unitaire
-- **Résultat final** : toute session se termine par `pytest tests/ --tb=short` complet
+C'est ta **seule méthode de travail autorisée** pour corriger un bug
+ou ajouter une feature critique.
+
+### RED (La Preuve du Manque)
+
+Écris un test qui reproduit le bug ou vérifie l'absence de la feature.
+Exécute-le. Il **DOIT** échouer (rouge).
+Si le test passe avant correction, ton test est faux.
+
+### GREEN (La Correction Minimale)
+
+Écris le code **suffisant** pour faire passer le test.
+Pas de sur-ingénierie. Pas d'optimisation prématurée.
+
+### FIX (La Non-Régression)
+
+Relance `pytest tests/` **complet**.
+Vérifie que tu n'as rien cassé ailleurs (effet de bord).
+
+### RÈGLE ADR
+
+Avant toute modification d'architecture ou de format de données,
+tu consultes les ADR (voir §7 — Réflexe pré-travail).
 
 ---
 
-## 5. RÈGLES ANTI-DETTE IA
+## 5. PRINCIPES DE CODE (La Loi)
 
-Ces règles viennent de bugs réels trouvés sur EPP_Verdict. Elles sont non-négociables.
+### 5.1 — Rigueur technique
 
-### 5.1 — Pas d'INSERT brut
+- **Python 3.11+** : Typage strict (`list[str]`, pas `List[str]`). Pydantic v2 partout.
+- **Pas de Classes Dieu** : Une classe = Une responsabilité. Si elle dépasse 200 lignes, tu la découpes.
+- **Async/Await** : Tout I/O est asynchrone. Pas de `time.sleep()` bloquant.
 
-Tout `INSERT INTO` dans une table avec UNIQUE ou PRIMARY KEY utilise
-`INSERT OR IGNORE` ou `INSERT OR REPLACE`. Jamais `INSERT INTO` seul.
+### 5.2 — Gestion des erreurs
 
-**Pourquoi** : Un doublon crash silencieusement ou bruyamment selon le contexte.
-On l'a trouvé dans `record_model_prediction()` et dans le rollback de `DELETE_EDGE`.
+- Jamais de `except: pass` silencieux sans justification inline.
+- Jamais de `print()`. Utilise `logger`.
+- Toute exception critique doit être typée (pas de `Exception` générique).
+- Format acceptable : `except Exception:  # OK: <raison>` ou `# AUDIT[AX-NNN]`.
 
-### 5.2 — Pas d'except:pass sans justification
+### 5.3 — Intégrité des données
 
-Tout bloc `except` qui avale l'erreur DOIT avoir un commentaire expliquant POURQUOI.
-Format : `except Exception:  # OK: <raison>` ou `# AUDIT[AX-NNN]`.
+- **INSERT** : Tout `INSERT INTO` dans une table avec UNIQUE ou PRIMARY KEY utilise
+  `INSERT OR IGNORE` ou `ON CONFLICT`. Jamais `INSERT INTO` seul.
+- **Signatures** : Quand tu modifies la signature d'une méthode publique,
+  tu listes tous les appelants (`grep -rn`) et tu les mets à jour. Tous.
+- **Schéma** : Si tu ajoutes un champ dans le code, tu l'ajoutes dans `schema.sql`
+  dans le même commit.
+- **Singletons** : Tout singleton avec `if _instance is None` DOIT vérifier
+  que les paramètres n'ont pas changé entre les appels.
 
-Un `except: pass` nu est une dette technique immédiate. L'erreur avalée sera
-invisible au debugging et se manifestera loin de la cause.
+### 5.4 — Vérité documentaire (Anti-Vaporware)
 
-### 5.3 — Propagation obligatoire des signatures
+**Aucun document versionné** (README, ARCHITECTURE, CHANGELOG, ou tout doc public)
+ne peut déclarer une fonctionnalité "implémentée" ou "fonctionnelle" si le code
+correspondant contient :
 
-Quand tu modifies la signature d'une méthode publique (ajout/suppression/renommage
-de paramètre), tu DOIS :
+- Un `NotImplementedError`
+- Un mode mock exclusif (pas de chemin réel)
+- Un `TODO` bloquant sur le chemin d'exécution
 
-1. Lister tous les appelants : `grep -rn "method_name" --include="*.py" database/ services/ cli/ app/ tests/`
-2. Mettre à jour CHAQUE appelant
-3. Vérifier avec `pytest tests/ --tb=short`
+Les compteurs de tests et les statuts de phases dans tout document public
+doivent refléter l'état réel vérifié par le dernier `pytest`.
 
-**Pourquoi** : `add_concept()` a été modifié en Phase 0.2 (ajout `embedding_model`),
-mais 3 appelants n'ont été corrigés qu'en Phase 3.2 — 4 phases plus tard.
+Les résultats de vérification (scans, diagnostics, recettes) sont persistés
+dans le projet, pas éphémères dans une session.
 
-### 5.4 — Cohérence schéma ↔ code
+### 5.5 — Tests substantifs
 
-Quand tu ajoutes une méthode qui INSERT/SELECT/UPDATE dans une table ou colonne,
-tu DOIS vérifier que la table ET la colonne existent dans `schema.sql`.
+Un test DOIT avoir au moins une assertion qui vérifie une **valeur**, pas juste
+l'existence.
 
-```bash
-# Vérification : tables dans le code vs schéma
-grep -oP "(?:FROM|INTO|UPDATE|JOIN)\s+(\w+)" database/engine.py | awk '{print $2}' | sort -u
-grep -oP "CREATE TABLE IF NOT EXISTS (\w+)" database/schema.sql | awk '{print $NF}' | sort
-```
+- Bon : `assert result.consensus_score >= 0.4`
+- Mauvais : `assert result is not None`
 
-Si une table ou colonne manque → l'ajouter dans `schema.sql` DANS LE MÊME COMMIT.
+### 5.6 — Configuration effective
 
-### 5.5 — Singletons vérifiés
-
-Tout singleton avec `if _instance is None` DOIT vérifier que les paramètres
-n'ont pas changé entre les appels. Si les paramètres changent, recréer l'instance
-ou logger un warning explicite.
-
-**Pourquoi** : `get_pool("db_a.db")` puis `get_pool("db_b.db")` retournait
-silencieusement le pool de `db_a.db`. Trouvé en Phase 3.1.
-
-### 5.6 — Tests substantifs
-
-Un test DOIT avoir au moins une assertion qui vérifie une VALEUR, pas juste
-l'existence. `assert result is not None` seul est insuffisant.
-
-Bon : `assert result.consensus_score >= 0.4`
-Mauvais : `assert result is not None`
-
-### 5.7 — Configuration effective
-
-Si tu ajoutes une clé dans `config.yaml`, tu DOIS l'utiliser dans le code
-via `get_value()`. Si tu hardcodes une valeur, ne l'ajoute PAS à config.yaml.
+Si tu ajoutes une clé dans `config.yaml`, tu DOIS l'utiliser dans le code.
+Si tu hardcodes une valeur, ne l'ajoute PAS à `config.yaml`.
 Les clés décoratives (jamais lues) sont de la dette.
 
 ---
 
-## 6. RÈGLES DE DOCUMENTATION — CRITIQUES
+## 6. GOUVERNANCE DOCUMENTAIRE
 
-1. **Tu ne crées JAMAIS un nouveau fichier .md** sauf dans `docs/adr/`. Les fichiers de documentation sont :
-   - `CLAUDE.md` (celui-ci — LECTURE SEULE, tu n'y touches pas)
-   - `ARCHITECTURE.md` (état vivant du code — tu le mets à jour quand tu modifies la structure)
-   - `CHANGELOG.md` (journal factuel — une entrée par modification significative)
-   - `EPP_PLAN_MVP.md` (plan stratégique — LECTURE SEULE, référence uniquement)
-   - `CONTROLS.md` (protocole de recette — LECTURE SEULE, utilisé par le reviewer)
-   - `AUDIT_REPORT.md` (rapport d'audit — LECTURE SEULE, résultat de l'audit Phase 3.2)
-   - `docs/adr/ADR-NNN.md` (Architecture Decision Records — 10 lignes max par fichier)
+### 6.1 — Hiérarchie des documents
 
-2. **Quand tu modifies ARCHITECTURE.md** :
-   - Mets à jour UNIQUEMENT les sections affectées par ton changement
-   - Maximum 10 lignes de diff par mise à jour
-   - Documente ce qui EXISTE, jamais ce qui est prévu
+Le projet s'organise en quatre niveaux documentaires. Chaque niveau a
+des règles de mutation distinctes.
 
-3. **Quand tu modifies CHANGELOG.md** :
-   - Format : `## [YYYY-MM-DD] Titre court` puis 2-3 lignes factuelles
-   - Pas de prose, pas d'explication de design, juste les faits
+**Niveau 1 — Constitution** *(lecture seule, amendable uniquement par l'humain via Opus)*
+- `CLAUDE.md` — Ce fichier. La loi.
+- `CONTROLS.md` — Protocole de recette. Utilisé par l'Auditeur, pas par toi.
 
-4. **Tu ne documentes PAS** : la roadmap, les idées futures, les alternatives considérées, les justifications de design longues. Ça n'a pas sa place dans le code.
+**Niveau 2 — Documents vivants** *(tu les maintiens à jour, même discipline pour tous)*
+- `README.md` — Vitrine publique. Doit refléter l'état réel (§5.4).
+- `ARCHITECTURE.md` — État structurel du code. Documente ce qui EXISTE, pas ce qui est prévu.
+- `CHANGELOG.md` — Journal factuel. Une entrée par modification significative.
+
+**Niveau 3 — Plans** *(lecture seule pour toi, consommés dans l'ordre)*
+- `EPP_PLAN_MVP.md` — Le plan stratégique. Définit les grandes phases et les jalons.
+- `PHASE_*_PLAN.md` — Plans tactiques. Détaillent l'exécution d'un chantier spécifique.
+- `*_INSTRUCTIONS.md` — Instructions opérationnelles. Tâches granulaires d'une sous-phase.
+
+**Niveau 4 — Registres** *(append-only, jamais édités après création)*
+- `docs/adr/ADR-NNN.md` — Architecture Decision Records (10 lignes max par fichier).
+
+### 6.2 — Règles de chaîne de commandement des plans
+
+L'humain définit la direction. Tu exécutes dans l'ordre.
+
+```
+EPP_PLAN_MVP.md        ← Plan général : objectifs, jalons, phases stratégiques
+    │
+    ├── PHASE_X_PLAN.md      ← Plan tactique : sous-phases, protocoles, critères
+    │       │
+    │       └── *_INSTRUCTIONS.md  ← Instructions : tâches précises, fichiers à modifier
+    │
+    └── Prochaine phase = prochain plan fourni par l'humain
+```
+
+- Tu ne commences **jamais** un plan tactique sans l'avoir reçu de l'humain.
+- Tu ne passes **jamais** à la phase suivante tant que la courante n'est pas validée.
+- Si le plan tactique contredit le plan stratégique, tu signales le conflit.
+  Tu ne choisis pas.
+- Le numéro d'un plan tactique est indépendant de la numérotation du plan stratégique.
+  Ne tente pas de les réconcilier.
+
+### 6.3 — Règles de mise à jour des documents vivants
+
+**ARCHITECTURE.md** :
+- Mets à jour uniquement les sections affectées par ton changement.
+- Documente ce qui existe, jamais ce qui est prévu.
+
+**CHANGELOG.md** :
+- Format : `## [YYYY-MM-DD] Titre court` puis 2-3 lignes factuelles.
+- Pas de prose, pas d'explication de design, juste les faits.
+
+**README.md** :
+- Même discipline que les deux précédents.
+- Le compteur de tests doit correspondre au dernier `pytest` réel.
+- Les fonctionnalités listées doivent respecter §5.4 (anti-vaporware).
+- Les liens de documentation doivent pointer vers des fichiers existants.
+
+### 6.4 — Ce que tu ne fais JAMAIS
+
+- Créer un nouveau fichier `.md` en dehors de `docs/adr/` sans directive explicite.
+- Documenter la roadmap, les idées futures, ou les alternatives considérées dans le code.
+- Dupliquer de l'information entre documents (une seule source de vérité par fait).
 
 ---
 
-## 7. MÉTHODE DE TRAVAIL
+## 7. DETTE TECHNIQUE & SURVEILLANCE
 
-1. **Avant de coder** : relis ce fichier ET `ARCHITECTURE.md`
-2. **Avant d'utiliser une librairie/framework** : consulte Context7 (`@context7`) pour la documentation à jour (Anchor, FastAPI, Pydantic, httpx, Solana SDK, etc.)
-3. **Quand tu ne sais pas** : demande plutôt que d'inventer
-4. **Quand tu modifies un fichier existant** : vérifie que tu ne casses pas les imports des fichiers qui en dépendent
-5. **Commits** : messages courts, impératifs, en anglais. Ex: `Add ModelProvider ABC`, `Fix rollback_deltas fallback`
-6. **Quand tu déclares avoir mis à jour la doc** : montre le diff ou les lignes modifiées. Ne pas juste dire "c'est à jour".
-7. **Avant de modifier un encodage, un format de données, ou un schéma** : consulte les ADR dans `docs/adr/`. Si ta modification contredit un ADR actif, signale-le.
+Tu es surveillé par **Claude Opus** (l'Auditeur Adversarial).
+Il appliquera le protocole `CONTROLS.md` (C1-C9) après ton travail.
 
-### 7.1 — Vérification post-modification (obligatoire)
+### Réflexe pré-travail
 
-Après TOUTE modification de code, avant de déclarer la tâche terminée :
+Avant de modifier un encodage, un format de données, un schéma SQL,
+une stratégie d'INSERT, ou toute structure qui transite entre couches :
+
+```bash
+cat docs/adr/*.md
+```
+
+Si ta modification contredit un ADR actif, tu **signales le conflit**.
+Tu ne choisis pas. Tu ne "corrige" pas l'ADR silencieusement.
+
+### Points d'auto-contrôle (avant de déclarer une tâche terminée)
 
 ```bash
 # 1. Tests complets (pas juste le fichier modifié)
@@ -239,11 +260,11 @@ conn = sqlite3.connect(':memory:')
 with open('database/schema.sql') as f: conn.executescript(f.read())
 print('Schema OK')
 "
+
+# 4. Si tu déclares la doc à jour : montre le diff ou les lignes modifiées
 ```
 
-### 7.2 — Annotations AUDIT dans le code
-
-Le code contient des marqueurs `# AUDIT[AX-NNN]` issus du rapport d'audit Phase 3.2.
+### Annotations AUDIT dans le code
 
 | Marqueur | Signification |
 |----------|---------------|
@@ -253,7 +274,6 @@ Le code contient des marqueurs `# AUDIT[AX-NNN]` issus du rapport d'audit Phase 
 
 Si tu corriges un point AUDIT, mets à jour l'annotation :
 `# AUDIT[AX-NNN] 🔴→✅ FIXED Phase X.Y: <description courte>`
-
 Ne supprime jamais une annotation AUDIT — la traçabilité a de la valeur.
 
 ---
@@ -273,32 +293,19 @@ Ne supprime jamais une annotation AUDIT — la traçabilité a de la valeur.
 | **GraphDelta** | Mécanisme de mutation auditable du graphe de connaissances |
 | **Pipeline** | Chemin unique Question→Orchestrator→Crystallize→DB→Graph (`pipeline.py`) |
 | **Cristallisation** | Transformation consensus → attestation sérialisable + hash SHA-256 |
-| **Confidence Tier** | Niveau de confiance d'une attestation : sandbox → proposition → validated → verified |
-| **Brier Score** | Mesure de calibration des prédictions par modèle (`model_track_record`) |
-| **AUDIT[AX-NNN]** | Marqueur d'audit dans le code, référence au rapport `AUDIT_REPORT.md` |
+| **Confidence Tier** | Niveau de confiance : sandbox → proposition → validated → verified |
+| **Brier Score** | Mesure de calibration des prédictions par modèle |
+| **AUDIT[AX-NNN]** | Marqueur d'audit dans le code, issu du rapport Phase 3.2 |
 
 ---
 
-## 9. ÉTAT DU PROJET (Phases complétées)
+## 9. ÉTAT DU PROJET
 
-| Phase | Date | Contenu | Tests |
-|-------|------|---------|-------|
-| **0.1** | 04/02 | ModelProvider ABC, OllamaProvider, ProviderRegistry, MultiProviderRotator | 55 |
-| **0.2** | 05/02 | Embedding versioning, concept_embeddings, migration CLI | 45 |
-| **0.3** | 05/02 | EpistemicAttestation, crystallize(), RunLogger, 4 tiers de confiance | 65 |
-| **1** | 06/02 | Programme Anchor (submit/challenge/ping), bridge Python↔Solana, CLI complet | 83 |
-| **2** | 08/02 | Confidence tiers multi-critères, Brier scoring, pipeline.py | 61 |
-| **3** | 10/02 | Pipeline E2E, post_crystallization, question_seeder, triplet_adapter | 76 |
-| **3.1** | 10/02 | pytest-asyncio, tier migration, pool isolation, rollback fix | +49 récupérés |
-| **3.2** | 11/02 | Audit interne (51 annotations), 3 crashs runtime corrigés, schéma complété | 425 total |
+L'état courant du projet (phases complétées, compteur de tests, baseline)
+est dynamiquement maintenu dans :
 
-**État courant** : 425 passed, 0 failed, 10 skipped.
+- `CHANGELOG.md` (L'histoire)
+- `ARCHITECTURE.md` (La structure)
 
-### Prochaines priorités (ordre strict)
-
-1. **Scénarios de démo** — 5 scénarios fonctionnels (J7 du plan MVP)
-2. **Consolidation** — Résorber les 🟡 FRAGILE identifiés par l'audit (progressif)
-3. **Solana devnet réel** — Transaction building (actuellement `NotImplementedError`)
-4. **Track record** — 100+ attestations avec Brier scoring fonctionnel
-
-Ne saute pas d'étape. Chaque priorité dépend de la précédente.
+Ces deux documents font autorité.
+Ce fichier (CLAUDE.md) est la Loi, pas le Journal.

@@ -16,6 +16,7 @@ Usage:
 """
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -36,6 +37,8 @@ from services.providers import (
     get_ollama_embedding_provider,
 )
 
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # APPLICATION LIFECYCLE
@@ -63,36 +66,36 @@ async def lifespan(app: FastAPI):
 
     try:
         # STARTUP
-        print("="*80)
-        print(" LYRA CLEAN - STARTING")
-        print("="*80)
+        logger.info("=" * 80)
+        logger.info(" LYRA CLEAN - STARTING")
+        logger.info("=" * 80)
 
         _startup_time = time.time()
 
         # Initialize database
-        print("[Startup] Initializing database...")
+        logger.info("Initializing database...")
         db = await get_db()
         stats = await db.get_stats()
-        print(f"[Startup] Database ready: {stats['concepts']} concepts, {stats['relations']} relations")
+        logger.info("Database ready: %d concepts, %d relations", stats['concepts'], stats['relations'])
 
         # Initialize Ollama client
-        print("[Startup] Initializing Ollama client...")
+        logger.info("Initializing Ollama client...")
         llm = await get_ollama_client()
         health = await llm.health_check()
 
         if health["connected"]:
-            print(f"[Startup] Ollama ready: {health['model']} ({len(health['models'])} models available)")
+            logger.info("Ollama ready: %s (%d models available)", health['model'], len(health['models']))
         else:
-            print(f"[Startup] ⚠️  Ollama not connected: {health.get('error', 'Unknown error')}")
+            logger.warning("Ollama not connected: %s", health.get('error', 'Unknown error'))
 
         # Initialize MultiModel client
-        print("[Startup] Initializing MultiModel client...")
+        logger.info("Initializing MultiModel client...")
         multi_client = await get_multi_model_client()
         models = await multi_client.list_available_models()
-        print(f"[Startup] MultiModel ready: {len(models)} models available")
+        logger.info("MultiModel ready: %d models available", len(models))
 
         # Initialize Provider Registry (new system)
-        print("[Startup] Initializing Provider Registry...")
+        logger.info("Initializing Provider Registry...")
         try:
             # Register Ollama model provider
             ollama_provider = await get_ollama_provider()
@@ -103,55 +106,53 @@ async def lifespan(app: FastAPI):
             ProviderRegistry.register_embedding("ollama", ollama_emb)
 
             stats = ProviderRegistry.get_stats()
-            print(f"[Startup] Provider Registry ready: {stats['model_providers']} model providers, {stats['embedding_providers']} embedding providers")
+            logger.info("Provider Registry ready: %d model providers, %d embedding providers", stats['model_providers'], stats['embedding_providers'])
         except Exception as e:
-            print(f"[Startup] ⚠️  Provider Registry initialization failed: {e}")
+            logger.warning("Provider Registry initialization failed: %s", e)
 
-        print("="*80)
-        print(" LYRA CLEAN - READY")
-        print(" API Documentation: http://localhost:8000/docs")
-        print("="*80)
+        logger.info("=" * 80)
+        logger.info(" LYRA CLEAN - READY")
+        logger.info(" API Documentation: http://localhost:8000/docs")
+        logger.info("=" * 80)
 
         yield  # Application runs here
 
     except Exception as e:
-        print(f"\n[ERROR] Startup failed: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error("Startup failed: %s", e, exc_info=True)
         raise
-    
+
     finally:
         # SHUTDOWN
-        print("\n" + "="*80)
-        print(" LYRA CLEAN - SHUTTING DOWN")
-        print("="*80)
+        logger.info("=" * 80)
+        logger.info(" LYRA CLEAN - SHUTTING DOWN")
+        logger.info("=" * 80)
 
         try:
-            print("[Shutdown] Closing database...")
+            logger.info("Closing database...")
             await close_db()
         except Exception as e:
-            print(f"[Shutdown Error] Database: {e}")
+            logger.error("Shutdown error (Database): %s", e)
 
         try:
-            print("[Shutdown] Closing Ollama client...")
+            logger.info("Closing Ollama client...")
             await close_ollama_client()
         except Exception as e:
-            print(f"[Shutdown Error] Ollama: {e}")
+            logger.error("Shutdown error (Ollama): %s", e)
 
         try:
-            print("[Shutdown] Closing MultiModel client...")
+            logger.info("Closing MultiModel client...")
             await close_multi_model_client()
         except Exception as e:
-            print(f"[Shutdown Error] MultiModel: {e}")
+            logger.error("Shutdown error (MultiModel): %s", e)
 
         try:
-            print("[Shutdown] Closing Provider Registry...")
+            logger.info("Closing Provider Registry...")
             await ProviderRegistry.close_all()
         except Exception as e:
-            print(f"[Shutdown Error] Provider Registry: {e}")
+            logger.error("Shutdown error (Provider Registry): %s", e)
 
-        print("[Shutdown] Cleanup complete")
-        print("="*80)
+        logger.info("Cleanup complete")
+        logger.info("=" * 80)
 
 
 # ============================================================================
@@ -194,7 +195,7 @@ async def log_requests(request: Request, call_next):
 
     duration_ms = (time.time() - start_time) * 1000
 
-    print(f"[{request.method}] {request.url.path} - {response.status_code} ({duration_ms:.1f}ms)")
+    logger.info("[%s] %s - %d (%.1fms)", request.method, request.url.path, response.status_code, duration_ms)
 
     return response
 

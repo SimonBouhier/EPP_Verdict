@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\relation_generator.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.5, 0.6, 0.7, 100, 1000, 5000, 10000, 'average_kappa', 'by_model_source', 'concept_id', 'embedding', 'embedding_similarity', 'id', 'similar_to', 'similarity', 'total_relations', 'unknown', 'weight_distribution']

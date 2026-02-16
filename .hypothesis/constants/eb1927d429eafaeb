@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\coverage_analyzer.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.3, 0.4, 1.0, 'ISpaceDB', 'consensus_density', 'count', 'coverage_score', 'degree', 'epistemic_diversity', 'epistemic_type', 'id', 'neighbor_id', 'structural_stability']

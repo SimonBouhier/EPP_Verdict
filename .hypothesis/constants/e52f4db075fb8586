@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\relation_normalizer.py
+# hypothesis_version: 6.151.6
+
+['aliases', 'canonical', 'category', 'inverse', 'related_to', 'symmetric', 'unknown']

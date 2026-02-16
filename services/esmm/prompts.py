@@ -2,14 +2,14 @@
 ESMM - FEW-SHOT PROMPTS FOR TRIPLET EXTRACTION
 ================================================
 
-Templates de prompts avec exemples positifs et négatifs pour
-améliorer la qualité de l'extraction de triplets sémantiques.
+Few-shot prompt templates with positive and negative examples to
+improve the quality of semantic triplet extraction.
 
-Stratégie:
-1. Exemples positifs: triplets valides et bien formés
-2. Exemples négatifs: erreurs communes à éviter
-3. Relations canoniques: liste blanche stricte
-4. Format de sortie: JSON structuré
+Strategy:
+1. Positive examples: valid, well-formed triplets
+2. Negative examples: common errors to avoid
+3. Canonical relations: strict whitelist
+4. Output format: structured JSON
 
 Author: Lyra-ACE ESMM Protocol
 """
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import List, Dict, Any
 
-# Relations canoniques autorisées
+# Canonical relations whitelist
 CANONICAL_RELATIONS = [
     "cause",           # A causes B
     "caused_by",       # A is caused by B
@@ -41,162 +41,165 @@ CANONICAL_RELATIONS = [
     "contains",        # Containment
 ]
 
-# Template principal pour extraction de triplets
-TRIPLET_EXTRACTION_PROMPT = """Tu es un extracteur de connaissances expert. Tu extrais des triplets sémantiques (Sujet, Relation, Objet) du texte fourni.
+# Main template for triplet extraction
+TRIPLET_EXTRACTION_PROMPT = """You are an expert knowledge extractor. You extract semantic triplets (Subject, Relation, Object) from the provided text.
 
-## RELATIONS CANONIQUES AUTORISÉES (UTILISE UNIQUEMENT CELLES-CI)
+CRITICAL: Regardless of the user's input language, ALL output keys and values
+in the JSON (subjects, relations, objects) MUST be in English.
+
+## ALLOWED CANONICAL RELATIONS (USE ONLY THESE)
 {canonical_relations}
 
-## EXEMPLES VALIDES (À IMITER)
+## VALID EXAMPLES (TO FOLLOW)
 
-Texte: "L'entropie augmente dans un système isolé car l'énergie se disperse."
+Text: "Entropy increases in an isolated system because energy disperses."
 Triplets:
 [
-  {{"subject": "entropie", "relation": "related_to", "object": "système isolé", "confidence": 0.9}},
-  {{"subject": "énergie", "relation": "cause", "object": "entropie", "confidence": 0.85}}
+  {{"subject": "entropy", "relation": "related_to", "object": "isolated system", "confidence": 0.9}},
+  {{"subject": "energy", "relation": "cause", "object": "entropy", "confidence": 0.85}}
 ]
 
-Texte: "La photosynthèse est un processus biologique qui produit de l'oxygène à partir de CO2."
+Text: "Photosynthesis is a biological process that produces oxygen from CO2."
 Triplets:
 [
-  {{"subject": "photosynthèse", "relation": "is_a", "object": "processus biologique", "confidence": 0.95}},
-  {{"subject": "photosynthèse", "relation": "produces", "object": "oxygène", "confidence": 0.9}},
-  {{"subject": "photosynthèse", "relation": "consumes", "object": "CO2", "confidence": 0.9}}
+  {{"subject": "photosynthesis", "relation": "is_a", "object": "biological process", "confidence": 0.95}},
+  {{"subject": "photosynthesis", "relation": "produces", "object": "oxygen", "confidence": 0.9}},
+  {{"subject": "photosynthesis", "relation": "consumes", "object": "CO2", "confidence": 0.9}}
 ]
 
-Texte: "Le théorème de Pythagore implique que le carré de l'hypoténuse égale la somme des carrés des côtés."
+Text: "The Pythagorean theorem implies that the square of the hypotenuse equals the sum of the squares of the sides."
 Triplets:
 [
-  {{"subject": "théorème de Pythagore", "relation": "implies", "object": "relation carrés côtés", "confidence": 0.95}},
-  {{"subject": "hypoténuse", "relation": "part_of", "object": "triangle rectangle", "confidence": 0.8}}
+  {{"subject": "pythagorean theorem", "relation": "implies", "object": "hypotenuse square relation", "confidence": 0.95}},
+  {{"subject": "hypotenuse", "relation": "part_of", "object": "right triangle", "confidence": 0.8}}
 ]
 
-## EXEMPLES INVALIDES (À NE JAMAIS FAIRE)
+## INVALID EXAMPLES (NEVER DO THIS)
 
-❌ Triplets trop vagues:
-  {{"subject": "chose", "relation": "fait", "object": "autre chose"}} - Trop générique
-  {{"subject": "ça", "relation": "est", "object": "important"}} - Pronoms non résolus
+X Triplets too vague:
+  {{"subject": "thing", "relation": "does", "object": "other thing"}} - Too generic
+  {{"subject": "it", "relation": "is", "object": "important"}} - Unresolved pronouns
 
-❌ Relations non canoniques:
-  {{"subject": "A", "relation": "interagit_avec", "object": "B"}} - Utilise "related_to" à la place
-  {{"subject": "X", "relation": "mène_à", "object": "Y"}} - Utilise "cause" ou "implies"
+X Non-canonical relations:
+  {{"subject": "A", "relation": "interacts_with", "object": "B"}} - Use "related_to" instead
+  {{"subject": "X", "relation": "leads_to", "object": "Y"}} - Use "cause" or "implies"
 
-❌ Opinions et subjectivité:
-  {{"subject": "Einstein", "relation": "pensait", "object": "temps relatif"}} - Opinion, pas fait
-  {{"subject": "théorie", "relation": "semble", "object": "correcte"}} - Incertain
+X Opinions and subjectivity:
+  {{"subject": "Einstein", "relation": "thought", "object": "time is relative"}} - Opinion, not fact
+  {{"subject": "theory", "relation": "seems", "object": "correct"}} - Uncertain
 
-❌ Informations incomplètes:
-  {{"subject": "il", "relation": "cause", "object": "effet"}} - "il" non résolu
-  {{"subject": "", "relation": "is_a", "object": "concept"}} - Sujet vide
+X Incomplete information:
+  {{"subject": "he", "relation": "cause", "object": "effect"}} - "he" unresolved
+  {{"subject": "", "relation": "is_a", "object": "concept"}} - Empty subject
 
-## RÈGLES STRICTES
+## STRICT RULES
 
-1. **Concepts concrets**: Les sujets et objets doivent être des termes précis (2-100 caractères)
-2. **Relations canoniques**: Utilise UNIQUEMENT les relations de la liste ci-dessus
-3. **Confiance**: Attribue une confiance entre 0.5 (incertain) et 1.0 (certain)
-4. **Pas de pronoms**: Résous les références avant d'extraire
-5. **Factuel uniquement**: Pas d'opinions, croyances ou spéculations
-6. **Français ou Anglais**: Les concepts peuvent être dans les deux langues
+1. **Concrete concepts**: Subjects and objects must be precise terms (2-100 characters)
+2. **Canonical relations**: Use ONLY the relations from the list above
+3. **Confidence**: Assign confidence between 0.5 (uncertain) and 1.0 (certain)
+4. **No pronouns**: Resolve references before extracting
+5. **Factual only**: No opinions, beliefs, or speculation
+6. **English ONLY for subjects, relations and objects**
 
-## FORMAT DE SORTIE (JSON STRICT)
+## OUTPUT FORMAT (STRICT JSON)
 ```json
 [
-  {{"subject": "concept_sujet", "relation": "relation_canonique", "object": "concept_objet", "confidence": 0.0-1.0}},
+  {{"subject": "subject_concept", "relation": "canonical_relation", "object": "object_concept", "confidence": 0.0-1.0}},
   ...
 ]
 ```
 
-Si aucun triplet valide n'est extractible, retourne: []
+If no valid triplet can be extracted, return: []
 
-## TEXTE À ANALYSER
+## TEXT TO ANALYZE
 {text}
 
-## TRIPLETS EXTRAITS (JSON uniquement, pas d'explication)
+## EXTRACTED TRIPLETS (JSON only, no explanation)
 """
 
-# Template pour validation de triplets existants
-TRIPLET_VALIDATION_PROMPT = """Tu es un validateur de triplets sémantiques. Évalue si les triplets suivants sont valides et bien formés.
+# Template for validating existing triplets
+TRIPLET_VALIDATION_PROMPT = """You are a semantic triplet validator. Evaluate whether the following triplets are valid and well-formed.
 
-## CRITÈRES DE VALIDATION
-1. Sujet et objet non vides (2-100 caractères)
-2. Relation dans la liste canonique: {canonical_relations}
-3. Pas de pronoms non résolus (il, elle, ça, ceci, cela)
-4. Pas d'opinions ou de spéculations
-5. Confiance appropriée (0.5-1.0)
+## VALIDATION CRITERIA
+1. Subject and object non-empty (2-100 characters)
+2. Relation in the canonical list: {canonical_relations}
+3. No unresolved pronouns (he, she, it, this, that)
+4. No opinions or speculation
+5. Appropriate confidence (0.5-1.0)
 
-## TRIPLETS À VALIDER
+## TRIPLETS TO VALIDATE
 {triplets}
 
-## FORMAT DE SORTIE
-Pour chaque triplet, indique:
+## OUTPUT FORMAT
+For each triplet, indicate:
 ```json
 [
-  {{"index": 0, "valid": true/false, "reason": "explication si invalide", "corrected": {{...}} ou null}}
+  {{"index": 0, "valid": true/false, "reason": "explanation if invalid", "corrected": {{...}} or null}}
 ]
 ```
 """
 
-# Template pour génération de relations à partir de concepts
-RELATION_GENERATION_PROMPT = """Tu génères des relations sémantiques entre deux concepts donnés.
+# Template for generating relations between concepts
+RELATION_GENERATION_PROMPT = """You generate semantic relations between two given concepts.
 
-## RELATIONS CANONIQUES DISPONIBLES
+## AVAILABLE CANONICAL RELATIONS
 {canonical_relations}
 
-## EXEMPLES
-Concepts: "cause" et "effet"
+## EXAMPLES
+Concepts: "cause" and "effect"
 Relations:
 [
   {{"relation": "opposite_of", "confidence": 0.9, "bidirectional": true}},
   {{"relation": "implies", "confidence": 0.7, "bidirectional": false}}
 ]
 
-Concepts: "photosynthèse" et "oxygène"
+Concepts: "photosynthesis" and "oxygen"
 Relations:
 [
   {{"relation": "produces", "confidence": 0.95, "bidirectional": false}}
 ]
 
-## CONCEPTS À ANALYSER
+## CONCEPTS TO ANALYZE
 Concept A: {concept_a}
 Concept B: {concept_b}
 
-## RELATIONS POSSIBLES (JSON uniquement)
+## POSSIBLE RELATIONS (JSON only)
 """
 
-# Template pour extraction de concepts d'un texte
-CONCEPT_EXTRACTION_PROMPT = """Tu extrais les concepts clés d'un texte pour construire un graphe sémantique.
+# Template for concept extraction from text
+CONCEPT_EXTRACTION_PROMPT = """You extract key concepts from text to build a semantic graph.
 
-## RÈGLES
-1. Extrais les noms, termes techniques, et concepts abstraits
-2. Normalise en minuscules sans accents
-3. Ignore les mots courants (le, la, de, un, etc.)
-4. Fusionne les variantes (ex: "entropies" → "entropie")
-5. Maximum 20 concepts par texte
+## RULES
+1. Extract nouns, technical terms, and abstract concepts
+2. Normalize to lowercase
+3. Ignore common words (the, a, an, of, etc.)
+4. Merge variants (e.g. "entropies" -> "entropy")
+5. Maximum 20 concepts per text
 
-## EXEMPLES
+## EXAMPLES
 
-Texte: "L'entropie est une mesure du désordre dans un système thermodynamique."
-Concepts: ["entropie", "mesure", "desordre", "systeme thermodynamique"]
+Text: "Entropy is a measure of disorder in a thermodynamic system."
+Concepts: ["entropy", "measure", "disorder", "thermodynamic system"]
 
-Texte: "La théorie de la relativité d'Einstein révolutionna la physique moderne."
-Concepts: ["theorie relativite", "einstein", "physique moderne", "revolution"]
+Text: "Einstein's theory of relativity revolutionized modern physics."
+Concepts: ["theory of relativity", "einstein", "modern physics", "revolution"]
 
-## TEXTE À ANALYSER
+## TEXT TO ANALYZE
 {text}
 
-## CONCEPTS EXTRAITS (JSON array uniquement)
+## EXTRACTED CONCEPTS (JSON array only)
 """
 
 
 def get_triplet_extraction_prompt(text: str) -> str:
     """
-    Génère le prompt complet pour extraction de triplets.
+    Generate the complete prompt for triplet extraction.
 
     Args:
-        text: Texte source à analyser
+        text: Source text to analyze
 
     Returns:
-        Prompt formaté avec exemples
+        Formatted prompt with examples
     """
     relations_str = ", ".join(CANONICAL_RELATIONS)
     return TRIPLET_EXTRACTION_PROMPT.format(
@@ -207,13 +210,13 @@ def get_triplet_extraction_prompt(text: str) -> str:
 
 def get_triplet_validation_prompt(triplets: List[Dict[str, Any]]) -> str:
     """
-    Génère le prompt pour validation de triplets.
+    Generate the prompt for triplet validation.
 
     Args:
-        triplets: Liste de triplets à valider
+        triplets: List of triplets to validate
 
     Returns:
-        Prompt formaté
+        Formatted prompt
     """
     import json
     relations_str = ", ".join(CANONICAL_RELATIONS)
@@ -226,14 +229,14 @@ def get_triplet_validation_prompt(triplets: List[Dict[str, Any]]) -> str:
 
 def get_relation_generation_prompt(concept_a: str, concept_b: str) -> str:
     """
-    Génère le prompt pour trouver des relations entre deux concepts.
+    Generate the prompt for finding relations between two concepts.
 
     Args:
-        concept_a: Premier concept
-        concept_b: Deuxième concept
+        concept_a: First concept
+        concept_b: Second concept
 
     Returns:
-        Prompt formaté
+        Formatted prompt
     """
     relations_str = ", ".join(CANONICAL_RELATIONS)
     return RELATION_GENERATION_PROMPT.format(
@@ -245,47 +248,47 @@ def get_relation_generation_prompt(concept_a: str, concept_b: str) -> str:
 
 def get_concept_extraction_prompt(text: str) -> str:
     """
-    Génère le prompt pour extraction de concepts.
+    Generate the prompt for concept extraction.
 
     Args:
-        text: Texte source
+        text: Source text
 
     Returns:
-        Prompt formaté
+        Formatted prompt
     """
     return CONCEPT_EXTRACTION_PROMPT.format(text=text)
 
 
 def is_canonical_relation(relation: str) -> bool:
     """
-    Vérifie si une relation est dans la liste canonique.
+    Check if a relation is in the canonical list.
 
     Args:
-        relation: Nom de la relation
+        relation: Relation name
 
     Returns:
-        True si canonique
+        True if canonical
     """
     return relation.lower() in [r.lower() for r in CANONICAL_RELATIONS]
 
 
 def normalize_relation(relation: str) -> str:
     """
-    Normalise une relation vers sa forme canonique.
+    Normalize a relation to its canonical form.
 
-    Tente de mapper les relations non-canoniques vers des équivalents.
+    Attempts to map non-canonical relations to equivalents.
 
     Args:
-        relation: Relation à normaliser
+        relation: Relation to normalize
 
     Returns:
-        Relation canonique ou "related_to" par défaut
+        Canonical relation or "related_to" as default
     """
     relation = relation.lower().strip()
 
-    # Mappings courants
+    # Common mappings
     mappings = {
-        # Causalité
+        # Causality
         "causes": "cause",
         "leads_to": "cause",
         "results_in": "cause",
@@ -293,12 +296,12 @@ def normalize_relation(relation: str) -> str:
         "provoque": "cause",
         "entraine": "cause",
 
-        # Causalité inverse
+        # Reverse causality
         "is_caused_by": "caused_by",
         "results_from": "caused_by",
         "comes_from": "caused_by",
 
-        # Hiérarchie
+        # Hierarchy
         "type_of": "is_a",
         "kind_of": "is_a",
         "instance_of": "is_a",
@@ -313,7 +316,7 @@ def normalize_relation(relation: str) -> str:
         "element_of": "part_of",
         "membre_de": "part_of",
 
-        # Similarité
+        # Similarity
         "like": "similar_to",
         "resembles": "similar_to",
         "similar": "similar_to",
@@ -331,13 +334,13 @@ def normalize_relation(relation: str) -> str:
         "outputs": "produces",
         "produit": "produces",
 
-        # Consommation
+        # Consumption
         "uses": "consumes",
         "needs": "requires",
         "depends_on": "requires",
         "necessite": "requires",
 
-        # Séquence
+        # Sequence
         "before": "precedes",
         "after": "follows",
         "then": "follows",
@@ -350,7 +353,7 @@ def normalize_relation(relation: str) -> str:
         "suggests": "implies",
         "indicates": "implies",
 
-        # Relations génériques
+        # Generic relations
         "associated_with": "related_to",
         "connected_to": "related_to",
         "linked_to": "related_to",

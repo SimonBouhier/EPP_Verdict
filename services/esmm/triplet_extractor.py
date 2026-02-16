@@ -72,6 +72,11 @@ class ExtractionResult:
     models_used: List[str]
     input_hash: str  # SHA256 hash of input text for audit
     skipped_reasons: Dict[str, int] = field(default_factory=dict)
+    # ADR-010: diagnostics from ConsensusResult
+    vote_entropy: float = 0.0
+    semantic_dispersion: Optional[float] = None
+    triplets_before_consensus: int = 0
+    triplets_after_consensus: int = 0
 
 
 @dataclass
@@ -256,7 +261,8 @@ class TripletExtractor:
         cycle_id: Optional[int] = None,
         event_id: Optional[int] = None,
         session_id: Optional[str] = None,
-        inject_to_graph: bool = True
+        inject_to_graph: bool = True,
+        model_weights: Optional[Dict[str, float]] = None,
     ) -> ExtractionResult:
         """
         Extract triplets from text with multi-model consensus.
@@ -358,16 +364,18 @@ class TripletExtractor:
         # =====================================================================
         # STEP 3: Consensus
         # =====================================================================
-        consensus_triplets = self.consensus_engine.compute_consensus(
+        consensus_result = await self.consensus_engine.compute_consensus(
             model_triplets,
-            pre_filter_confidence=self.min_confidence * 0.6
+            pre_filter_confidence=self.min_confidence * 0.6,
+            model_weights=model_weights,
         )
+        consensus_triplets = consensus_result.triplets
 
         logger.info(
             "[TripletExtractor] Consensus computed",
             extra={
-                "triplets_before_consensus": total_raw,
-                "triplets_after_consensus": len(consensus_triplets),
+                "triplets_before_consensus": consensus_result.triplets_before_consensus,
+                "triplets_after_consensus": consensus_result.triplets_after_consensus,
                 "models_contributed": list(model_triplets.keys())
             }
         )
@@ -477,7 +485,11 @@ class TripletExtractor:
             duration_ms=round(duration_ms, 2),
             models_used=self.models,
             input_hash=input_hash,
-            skipped_reasons=dict(skipped_reasons)
+            skipped_reasons=dict(skipped_reasons),
+            vote_entropy=consensus_result.vote_entropy,
+            semantic_dispersion=consensus_result.semantic_dispersion,
+            triplets_before_consensus=consensus_result.triplets_before_consensus,
+            triplets_after_consensus=consensus_result.triplets_after_consensus,
         )
 
     async def _check_db_duplicate(

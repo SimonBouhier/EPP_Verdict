@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-02-12
+**Dernière mise à jour** : 2026-02-16
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -16,10 +16,11 @@
 |---------|------|------|
 | `orchestrator.py` | Pilote les runs ESMM (cycles, timeouts, checkpoints) | ✅ Fonctionnel, couplé Lyra |
 | `cycle_manager.py` | Exécution des 3 types de cycles | ✅ Fonctionnel |
-| `cycle_prompts.py` | Prompts DIVERGENT / DEBATE / META | ✅ Fonctionnel |
+| `cycle_prompts.py` | Prompts DIVERGENT / DEBATE / META (anglais, Phase 4.8) | ✅ Fonctionnel |
 | `triplet_extractor.py` | Pipeline complet extraction → validation → consensus | ✅ Fonctionnel |
 | `triplet_validator.py` | Validation Pydantic, détection patterns invalides | ✅ Fonctionnel |
-| `consensus_engine.py` | Vote multi-modèles, SHA-256 hashing, scoring | ✅ Fonctionnel |
+| `consensus_engine.py` | Vote 2 passes (hash exact + semantic merge), normalize_triplet(), ambiguity detection, ConsensusResult (vote_entropy, semantic_dispersion) | ✅ Fonctionnel |
+| `response_deduplicator.py` | Déduplication sémantique des réponses (embedding cosine) | ✅ Fonctionnel |
 | `cochain_builder.py` | Signature 5D normalisée, typage épistémique | ✅ Fonctionnel |
 | `gap_detector.py` | Concepts isolés, triplets instables, ponts manquants | ✅ Fonctionnel |
 | `coverage_analyzer.py` | Shannon entropy, métriques de couverture | ✅ Fonctionnel |
@@ -42,9 +43,9 @@ Système de cristallisation des attestations épistémiques, produisant des obje
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/attestation.py` | Modèle EpistemicAttestation, crystallize(), compute_claim_hash(), RevalidationInput | ✅ Fonctionnel |
+| `services/esmm/attestation.py` | Modèle EpistemicAttestation (+ consensus_meta ADR-010), crystallize(), compute_claim_hash(), RevalidationInput | ✅ Fonctionnel |
 | `services/esmm/run_logger.py` | Logs structurés du pipeline (PhaseEvent, RunLogger) | ✅ Fonctionnel |
-| Table `attestations` | Stockage attestations cristallisées (table 20) | ✅ Fonctionnel |
+| Table `attestations` | Stockage attestations cristallisées (table 20), consensus_meta TEXT (ADR-010) | ✅ Fonctionnel |
 
 **Méthodes ISpaceDB ajoutées** :
 
@@ -60,11 +61,11 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph | ✅ Fonctionnel |
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph (+ esmm_config param) | ✅ Fonctionnel |
 | `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
 | `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
 | `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7) | ✅ Fonctionnel |
-| `services/esmm/post_crystallization.py` | Hook track record + tier transitions (D8) | ✅ Fonctionnel |
+| `services/esmm/post_crystallization.py` | Hook track record + tier transitions + diversity bonus (D8, R2) | ✅ Fonctionnel |
 | `services/providers/mock_provider.py` | MockProvider + make_synthetic_triplets() (D10) | ✅ Fonctionnel |
 | `services/providers/base.py` | + infer_architecture_family() pour mesure diversité | ✅ Fonctionnel |
 
@@ -135,7 +136,7 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 | `pool.py` | Pool 10 connexions, 30s busy_timeout, cache LRU | ✅ Fonctionnel |
 | `graph.py` | Opérations graphe sémantique (PPMI, voisinage) | ✅ Fonctionnel |
 | `graph_delta.py` | GraphDelta + KappaCalculator (Ollivier + Jaccard) | ✅ Fonctionnel |
-| `schema.sql` | 23 tables, 8 vues SQLite | ✅ Fonctionnel |
+| `schema.sql` | 24 tables, 8 vues SQLite | ✅ Fonctionnel |
 | `entity_resolver.py` | Résolution d'entités | ✅ Fonctionnel |
 | `relation_normalizer.py` | 20 relations canoniques | ✅ Fonctionnel |
 | `relation_generator.py` | Génération de relations | ✅ Fonctionnel |
@@ -155,11 +156,10 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 |---------|------|------|
 | `main.py` | FastAPI entry point, lifecycle, CORS | ✅ Fonctionnel |
 | `models.py` | Modèles Pydantic (requêtes/réponses) | ✅ Fonctionnel |
-| `config.yaml` | Configuration centralisée | ✅ Fonctionnel |
+| `config.yaml` | Configuration centralisée (purgé Phase 4.4 : 12 clés effectives) | ✅ Fonctionnel |
 | `injector.py` | Injection contexte sémantique (TF-IDF + PPMI) | ✅ Fonctionnel |
 | `sessions.py` | Gestion sessions | ✅ Fonctionnel |
 | `session_storage.py` | Export/import sessions JSON | ✅ Fonctionnel |
-| `security.py` | Gestion secrets | ✅ Fonctionnel |
 | `prompts.py` | Prompts extraction triplets (few-shot, 20 relations) | ✅ Fonctionnel |
 | `seed_injector.py` | Injection graines sémantiques | ✅ Fonctionnel |
 | `populate_graph.py` | Population initiale graphe | ✅ Fonctionnel |
@@ -179,7 +179,7 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | `programs/epp/programs/epp/src/state.rs` | EpistemicAttestation account (462 bytes) | ✅ Build OK |
 | `programs/epp/programs/epp/src/errors.rs` | EppError enum (11 variantes) | ✅ Build OK |
 | `programs/epp/programs/epp/src/constants.rs` | Constantes on-chain (MAX_SUBJECT_LEN, SCORE_SCALE, seeds) | ✅ Build OK |
-| `cli/epp_cli.py` | CLI : ask, submit (--devnet), query, frame list/show, graph stats | ✅ Fonctionnel |
+| `cli/epp_cli.py` | CLI : ask, submit (--devnet), query, frame list/show, graph stats, models stats | ✅ Fonctionnel |
 
 **Décisions architecturales** :
 
@@ -192,7 +192,7 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 
 ### Architecture Decision Records (Phase 3.3+)
 
-8 ADR actifs dans `docs/adr/` :
+9 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -204,10 +204,12 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | ADR-006 | Claim hash déterministe SHA-256 | Actif |
 | ADR-007 | Append-only pour events et graph_deltas | Actif |
 | ADR-008 | Stratégie auth submitter Solana (keypair, devnet guard) | Actif |
+| ADR-009 | Language Neutrality in ESMM Protocol | Actif |
+| ADR-010 | Traçabilité méthodologique du consensus (consensus_meta) | Actif |
 
-### Phase 4 — Corrections systématiques (2026-02-12)
+### Phase 4 — Corrections systématiques (2026-02-15)
 
-Corrections appliquées en 7 sous-phases (4.0-4.6). 45 tests ajoutés (425→470).
+Corrections appliquées en 8 sous-phases (4.0-4.7). 62 tests ajoutés (425→487).
 
 **4.0 Fondations** : Isolation 16 singletons (setup+teardown dans conftest.py).
 **4.1 Crashs** : triplet_extractor ON CONFLICT, imports dépréciés migrés, session_storage INSERT OR IGNORE.
@@ -216,6 +218,51 @@ Corrections appliquées en 7 sous-phases (4.0-4.6). 45 tests ajoutés (425→470
 **4.4 Nettoyage** : config.yaml purgé (35→12 clés), embeddings.py supprimé, semantic_memory supprimée du schéma.
 **4.5 Sécurité** : XML boundary delimiters, _sanitize_concept(), infer_architecture_family() durci, input validation.
 **4.6 Solana** : Transaction building, account deserialization, PDA validation, queries memcmp, mock mode déterministe.
+**4.7 Peaufinage** : providers corrigés, tier sync Rust↔Python, property-based tests, print()→logger (§5.2).
+
+### Phase R2 — Consensus robuste & intégrité (2026-02-15)
+
+Renforcement du consensus multi-modèles : pondération par Brier score, normalisation des triplets, diversité, déduplication sémantique, commit-reveal.
+
+**R-2.1.1 Weighted Consensus** : `compute_consensus()` accepte `model_weights: Dict[str, float]` (propagé via 7 signatures : pipeline → orchestrator → cycle_manager → triplet_extractor → consensus_engine). Poids basés sur Brier score via `get_all_model_brier_scores()`.
+
+**R-2.1.2 Normalize Triplet** : `normalize_triplet()` dans consensus_engine.py — lowercase + strip + collapse whitespace + synonym mapping (10 groupes de relations, abréviations entités, synonymes mot-à-mot). Appelé dans `_hash_triplet()` avant SHA-256.
+
+**R-2.2.1 Diversity Bonus** : Bonus appliqué APRÈS `crystallize()` (respect ADR-005). Champs enrichis : `adjusted_consensus_score`, `diversity_bonus_factor`. Le `confidence_tier` reste immuable.
+
+**R-2.2.2 Response Deduplication** : `ResponseDeduplicator` dans response_deduplicator.py — déduplication par embedding cosine similarity avant consensus.
+
+**R-2.2.3 Commit-Reveal** : Table `commit_reveal` (hash par modèle/phase). Colonnes `commit_hash`, `commit_verified` dans `attestations`. Vérification post-reveal via `verify_and_update_commit()`.
+
+**Corrections live run** : `_hash_triplet()` / `compute_consensus()` gèrent triplets dict et objets (fix getattr sur dict). CYCLE_TIMEOUTS uniformes 60s. META retry capped à 3. `ESMMRunConfig` dataclass pour contrôle externe (cycles, timeouts, adaptive).
+
+**Tables SQL ajoutées (R2)** :
+
+- `commit_reveal` — Hash commits par modèle/phase (table 24)
+- Colonnes `attestations` : `adjusted_consensus_score`, `diversity_bonus_factor`, `commit_reveal_verified`
+
+**Méthodes ISpaceDB ajoutées (R2)** :
+
+- `store_commit()` — Stocke un commit hash (modèle + phase)
+- `get_commit()` — Récupère un commit par run_id + model_id + phase
+- `verify_and_update_commit()` — Vérifie hash et met à jour `verified`
+- `update_attestation_commit_verified()` — Met à jour `commit_verified` sur attestation
+- `get_all_model_brier_scores()` — Tous les Brier scores pour pondération
+- `update_attestation_diversity_bonus()` — Met à jour bonus diversité post-cristallisation
+
+**Tests ajoutés** : 25 tests (489→514). Property-based (hypothesis), normalize_triplet, commit-reveal, weighted consensus, diversity bonus, response deduplicator, dashboard models.
+
+### Phase 4.8 — Neutralité linguistique ESMM (2026-02-15)
+
+Prompts traduits en anglais + consensus sémantique deux passes + préservation ambiguïté.
+
+**4.8.1 Prompts anglais** : 3 SYSTEM_PROMPTS + 20 templates + 4 extraction prompts traduits en anglais. Directive "MUST be in English" dans chaque system prompt et TRIPLET_EXTRACTION_PROMPT. `normalize_relation()` et `CANONICAL_RELATIONS` inchangés (déjà anglais).
+
+**4.8.2 Semantic merge** : `compute_consensus()` async, accepte `embedding_provider` optionnel. Pass 1 = hash exact (existant). Pass 2 = clustering cosine > 0.85 via `_semantic_merge()`. `ConsensusTriplet` étendu : `variations: List[Tuple[str,str,str]]`, `ambiguity_detected: bool`. Représentant canonique : plus de votes, puis texte le plus court. Tie → `ambiguity_detected=True`.
+
+**Annotation COMMUNITY_DECISION_REQUIRED** dans consensus_engine.py, post_crystallization.py, pipeline.py — le traitement des triplets CONTESTED est délibérément ouvert (ADR-009).
+
+**Tests ajoutés** : 9 tests (514→523). Prompts anglais (5), semantic merge/ambiguity/no-false-merge/backward-compat (4).
 
 ---
 
@@ -233,7 +280,8 @@ orchestrator.py
 triplet_extractor.py
   ├── multi_provider_rotator.py  ← provider-agnostique
   ├── triplet_validator.py
-  ├── consensus_engine.py
+  ├── consensus_engine.py  ← normalize_triplet(), model_weights
+  ├── response_deduplicator.py  ← embedding cosine dedup
   └── prompts.py
 
 engine.py (ISpaceDB)

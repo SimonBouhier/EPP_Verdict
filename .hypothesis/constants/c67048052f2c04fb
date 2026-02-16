@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\openai_compat.py
+# hypothesis_version: 6.151.6
+
+[0.0, 1.0, 10.0, 120.0, 1000, 8192, '/', 'Authorization', 'DEEPSEEK_API_KEY', 'KIMI_API_KEY', 'OPENAI_API_KEY', 'OpenAI-Organization', 'choices', 'completion', 'completion_tokens', 'connected', 'content', 'data', 'deepseek-chat', 'error', 'frequency_penalty', 'gpt-4o-mini', 'healthy', 'id', 'latency_ms', 'max_tokens', 'message', 'messages', 'model', 'moonshot-v1-8k', 'openai_compat', 'presence_penalty', 'prompt', 'prompt_tokens', 'status', 'stream', 'temperature', 'top_p', 'total', 'total_tokens', 'unhealthy', 'usage']

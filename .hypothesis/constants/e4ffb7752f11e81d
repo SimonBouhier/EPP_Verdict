@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\__init__.py
+# hypothesis_version: 6.151.6
+
+['AnthropicProvider', 'EmbeddingProvider', 'ModelMetadata', 'ModelProvider', 'OllamaProvider', 'OpenAICompatProvider', 'ProviderRegistry', 'StructuredQuery', 'StructuredResponse', 'create_kimi_provider', 'get_ollama_provider', 'get_provider', 'health_check_all']

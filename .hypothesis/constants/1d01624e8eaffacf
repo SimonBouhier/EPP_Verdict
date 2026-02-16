@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\ollama.py
+# hypothesis_version: 6.151.6
+
+[0.0, 10.0, 30.0, 100.0, 120.0, 404, 1000, 8192, '/', '5m', '8192', 'LYRA_MODEL', 'LYRA_NUM_CTX', 'LYRA_OLLAMA_URL', 'completion', 'connected', 'content', 'default_model', 'error', 'eval_count', 'gpt-oss:20b', 'healthy', 'keep_alive', 'latency_ms', 'message', 'messages', 'model', 'models', 'models_available', 'name', 'num_ctx', 'num_predict', 'ollama', 'options', 'prompt', 'prompt_eval_count', 'repeat_penalty', 'status', 'stream', 'temperature', 'top_k', 'top_p', 'total', 'unhealthy', 'unknown']

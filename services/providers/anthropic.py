@@ -14,6 +14,7 @@ from services.providers.base import (
     StructuredQuery,
     StructuredResponse,
     ModelMetadata,
+    infer_architecture_family,
 )
 
 logger = logging.getLogger(__name__)
@@ -258,7 +259,7 @@ class AnthropicProvider(ModelProvider):
         return ModelMetadata(
             provider_id="anthropic",
             model_id=self.model,
-            architecture_family="transformer_dense",
+            architecture_family=infer_architecture_family(self.model),
             context_window=context_window,
             supports_vram_management=False,
         )

@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\consciousness\metrics.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 100, 150, 200, 'coherence', 'delta_r', 'fit', 'pressure', 'rho', 'stability_score', 'tau_c', 'tension']

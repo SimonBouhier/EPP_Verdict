@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\consensus_engine.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.001, 0.15, 0.3, 0.4, 0.5, 0.6, 0.9, 1.0, 'confidence', 'confidences', 'consensus_triplets', 'count', 'min_agreement', 'models', 'object', 'relation', 'subject', 'total_models', 'triplet', 'triplets_filtered', 'triplets_processed', 'unique_triplets']

@@ -103,6 +103,12 @@ class EpistemicAttestation(BaseModel):
     timestamp: float = Field(description="Epoch de cristallisation")
     protocol_version: str = Field(default="0.3", description="Version du protocole ESMM")
 
+    # === TRAÇABILITÉ MÉTHODOLOGIQUE (ADR-010) ===
+    consensus_meta: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Métadonnées méthodologiques du consensus (ADR-010)"
+    )
+
     # === REVALIDATION ===
     validation_count: int = Field(default=1, description="Nombre de validations")
     previous_hash: Optional[str] = Field(
@@ -291,6 +297,7 @@ def crystallize(
     previous_hash: Optional[str] = None,
     validation_count: int = 1,
     architecture_families: int = 1,
+    consensus_meta: Optional[Dict[str, Any]] = None,
 ) -> EpistemicAttestation:
     """
     Cristallise les résultats du pipeline ESMM en attestation.
@@ -344,6 +351,7 @@ def crystallize(
         signature_5d=signature_5d,
         epistemic_type=epistemic_type,
         confidence_tier=confidence_tier,
+        consensus_meta=consensus_meta,
         metrological_frame=metrological_frame,
         source_anchor=source_anchor,
         run_id=run_id,

@@ -54,7 +54,7 @@ pub struct EpistemicAttestation {
     // === CLASSIFICATION ===
     /// 0=Foundational, 1=Bridge, 2=Specialized, 3=Generalist, 4=Hybrid
     pub epistemic_type: u8,                      // 1 byte
-    /// 0=Low, 1=Medium, 2=High, 3=Verified
+    /// 0=sandbox, 1=proposition, 2=validated, 3=verified
     pub confidence_tier: u8,                     // 1 byte
 
     // === METROLOGICAL REFERENCE ===
@@ -113,6 +113,7 @@ impl EpistemicAttestation {
 }
 
 // === HELPER: Enum mappings ===
+// NOTE: Helper not called by instructions — client sends u8 directly. Kept for documentation.
 
 /// Maps epistemic_type string to u8.
 pub fn epistemic_type_to_u8(t: &str) -> Result<u8> {
@@ -126,12 +127,13 @@ pub fn epistemic_type_to_u8(t: &str) -> Result<u8> {
     }
 }
 
+// NOTE: Helper not called by instructions — client sends u8 directly. Kept for documentation.
 /// Maps confidence_tier string to u8.
 pub fn confidence_tier_to_u8(t: &str) -> Result<u8> {
     match t {
-        "low" => Ok(0),
-        "medium" => Ok(1),
-        "high" => Ok(2),
+        "sandbox" => Ok(0),
+        "proposition" => Ok(1),
+        "validated" => Ok(2),
         "verified" => Ok(3),
         _ => err!(crate::errors::EppError::InvalidConfidenceTier),
     }

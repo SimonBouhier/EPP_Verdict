@@ -28,7 +28,6 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional, Any, TYPE_CHECKING
 from dataclasses import dataclass, field
-from enum import Enum
 
 from .cycle_prompts import CycleType
 from .cycle_manager import ExplorationCycleManager, create_cycle_manager
@@ -142,6 +141,11 @@ class ESMMRunResult:
     duration_ms: float
     errors: List[str] = field(default_factory=list)
     consensus_triplets: List = field(default_factory=list)
+    # ADR-010: accumulated diagnostics across all cycles
+    vote_entropy: float = 0.0
+    semantic_dispersion: Optional[float] = None
+    triplets_before_consensus: int = 0
+    triplets_after_consensus: int = 0
 
 
 # ============================================================================
@@ -279,6 +283,7 @@ class ESMMOrchestrator:
             run_id=run_id,
             models=self.config.models,
             providers=self._providers,
+            min_consensus=self.config.min_consensus,
         )
 
         self.gap_detector = create_gap_detector(
@@ -315,7 +320,8 @@ class ESMMOrchestrator:
     async def execute_cycles(
         self,
         run_id: int,
-        resume: bool = False
+        resume: bool = False,
+        model_weights: Optional[Dict[str, float]] = None,
     ) -> None:
         """
         Execute les cycles d'exploration avec adaptation dynamique.
@@ -323,7 +329,12 @@ class ESMMOrchestrator:
         Args:
             run_id: ID du run
             resume: True si reprise d'un run pause
+            model_weights: Optional Brier-based weights per model.
+                          If None, weights are computed from DB at run start.
         """
+        # R-2.1.1: Compute Brier-based model weights if not provided
+        if model_weights is None:
+            model_weights = await self._compute_model_weights()
         cycles_per_type = dict(self.config.cycles_per_type)
 
         for cycle_type_str in self.config.cycle_sequence:
@@ -362,7 +373,8 @@ class ESMMOrchestrator:
                     result = await self.cycle_manager.execute_cycle(
                         cycle_type=cycle_type,
                         iteration=i + 1,
-                        context={"domain": "general"}
+                        context={"domain": "general"},
+                        model_weights=model_weights,
                     )
 
                     # Accumuler les statistiques
@@ -370,6 +382,26 @@ class ESMMOrchestrator:
                     self._stats["total_cycles"] += 1
                     self._stats["total_triplets"] += result.triplets_extracted
                     self._state.triplets_extracted += result.triplets_extracted
+
+                    # ADR-010: accumulate diagnostics
+                    self._stats["triplets_before_consensus"] = (
+                        self._stats.get("triplets_before_consensus", 0)
+                        + result.triplets_before_consensus
+                    )
+                    self._stats["triplets_after_consensus"] = (
+                        self._stats.get("triplets_after_consensus", 0)
+                        + result.triplets_after_consensus
+                    )
+                    self._stats["vote_entropy"] = max(
+                        self._stats.get("vote_entropy", 0.0),
+                        result.vote_entropy,
+                    )
+                    if result.semantic_dispersion is not None:
+                        prev = self._stats.get("semantic_dispersion")
+                        if prev is None:
+                            self._stats["semantic_dispersion"] = result.semantic_dispersion
+                        else:
+                            self._stats["semantic_dispersion"] = max(prev, result.semantic_dispersion)
 
                     # Collect consensus triplets (D2)
                     if result.consensus_triplets:
@@ -510,6 +542,10 @@ class ESMMOrchestrator:
             duration_ms=round(duration_ms, 2),
             errors=self._stats["errors"],
             consensus_triplets=list(self._collected_triplets),
+            vote_entropy=self._stats.get("vote_entropy", 0.0),
+            semantic_dispersion=self._stats.get("semantic_dispersion"),
+            triplets_before_consensus=self._stats.get("triplets_before_consensus", 0),
+            triplets_after_consensus=self._stats.get("triplets_after_consensus", 0),
         )
 
         logger.info(
@@ -609,7 +645,8 @@ class ESMMOrchestrator:
         self.cycle_manager = await create_cycle_manager(
             db=self.db,
             run_id=run_id,
-            models=self.config.models
+            models=self.config.models,
+            min_consensus=self.config.min_consensus,
         )
 
         self.gap_detector = create_gap_detector(db=self.db, run_id=run_id)
@@ -635,6 +672,25 @@ class ESMMOrchestrator:
 
         elapsed_hours = (datetime.now() - self._start_time).total_seconds() / 3600
         return elapsed_hours >= self.config.max_duration_hours
+
+    async def _compute_model_weights(self) -> Dict[str, float]:
+        """
+        R-2.1.1: Compute Brier-based weights for all configured models.
+
+        Formula: weight = max(0.0, 1.0 - avg_brier_score)
+        Cold start (no Brier data): weight = 1.0 (neutral)
+
+        Returns:
+            Dict {model_id: weight} for all models in self.config.models.
+        """
+        weights: Dict[str, float] = {}
+        for model_id in self.config.models:
+            brier = await self.db.get_model_brier_score(model_id)
+            if brier is None:
+                weights[model_id] = 1.0  # cold start
+            else:
+                weights[model_id] = max(0.0, 1.0 - brier["avg_brier_score"])
+        return weights
 
     def get_stats(self) -> Dict[str, Any]:
         """Retourne les statistiques accumulees."""
@@ -669,7 +725,8 @@ async def run_esmm_protocol(
     orchestrator.cycle_manager = await create_cycle_manager(
         db=db,
         run_id=run_id,
-        models=config.models
+        models=config.models,
+        min_consensus=config.min_consensus,
     )
     orchestrator.gap_detector = create_gap_detector(db=db, run_id=run_id)
     orchestrator.cochain_builder = create_cochain_builder(db=db, run_id=run_id)

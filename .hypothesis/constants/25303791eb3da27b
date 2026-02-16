@@ -1,0 +1,4 @@
+# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\gap_detector.py
+# hypothesis_version: 6.151.6
+
+[0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.9, 1.0, 5.0, 20.0, ',', '?', 'ISpaceDB', 'avg_confidence', 'bridge', 'bridge opportunity', 'cause', 'caused_by', 'cluster_a', 'cluster_b', 'cluster_sizes', 'concept_id', 'confidence_a', 'confidence_b', 'contradiction', 'contradicts', 'count', 'degree', 'degree_factor', 'extraction_count', 'follows', 'greater_than', 'has_part', 'implies', 'isolated', 'isolated concept', 'less_than', 'model_source', 'models', 'object', 'part_of', 'precedes', 'prevents', 'relation', 'relation_a', 'relation_b', 'representative_a', 'representative_b', 'run_id', 'similarity', 'source', 'std_confidence', 'subject', 'supports', 'target', 'threshold', 'total_gaps', 'unstable', 'unstable triplet', 'weight', 'weights']
