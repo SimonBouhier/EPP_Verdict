@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\database\graph_delta.py
-# hypothesis_version: 6.151.6
-
-[0.0, 0.05, 0.5, 1.0, 2.0, 'GraphDelta', 'add_edge', 'add_node', 'alpha', 'delete_edge', 'delete_node', 'kappa_hybrid', 'kappa_jaccard', 'kappa_ollivier', 'operation', 'system', 'update_edge', 'update_node']

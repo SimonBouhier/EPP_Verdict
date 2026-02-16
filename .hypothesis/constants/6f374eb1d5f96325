@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\cochain_builder.py
-# hypothesis_version: 6.151.6
-
-[0.0, 0.2, 0.5, 0.8, 1.0, 3.0, 10.0, 'ISpaceDB', 'avg_confidence', 'concept_id', 'degree', 'entries_created', 'generalist', 'hybrid', 'min_triplet_count', 'models', 'p20', 'p80', 'run_id', 'specialized', 'triplet_count']

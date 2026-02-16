@@ -1,4 +1,0 @@
-# file: c:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\triplet_extractor.py
-# hypothesis_version: 6.151.6
-
-[0.3, 0.5, 0.6, 120.0, 100, 1000, ',', 'content', 'count', 'duplicate_cached', 'duplicate_db', 'duration_ms', 'id', 'input_hash', 'llm_structured', 'min_confidence', 'min_consensus', 'models', 'models_contributed', 'new_concepts', 'object', 'related_to', 'relation', 'resolution_failed', 'role', 'skipped_reasons', 'subject', 'text_length', 'triplet', 'triplets_extracted', 'triplets_injected', 'triplets_skipped', 'user', 'weight']

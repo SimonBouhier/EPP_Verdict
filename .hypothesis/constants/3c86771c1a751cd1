@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\populate_graph.py
-# hypothesis_version: 6.151.6
-
-[0.0, 100, 1000, '#', '.', '//', '\\s+', '^\\.', '^\\d+\\.', '^final list', "^let\\'s", '^produce', 'average_degree', 'by_source', 'data/topics.txt', 'embedding_coverage', 'manual', 'mxbai-embed-large', 'r', 'topics_file', 'total_concepts', 'utf-8', 'with_embeddings', 'without_embeddings']

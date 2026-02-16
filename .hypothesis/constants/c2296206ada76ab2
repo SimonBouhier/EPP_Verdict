@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\run_logger.py
-# hypothesis_version: 6.151.6
-
-[1000, '...', 'attestation', 'calls', 'claim_hash', 'confidence', 'confidence_tier', 'consensus_score', 'crystallization', 'duration_ms', 'end', 'error', 'errors', 'esmm.run', 'event', 'events', 'extraction', 'failures', 'latency_ms', 'model_id', 'model_response', 'model_stats', 'object', 'phase', 'phase_end', 'phase_start', 'phases', 'predicate', 'question', 'run_id', 'start', 'subject', 'success', 'total_latency_ms', 'triplet', 'triplet_extracted', 'triplets_extracted', 'unknown']

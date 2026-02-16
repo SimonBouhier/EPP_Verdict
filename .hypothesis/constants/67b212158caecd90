@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\database\pool.py
-# hypothesis_version: 6.151.6
-
-[0.01, 30.0, 300.0, 100, 255, 1000, 3600, "'", "''", "';", '*/', '--', '/*', 'ALTER ', 'Cache cleared', 'DELETE ', 'DROP ', 'EXEC ', 'EXECUTE ', 'Pool closed', 'TRUNCATE ', '^[\\w\\s\\-]+$', '_', 'active', 'available', 'cache', 'data/ispace.db', 'hit_rate', 'hits', 'in_use', 'initialized', 'iso', 'limiter', 'lyra', 'misses', 'overflow', 'pool', 'size', 'sp_', 'timeouts', 'total', 'total_requests', 'xp_']

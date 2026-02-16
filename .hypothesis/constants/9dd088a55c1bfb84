@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\providers\anthropic.py
-# hypothesis_version: 6.151.6
-
-[10.0, 120.0, 1000, 200000, '2023-06-01', 'ANTHROPIC_API_KEY', 'anthropic', 'anthropic-version', 'application/json', 'completion', 'connected', 'content', 'content-type', 'error', 'haiku', 'healthy', 'input_tokens', 'latency_ms', 'max_tokens', 'messages', 'model', 'opus', 'output_tokens', 'ping', 'prompt', 'role', 'sonnet', 'status', 'system', 'temperature', 'text', 'top_p', 'total', 'type', 'unhealthy', 'usage', 'user', 'x-api-key']

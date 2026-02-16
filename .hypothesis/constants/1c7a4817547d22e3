@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\cycle_manager.py
-# hypothesis_version: 6.151.6
-
-[0.0, 0.3, 0.5, 120.0, 100, 200, 1000, '<[^>]*>', 'A', 'B', 'ISpaceDB', 'MultiProviderRotator', 'TripletExtractor', 'antithesis', 'attempt', 'aucun triplet recent', 'concept', 'consensus_score', 'consensus_triplets', 'content', 'cycle_counts', 'cycle_type', 'domain', 'duration_ms', 'error', 'gap_concepts', 'gaps_used', 'general', 'iteration', 'models', 'models_contributed', 'models_responded', 'models_used', 'new_concepts', 'object', 'property', 'relation', 'responses_count', 'retry_failures', 'retry_successes', 'role', 'run_id', 'semantic_dispersion', 'simplified_length', 'subject', 'target_concepts', 'thesis', 'timeout_seconds', 'triplets', 'triplets_extracted', 'triplets_injected', 'user', 'vote_entropy']

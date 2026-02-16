@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\solana\client.py
-# hypothesis_version: 6.151.6
-
-[b'\x00', b'attestation', b'global:submit_attestation', 0.0, 255, '<B', '<H', '<q', '?cluster=devnet', 'Program ID not set', 'agreement', 'bump', 'centrality', 'claim_hash', 'confidence_tier', 'consensus_score', 'epistemic_type', 'epp.solana.client', 'frame_hash', 'is_challenge', 'mock_program', 'mock_submitter', 'models_agreeing', 'models_consulted', 'object', 'predicate', 'protocol_version', 'r', 'relation_diversity', 'replace', 'semantic_consistency', 'signature_5d', 'source_anchor', 'stability', 'subject', 'submitter', 'timestamp', 'unknown', 'utf-8', 'validation_count']

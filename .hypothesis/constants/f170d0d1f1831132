@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\esmm\model_rotator.py
-# hypothesis_version: 6.151.6
-
-[0.7, 0.9, 10.0, 100.0, 120.0, 1000, 4096, 8192, '/', '5m', '8192', 'LYRA_NUM_CTX', 'LYRA_OLLAMA_URL', 'completion', 'content', 'eval_count', 'keep_alive', 'message', 'messages', 'model', 'num_ctx', 'num_predict', 'options', 'prompt', 'prompt_eval_count', 'role', 'stream', 'system', 'temperature', 'top_k', 'top_p', 'total', 'user']

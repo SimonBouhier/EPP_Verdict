@@ -1,4 +1,0 @@
-# file: C:\Users\simon\PROJECTS\EPP_Verdict\services\config_loader.py
-# hypothesis_version: 6.151.6
-
-['EPP_CONFIG_PATH', 'config.yaml', 'r', 'utf-8']
