@@ -420,26 +420,26 @@ Niveau 0 : Consommateurs
 > sécurité, Solana devnet complet, peaufinage) du CHANGELOG correspondent au travail de
 > robustesse de cette Phase 2 du plan. 487 tests, 0 failed, 8 ADR, 15 annotations AUDIT FIXED.
 
-#### 2.1 — Track record et calibration des modèles ✅ INFRASTRUCTURE PRÊTE
+#### 2.1 — Track record et calibration des modèles ✅ TERMINÉ
 
 - [x] Brier score par modèle → table `model_track_record` + vue `v_model_brier_scores`
 - [x] Mesure de diversité inter-modèles → `infer_architecture_family()` dans `base.py`
 - [x] Confidence tiers multi-critères : sandbox/proposition/validated/verified
 - [x] Méthodes DB : `record_model_prediction()`, `resolve_prediction()`, `get_model_brier_score()`
 - [x] Audit tier transitions : table `tier_transitions` + `log_tier_transition()`
-- [ ] Pondération dynamique des votes selon track record
-- [ ] Dashboard ou rapport : performance de chaque modèle dans le pool
+- [x] Pondération dynamique des votes selon track record → R-2.1.1 (Brier → `model_weights` propagé dans le consensus)
+- [x] Dashboard ou rapport : performance de chaque modèle dans le pool → R-2.1.2 (commande `epp models stats`)
 
-#### 2.2 — Anti-Sybil et intégrité du consensus
+#### 2.2 — Anti-Sybil et intégrité du consensus ✅ TERMINÉ
 
 - [x] Diversité architecturale mesurée via `infer_architecture_family()`
 - [x] `infer_architecture_family()` durci : first-token match, provider prefix strip (Phase 4.5)
 - [x] Tous les providers (ollama, anthropic, openai_compat) délèguent à `infer_architecture_family()` (Phase 4.7)
 - [x] Prompt injection : XML boundary delimiters, `_sanitize_concept()` (Phase 4.5)
 - [x] Pipeline input validation : MAX_QUESTION_LENGTH=5000, control char stripping (Phase 4.5)
-- [ ] Protocole commit-reveal basique
-- [ ] Détection de réponses quasi-identiques (clustering d'embeddings)
-- [ ] Pondération par diversité mesurable, pas par nombre de voix
+- [x] Protocole commit-reveal basique → R-2.2.3 (table `commit_reveal` + CRUD + vérification post-crystallize)
+- [x] Détection de réponses quasi-identiques (clustering d'embeddings) → R-2.2.2 (`response_deduplicator.py`, pénalité similarité cosinus)
+- [x] Pondération par diversité mesurable, pas par nombre de voix → R-2.2.1 (bonus `diversity_bonus_factor` post-crystallize)
 
 #### 2.3 — Enrichissement du RAG
 

@@ -23,6 +23,11 @@ esmm:
     - "mistral:7b"
     - "llama3.1:8b"
     - "qwen2.5:7b"
+  min_consensus: 0.4                   # Seuil min de consensus (orchestrator.py)
+  cycle_sequence:                      # Séquence des types de cycles ESMM
+    - "divergent"
+    - "debate"
+    - "meta"
 
 # ============================================================================
 # CONFIDENCE TIERS (Méthode scientifique)

@@ -1548,7 +1548,7 @@ class ISpaceDB:
                     SELECT delta_id, operation, source, target, old_weight, old_kappa
                     FROM graph_deltas
                     WHERE session_id = ?
-                      AND applied_at > ?
+                      AND applied_at >= ?
                       AND rolled_back_at IS NULL
                     ORDER BY applied_at DESC
                     """,

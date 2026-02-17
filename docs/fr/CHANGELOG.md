@@ -4,6 +4,20 @@
 
 ---
 
+## [2026-02-17] Phase 1.2 — Fix désérialiseur on-chain + tests relecture
+
+- client.py: fix _deserialize_attestation_account() — ajout champ last_revalidated
+  (i64, 8 bytes) manquant entre timestamp et validation_count. Tous les champs après
+  timestamp étaient décalés de 8 bytes (bug critique C4).
+- client.py: assertion taille en fin de désérialisation (filet anti-décalage permanent)
+- test_phase4_solana.py: fix test_deserialize_attestation_layout (buffer +8 bytes)
+- test_phase4_solana.py: fix test_borsh_layout_matches_account_size (446→454, +assert ==462)
+- 5 tests RED→GREEN dans test_solana_deserialize.py (roundtrip, taille invalide,
+  offsets claim_hash/subject, hypothesis float)
+- Baseline: 548 → 553 passed, 0 failed, 11 skipped
+
+---
+
 ## [2026-02-16] ADR-010 — Traçabilité méthodologique du consensus
 
 - schema.sql: colonne `consensus_meta TEXT` dans attestations

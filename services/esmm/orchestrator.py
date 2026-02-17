@@ -42,6 +42,36 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
+# CONFIG HELPERS (read from config.yaml with hardcoded fallback)
+# ============================================================================
+
+def _default_cycle_sequence() -> List[str]:
+    """Read esmm.cycle_sequence from config.yaml, fallback to hardcoded default."""
+    try:
+        from services.config_loader import get_section
+        esmm = get_section("esmm", {})
+        seq = esmm.get("cycle_sequence")
+        if isinstance(seq, list) and seq:
+            return list(seq)
+    except Exception:
+        pass
+    return ["divergent", "debate", "meta"]
+
+
+def _default_min_consensus() -> float:
+    """Read esmm.min_consensus from config.yaml, fallback to 0.4."""
+    try:
+        from services.config_loader import get_section
+        esmm = get_section("esmm", {})
+        val = esmm.get("min_consensus")
+        if val is not None:
+            return float(val)
+    except Exception:
+        pass
+    return 0.4
+
+
+# ============================================================================
 # CONFIGURATION
 # ============================================================================
 
@@ -72,12 +102,10 @@ class ESMMRunConfig:
         "debate": 2,
         "meta": 1
     })
-    # AUDIT[A8-004] 🟡 FRAGILE: cycle_sequence hardcodé — config.yaml ignoré.
-    cycle_sequence: List[str] = field(default_factory=lambda: [
-        "divergent", "debate", "meta"
-    ])
-    # AUDIT[A8-003] 🟡 FRAGILE: min_consensus=0.5 hardcodé — config.yaml dit 0.4.
-    min_consensus: float = 0.5
+    # AUDIT[A8-004] 🟡→✅ FIXED Phase Audit: lu depuis config.yaml::esmm.cycle_sequence.
+    cycle_sequence: List[str] = field(default_factory=_default_cycle_sequence)
+    # AUDIT[A8-003] 🟡→✅ FIXED Phase Audit: lu depuis config.yaml::esmm.min_consensus.
+    min_consensus: float = field(default_factory=_default_min_consensus)
     min_confidence: float = 0.5
     max_questions_per_cycle: int = 10
     inject_triplets: bool = True

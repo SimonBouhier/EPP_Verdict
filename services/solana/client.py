@@ -421,10 +421,17 @@ class EppSolanaClient:
         frame_hash = read(32)
         source_anchor = read(32)
         timestamp = struct.unpack("<q", read(8))[0]
+        last_revalidated = struct.unpack("<q", read(8))[0]
         validation_count = struct.unpack("<H", read(2))[0]
         protocol_version = struct.unpack("<H", read(2))[0]
         is_challenge = struct.unpack("<B", read(1))[0] != 0
         challenged_attestation = read(32)
+
+        if offset != len(data):
+            raise ValueError(
+                f"Deserialization offset mismatch: consumed {offset} bytes, "
+                f"buffer has {len(data)} bytes"
+            )
 
         return {
             "bump": bump,
@@ -448,6 +455,7 @@ class EppSolanaClient:
             "frame_hash": frame_hash.hex(),
             "source_anchor": source_anchor.hex(),
             "timestamp": timestamp,
+            "last_revalidated": last_revalidated,
             "validation_count": validation_count,
             "protocol_version": protocol_version,
             "is_challenge": is_challenge,

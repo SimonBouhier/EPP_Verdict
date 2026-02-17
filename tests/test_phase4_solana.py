@@ -138,18 +138,18 @@ class TestInstructionSerialization:
 
     def test_borsh_layout_matches_account_size(self):
         """La taille sérialisée correspond à l'account size Anchor (462 bytes)."""
-        # Account layout from state.rs:
+        # Account layout from state.rs — CHAQUE champ listé :
         # bump(1) + submitter(32) + claim_hash(32) + subject(64) + predicate(64) +
         # object(128) + consensus_score(2) + models_consulted(1) + models_agreeing(1) +
-        # sig(5*2=10) + epistemic_type(1) + confidence_tier(1) + frame_hash(32) +
-        # source_anchor(32) + timestamp(8) + validation_count(2) + protocol_version(2) +
-        # is_challenge(1) + challenged_attestation(32)
-        expected_size = 1 + 32 + 32 + 64 + 64 + 128 + 2 + 1 + 1 + 10 + 1 + 1 + 32 + 32 + 8 + 2 + 2 + 1 + 32
-        # = 446 bytes of data (without 8-byte discriminator)
-        assert expected_size == 446
-
-        # Full account with discriminator = 454 (not 462 — the Rust SIZE may include padding)
-        # The critical thing is our serialization matches the layout order
+        # sig_5d(5×2=10) + epistemic_type(1) + confidence_tier(1) + frame_hash(32) +
+        # source_anchor(32) + timestamp(8) + last_revalidated(8) + validation_count(2) +
+        # protocol_version(2) + is_challenge(1) + challenged_attestation(32)
+        expected_data_size = (
+            1 + 32 + 32 + 64 + 64 + 128 + 2 + 1 + 1 + 10 + 1 + 1
+            + 32 + 32 + 8 + 8 + 2 + 2 + 1 + 32
+        )
+        assert expected_data_size == 454  # Data sans discriminator
+        assert expected_data_size + ACCOUNT_DISCRIMINATOR_SIZE == 462  # == state.rs::SIZE
 
 
 # ============================================================================
@@ -218,6 +218,7 @@ class TestPDAValidation:
         data += b"\x33" * 32                 # frame_hash
         data += b"\x44" * 32                 # source_anchor
         data += struct.pack("<q", 1700000000)  # timestamp
+        data += struct.pack("<q", 1700000000)  # last_revalidated
         data += struct.pack("<H", 3)         # validation_count
         data += struct.pack("<H", 1)         # protocol_version
         data += struct.pack("<B", 0)         # is_challenge
@@ -235,6 +236,7 @@ class TestPDAValidation:
         assert result["epistemic_type"] == "foundational"
         assert result["confidence_tier"] == "validated"
         assert result["timestamp"] == 1700000000
+        assert result["last_revalidated"] == 1700000000
         assert result["is_challenge"] is False
 
 
