@@ -77,6 +77,8 @@ class ExtractionResult:
     semantic_dispersion: Optional[float] = None
     triplets_before_consensus: int = 0
     triplets_after_consensus: int = 0
+    # ADR-011-v2: raw per-model triplets for fingerprinting
+    raw_model_triplets: Dict[str, List] = field(default_factory=dict)
 
 
 @dataclass
@@ -174,7 +176,7 @@ class TripletExtractor:
             async with self._init_lock:
                 if self._entity_resolver is None:
                     from services.entity_resolver import get_entity_resolver
-                    self._entity_resolver = await get_entity_resolver()
+                    self._entity_resolver = await get_entity_resolver(db=self.db)
         return self._entity_resolver
 
     async def _get_relation_normalizer(self):
@@ -185,7 +187,7 @@ class TripletExtractor:
             async with self._init_lock:
                 if self._relation_normalizer is None:
                     from services.relation_normalizer import get_relation_normalizer
-                    self._relation_normalizer = await get_relation_normalizer()
+                    self._relation_normalizer = await get_relation_normalizer(db=self.db)
         return self._relation_normalizer
 
     def _get_cached_prompt(self, text: str) -> str:
@@ -490,6 +492,7 @@ class TripletExtractor:
             semantic_dispersion=consensus_result.semantic_dispersion,
             triplets_before_consensus=consensus_result.triplets_before_consensus,
             triplets_after_consensus=consensus_result.triplets_after_consensus,
+            raw_model_triplets=dict(model_triplets),
         )
 
     async def _check_db_duplicate(
@@ -505,7 +508,7 @@ class TripletExtractor:
             async with self.db.connection() as conn:
                 cursor = await conn.execute(
                     """
-                    SELECT id, weight, extraction_count
+                    SELECT weight, extraction_count
                     FROM relations
                     WHERE source = ? AND target = ? AND relation_type = ?
                     """,
@@ -513,7 +516,7 @@ class TripletExtractor:
                 )
                 row = await cursor.fetchone()
                 if row:
-                    return {"id": row[0], "weight": row[1], "count": row[2]}
+                    return {"weight": row[0], "count": row[1]}
         except Exception as e:
             logger.warning(f"[TripletExtractor] DB duplicate check error: {e}")
         return None
@@ -596,6 +599,96 @@ class TripletExtractor:
 
 
 # ============================================================================
+# VERDICT RESPONSE PARSING (VERIFY mode)
+# ============================================================================
+
+
+def _parse_verdict_response(
+    text: str,
+    claim_text: str = "",
+) -> Dict[str, Any]:
+    """
+    Parse a VERIFY-mode verdict response from an LLM.
+
+    Expected JSON format:
+        {"verdict": "SUPPORTED", "confidence": 0.85,
+         "evidence": [...], "reasoning": "..."}
+
+    Returns:
+        Dict with keys: verdict, confidence, evidence, reasoning, triplets
+        where triplets includes the verdict-as-triplet encoding.
+    """
+    import json
+    import re
+
+    # Try to extract JSON from the response
+    text = text.strip()
+
+    # Try direct JSON parse first
+    parsed = None
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        # Try to find JSON object in the text
+        match = re.search(r"\{[\s\S]*\}", text)
+        if match:
+            try:
+                parsed = json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+
+    if parsed is None:
+        return {
+            "verdict": "INSUFFICIENT_EVIDENCE",
+            "confidence": 0.0,
+            "evidence": [],
+            "reasoning": "Failed to parse LLM response as JSON",
+            "triplets": [],
+        }
+
+    verdict = parsed.get("verdict", "INSUFFICIENT_EVIDENCE")
+    confidence = float(parsed.get("confidence", 0.0))
+    evidence = parsed.get("evidence", [])
+    reasoning = parsed.get("reasoning", "")
+
+    # Normalize verdict value
+    valid_verdicts = {"SUPPORTED", "CONTESTED", "INSUFFICIENT_EVIDENCE"}
+    if verdict.upper() not in valid_verdicts:
+        verdict = "INSUFFICIENT_EVIDENCE"
+    else:
+        verdict = verdict.upper()
+
+    # Build triplets list: verdict triplet + evidence triplets
+    triplets = []
+
+    # Verdict-as-triplet (S5 encoding)
+    triplets.append({
+        "subject": claim_text,
+        "relation": "verdict",
+        "object": verdict,
+        "confidence": confidence,
+    })
+
+    # Evidence triplets
+    for ev in evidence:
+        if isinstance(ev, dict) and "subject" in ev and "object" in ev:
+            triplets.append({
+                "subject": ev.get("subject", ""),
+                "relation": ev.get("relation", "related_to"),
+                "object": ev.get("object", ""),
+                "confidence": float(ev.get("confidence", 0.5)),
+            })
+
+    return {
+        "verdict": verdict,
+        "confidence": confidence,
+        "evidence": evidence,
+        "reasoning": reasoning,
+        "triplets": triplets,
+    }
+
+
+# ============================================================================
 # SINGLETON
 # ============================================================================
 
@@ -604,6 +697,7 @@ _extractor_lock = asyncio.Lock()
 
 
 async def get_triplet_extractor(
+    db=None,
     models: List[str] = None,
     min_consensus: float = 0.5,
     min_confidence: float = 0.5
@@ -611,15 +705,24 @@ async def get_triplet_extractor(
     """
     Get or create singleton TripletExtractor instance.
 
-    Note: Singleton shares configuration, so first call determines settings.
+    If db is explicitly provided and differs from the current instance's db,
+    the singleton is invalidated and recreated with the new db.
+    When db is None, falls back to get_db() (config-based default).
     """
     global _extractor_instance
+
+    # If db explicitly provided and different from current instance's db,
+    # invalidate singleton (caller wants a specific DB)
+    if db is not None and _extractor_instance is not None:
+        if _extractor_instance.db is not db:
+            _extractor_instance = None
 
     if _extractor_instance is None:
         async with _extractor_lock:
             if _extractor_instance is None:
-                from database import get_db
-                db = await get_db()
+                if db is None:
+                    from database import get_db
+                    db = await get_db()
                 _extractor_instance = TripletExtractor(
                     db=db,
                     models=models,

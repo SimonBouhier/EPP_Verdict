@@ -35,10 +35,14 @@ SEMANTIC_MERGE_THRESHOLD = 0.85
 
 # ---------------------------------------------------------------------------
 # Relation synonym mapping — canonical forms for hash normalization
+# SOURCE OF TRUTH: see relation_vocabulary.py — do NOT define local synonym groups
+# TODO: Remove _LEGACY after staging validation — see PLAN_RELATION_VOCABULARY.md §3.2
 # ---------------------------------------------------------------------------
-_RELATION_SYNONYMS: Dict[str, str] = {}
+from .relation_vocabulary import build_synonym_map
 
-_RELATION_GROUPS = {
+# Legacy groups — frozen snapshot pre-refactoring, used when use_legacy_relation_groups=true
+_LEGACY_RELATION_SYNONYMS: Dict[str, str] = {}
+_LEGACY_RELATION_GROUPS = {
     "USES": ["uses", "requires", "needs", "employs", "utilizes", "utilises"],
     "IS_A": ["is_a", "type_of", "is_type", "is_type_of", "kind_of", "instance_of"],
     "HAS": ["has", "contains", "includes", "possesses", "owns"],
@@ -50,10 +54,28 @@ _RELATION_GROUPS = {
     "DEPENDS_ON": ["depends_on", "relies_on", "based_on", "built_on"],
     "PROVIDES": ["provides", "offers", "supplies", "gives", "delivers"],
 }
+for _canonical, _synonyms in _LEGACY_RELATION_GROUPS.items():
+    for _syn in _synonyms:
+        _LEGACY_RELATION_SYNONYMS[_syn] = _canonical
 
-for canonical, synonyms in _RELATION_GROUPS.items():
-    for syn in synonyms:
-        _RELATION_SYNONYMS[syn] = canonical
+
+def _get_relation_synonyms() -> Dict[str, str]:
+    """Return active synonym map based on config flag."""
+    try:
+        from services.config_loader import get_section
+        esmm_cfg = get_section("esmm", {})
+        if esmm_cfg.get("use_legacy_relation_groups", True):
+            return _LEGACY_RELATION_SYNONYMS
+    except Exception:
+        pass  # Config unavailable (tests, CLI) → use new
+    return build_synonym_map(uppercase_canonicals=True)
+
+
+# WARNING: _RELATION_SYNONYMS is frozen at import time. Monkeypatching
+# use_legacy_relation_groups after import has NO EFFECT on this module.
+# fingerprint_match.py reads the flag per-call — this asymmetry is intentional
+# (consensus hashing must be deterministic within a process lifetime).
+_RELATION_SYNONYMS: Dict[str, str] = _get_relation_synonyms()
 
 # Entity abbreviation mapping — common short forms
 _ENTITY_SYNONYMS: Dict[str, str] = {

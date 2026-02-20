@@ -120,7 +120,7 @@ class EpistemicAttestation(BaseModel):
     @field_validator("epistemic_type")
     @classmethod
     def validate_epistemic_type(cls, v: str) -> str:
-        allowed = {"foundational", "bridge", "specialized", "generalist", "hybrid"}
+        allowed = {"foundational", "bridge", "specialized", "generalist", "hybrid", "verdict"}
         if v not in allowed:
             raise ValueError(f"epistemic_type must be one of {allowed}, got '{v}'")
         return v

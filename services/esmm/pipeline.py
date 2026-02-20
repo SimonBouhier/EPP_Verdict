@@ -24,6 +24,7 @@ from .attestation import (
     Signature5D,
     ModelVote,
     crystallize,
+    compute_claim_hash,
 )
 from .run_logger import RunLogger
 
@@ -132,8 +133,10 @@ async def run_pipeline(
             model_weights=model_weights, esmm_config=esmm_config,
         )
 
-        # Backward compat: mocks may return 2-tuple, real code returns 3-tuple
-        if len(extract_result) == 3:
+        # Backward compat: mocks may return 2-tuple, real code returns 4-tuple
+        if len(extract_result) == 4:
+            extracted_triplets, run_id, esmm_result, esmm_config = extract_result
+        elif len(extract_result) == 3:
             extracted_triplets, run_id, esmm_result = extract_result
         else:
             extracted_triplets, run_id = extract_result
@@ -154,8 +157,22 @@ async def run_pipeline(
         # should be made by the open-source community, not by the founding team.
         # See ADR-009 (pending) for context.
 
-        # Cristalliser chaque triplet ayant un consensus suffisant
+        # F5: dedup within a single run. Cross-run dedup requires DB lookup
+        # on attestations.claim_hash — deferred to Phase 2 cleanup.
+        seen_hashes = set()
         for triplet in extracted_triplets:
+            h = compute_claim_hash(
+                triplet["subject"], triplet["predicate"], triplet["object"],
+                metrological_frame=config.metrological_frame,
+            )
+            if h in seen_hashes:
+                logger.info(
+                    "Skipping duplicate triplet claim_hash=%s subject=%s",
+                    h[:16], triplet["subject"],
+                )
+                continue
+            seen_hashes.add(h)
+
             if triplet["consensus_score"] < config.min_consensus_for_attestation:
                 continue
 
@@ -232,6 +249,36 @@ async def run_pipeline(
                 except Exception as e:
                     # AUDIT[A2-010,A9-001] 🟡 FRAGILE: erreurs accumulées sans arrêt du pipeline.
                     errors.append(f"Injection failed for {triplet['subject']}: {e}")
+
+        # P1: Enrich verify section with final verdict post-crystallization
+        if consensus_meta and consensus_meta.get("verify") and attestations:
+            verdict_attestations = [
+                a for a in attestations if a.predicate == "verdict"
+            ]
+            if verdict_attestations:
+                best = max(verdict_attestations, key=lambda a: a.consensus_score)
+                consensus_meta["verify"]["final_verdict"] = best.object
+                consensus_meta["verify"]["verdict_confidence"] = best.consensus_score
+                consensus_meta["verify"]["model_verdicts"] = {
+                    v.model_id: {"agreed": v.agreed, "confidence": v.confidence}
+                    for a in verdict_attestations for v in a.model_votes
+                }
+
+        # P2: Preserve sub-consensus evidence in verify section (ADR-010)
+        if consensus_meta and consensus_meta.get("verify"):
+            sub_consensus_evidence = []
+            for triplet in extracted_triplets:
+                if triplet["consensus_score"] < config.min_consensus_for_attestation:
+                    sub_consensus_evidence.append({
+                        "subject": triplet["subject"],
+                        "predicate": triplet["predicate"],
+                        "object": triplet["object"],
+                        "consensus_score": round(triplet["consensus_score"], 4),
+                        "models": triplet.get("contributing_models", []),
+                    })
+            if sub_consensus_evidence:
+                consensus_meta["verify"]["evidence_corpus"] = sub_consensus_evidence[:20]
+                consensus_meta["verify"]["evidence_total"] = len(sub_consensus_evidence)
 
         run_logger.phase_end("pipeline", attestations=len(attestations))
 
@@ -319,11 +366,32 @@ async def _build_consensus_meta(
         "triplets_after_consensus": getattr(esmm_result, "triplets_after_consensus", 0),
     }
 
-    return {
+    meta = {
         "methodology": methodology,
         "conditions": conditions,
         "diagnostics": diagnostics,
     }
+
+    # Dual-mode: add verify section if applicable
+    if esmm_config and getattr(esmm_config, "input_mode", "explore") == "verify":
+        methodology["pipeline_mode"] = "verify"
+        meta["verify"] = {
+            "original_claim": getattr(esmm_config, "original_claim", None),
+            "final_verdict": None,       # Set downstream after consensus
+            "verdict_confidence": None,   # Set downstream after consensus
+            "model_verdicts": {},         # Set downstream after consensus
+        }
+    else:
+        methodology["pipeline_mode"] = "explore"
+
+    # ADR-011-v2: reconciliation metadata
+    reconciliation = getattr(esmm_result, "reconciliation_meta", None)
+    if reconciliation:
+        meta["reconciliation"] = reconciliation
+        if reconciliation.get("method") == "semantic_fingerprinting":
+            methodology["consensus_method"] = "hash_exact_v2+fingerprint_v1+semantic_merge_v1"
+
+    return meta
 
 
 async def _extract_triplets_from_question(
@@ -347,7 +415,7 @@ async def _extract_triplets_from_question(
     Returns:
         Tuple (triplets adaptes en dicts, run_id, ESMMRunResult)
     """
-    from .question_seeder import seed_graph_from_question
+    from .question_seeder import seed_graph_from_question, classify_input, InputType
     from .triplet_adapter import adapt_all
     from .orchestrator import ESMMOrchestrator, ESMMRunConfig
 
@@ -363,13 +431,21 @@ async def _extract_triplets_from_question(
     elif not esmm_config.models:
         esmm_config.models = effective_models
 
+    # Dual-mode: auto-detect VERIFY claims
+    input_mode = classify_input(question)
+    if input_mode == InputType.VERIFY:
+        esmm_config.input_mode = "verify"
+        esmm_config.original_claim = question
+        logger.info(f"Auto-detected VERIFY mode for claim: {question[:80]}")
+
     orchestrator = ESMMOrchestrator(db=db, config=esmm_config, providers=providers)
 
     run_logger.phase_start("esmm_orchestrator", question=question)
 
-    # The orchestrator flow: initialize -> execute -> finalize
+    # The orchestrator flow: initialize -> execute -> reconcile -> finalize
     run_id = await orchestrator.initialize_run()
     await orchestrator.execute_cycles(run_id, model_weights=model_weights)
+    await orchestrator.reconcile()  # ADR-011-v2: Semantic Fingerprinting
     result = await orchestrator.finalize_run(run_id)
 
     run_logger.phase_end(
@@ -381,7 +457,7 @@ async def _extract_triplets_from_question(
     # D4: Adapt ConsensusTriplet -> dict pipeline
     adapted = adapt_all(result.consensus_triplets)
 
-    return adapted, result.run_id, result
+    return adapted, result.run_id, result, esmm_config
 
 
 async def _inject_triplet_to_graph(

@@ -28,6 +28,18 @@ esmm:
     - "divergent"
     - "debate"
     - "meta"
+  use_legacy_relation_groups: true  # true = legacy behavior, false = relation_vocabulary.py
+  # ADR-011-v2: Semantic Fingerprinting (reconciliation lexicale)
+  fingerprint:
+    enabled: true
+    max_neighbors: 5                   # Voisins demandés par terme
+    min_neighbors: 3                   # Minimum pour fingerprint valide
+    merge_threshold: 0.6               # Recouvrement pondéré pour fusion
+    subnode_threshold: 0.3             # Recouvrement pour sous-nœud
+    matching_algorithm: "jaro_winkler"
+    timeout_seconds: 60
+    min_unique_terms: 5                # Sous ce seuil, fingerprinting sauté
+    inject_micro_graphs: false         # Désactivé Phase 1
 
 # ============================================================================
 # CONFIDENCE TIERS (Méthode scientifique)

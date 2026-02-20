@@ -91,3 +91,7 @@ node_modules/
 
 # === Saves / Sessions locales ===
 saves/
+
+# === Temp DB from demos/scenarios ===
+*.db-shm
+*.db-wal

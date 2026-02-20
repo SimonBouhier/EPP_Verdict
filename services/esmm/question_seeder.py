@@ -7,12 +7,77 @@ and injected as seeds to bootstrap the exploration.
 
 import logging
 import re
+from enum import Enum
 from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from database.engine import ISpaceDB
 
 logger = logging.getLogger("esmm.question_seeder")
+
+
+# ============================================================================
+# INPUT CLASSIFICATION — Dual-mode (EXPLORE / VERIFY)
+# ============================================================================
+
+
+class InputType(str, Enum):
+    """Input classification for dual-mode pipeline."""
+    EXPLORE = "explore"  # Open question → knowledge graph RAG
+    VERIFY = "verify"    # Factual claim → truthfulness judgment
+
+
+# Conservative patterns — prefer false negatives over false positives.
+# Default is EXPLORE; only match clear verifiable claims.
+_VERIFY_PATTERNS = [
+    # Comparatives + measurable value
+    re.compile(r"\b(exceeds?|surpass(?:es)?|greater\s+than|less\s+than|more\s+than|fewer\s+than)\b", re.IGNORECASE),
+    # Explicit verification formulations
+    re.compile(r"\b(is\s+true|is\s+false|verify\s+that|confirm\s+that|refute)\b", re.IGNORECASE),
+    re.compile(r"^(is\s+it\s+true|is\s+it\s+correct|is\s+it\s+accurate)\b", re.IGNORECASE),
+    # Numeric value + state verb (measurable claim)
+    re.compile(r"\b\d+.*\b(exceeds?|surpass|reaches?|achieves?|costs?)\b", re.IGNORECASE),
+    re.compile(r"\b(exceeds?|surpass|reaches?|achieves?|costs?)\b.*\b\d+", re.IGNORECASE),
+]
+
+# Open question patterns — these are definitely EXPLORE
+_EXPLORE_PATTERNS = [
+    re.compile(r"^(what|how|why|when|where|who|which)\b", re.IGNORECASE),
+    re.compile(r"\?\s*$"),  # Ends with question mark
+    re.compile(r"^explain\b", re.IGNORECASE),
+]
+
+
+def classify_input(question: str) -> InputType:
+    """
+    Classify user input as EXPLORE or VERIFY.
+
+    Conservative: defaults to EXPLORE when ambiguous.
+    VERIFY only for clear factual claims with measurable assertions.
+
+    Args:
+        question: User input string
+
+    Returns:
+        InputType.VERIFY for verifiable claims, InputType.EXPLORE otherwise
+    """
+    text = question.strip()
+    if not text:
+        return InputType.EXPLORE
+
+    # Check EXPLORE patterns first (questions are never claims)
+    for pattern in _EXPLORE_PATTERNS:
+        if pattern.search(text):
+            return InputType.EXPLORE
+
+    # Check VERIFY patterns
+    for pattern in _VERIFY_PATTERNS:
+        if pattern.search(text):
+            return InputType.VERIFY
+
+    # Default: EXPLORE (conservative)
+    return InputType.EXPLORE
+
 
 # Stop words (English + French basics)
 STOP_WORDS = frozenset({

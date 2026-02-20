@@ -44,6 +44,11 @@ pandas>=2.0.0               # ONLY for CSV migration script (not runtime)
 pyyaml>=6.0                 # Config files (optional, can use JSON)
 
 # ============================================================================
+# STRING MATCHING (ADR-011-v2 Semantic Fingerprinting)
+# ============================================================================
+rapidfuzz>=3.0.0            # Jaro-Winkler distance for fingerprint matching
+
+# ============================================================================
 # DEVELOPMENT (Optional)
 # ============================================================================
 pytest>=7.4.0               # Testing framework

@@ -1,0 +1,9 @@
+Collecting rapidfuzz
+  Downloading rapidfuzz-3.14.3-cp310-cp310-win_amd64.whl.metadata (12 kB)
+Downloading rapidfuzz-3.14.3-cp310-cp310-win_amd64.whl (1.5 MB)
+   ---------------------------------------- 1.5/1.5 MB 6.3 MB/s  0:00:00
+Installing collected packages: rapidfuzz
+Successfully installed rapidfuzz-3.14.3
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: c:\Users\simon\PROJECTS\lyra_clean\.venv\Scripts\python.exe -m pip install --upgrade pip

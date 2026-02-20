@@ -52,6 +52,10 @@ def _sanitize_concept(value: str) -> str:
     Strips XML-like tags, control characters, and truncates to safe length
     to prevent prompt injection via concept names.
     """
+    if not value:
+        return ""
+    if not isinstance(value, str):
+        value = str(value)
     import re
     # Strip XML/HTML tags
     cleaned = re.sub(r"<[^>]*>", "", value)
@@ -67,9 +71,12 @@ def _sanitize_concept(value: str) -> str:
 
 # AUDIT[A8-006] 🟡 FRAGILE: timeouts hardcodés — config.yaml::esmm.timeout_per_cycle_seconds ignoré.
 CYCLE_TIMEOUTS = {
-    CycleType.DIVERGENT: 60,   # Exploration simple (60s: cold models need warmup)
-    CycleType.DEBATE: 60,      # Dialectique complexe
-    CycleType.META: 60         # Meta-reflexion
+    CycleType.DIVERGENT: 60,     # Exploration simple (60s: cold models need warmup)
+    CycleType.DEBATE: 60,        # Dialectique complexe
+    CycleType.META: 60,          # Meta-reflexion
+    CycleType.ASSESS: 90,        # VERIFY: verdict elicitation (slower)
+    CycleType.CHALLENGE: 90,     # VERIFY: adversarial review
+    CycleType.ADJUDICATE: 90,    # VERIFY: final synthesis
 }
 
 
@@ -103,6 +110,8 @@ class CycleResult:
     semantic_dispersion: Optional[float] = None
     triplets_before_consensus: int = 0
     triplets_after_consensus: int = 0
+    # ADR-011-v2: raw per-model triplets for fingerprinting
+    raw_model_triplets: Dict[str, List] = field(default_factory=dict)
 
 
 class ExplorationCycleManager:
@@ -145,6 +154,7 @@ class ExplorationCycleManager:
             for model in self.models
         ]
         self.provider_to_model = dict(zip(self.provider_ids, self.models))
+        self.model_to_provider = dict(zip(self.models, self.provider_ids))
 
         # Cache des reponses modeles (evite retraitement)
         self._response_cache: Dict[str, Dict[str, str]] = {}
@@ -217,7 +227,31 @@ class ExplorationCycleManager:
 
         # 3. Appel multi-modeles avec timeout adaptatif
         timeout = self._get_timeout(cycle_type)
-        responses = await self._query_models(question, cycle_type, timeout)
+
+        # CHALLENGE: epistemic isolation — each model sees only ONE peer's verdict
+        if cycle_type == CycleType.CHALLENGE and "_verify_model_verdicts" in context:
+            model_verdicts = context["_verify_model_verdicts"]
+            model_ids = list(model_verdicts.keys())
+            template = get_template(
+                CycleType.CHALLENGE,
+                (self._template_rotation_index[CycleType.CHALLENGE] - 1)
+                % get_template_count(CycleType.CHALLENGE),
+            )
+            model_questions = {}
+            for i, mid in enumerate(model_ids):
+                peer_id = model_ids[(i + 1) % len(model_ids)]
+                peer_response = model_verdicts[peer_id]
+                claim = _sanitize_concept(context.get("original_claim", ""))
+                model_questions[mid] = template.format(
+                    claim=claim,
+                    verdict=peer_response[:200],
+                    evidence=peer_response[:500],
+                )
+            responses = await self._query_models_isolated(
+                model_questions, cycle_type, timeout
+            )
+        else:
+            responses = await self._query_models(question, cycle_type, timeout)
 
         # 3b. RETRY LOGIC pour cycles META vides (max 3 retries)
         META_MAX_RETRIES = 3
@@ -270,6 +304,14 @@ class ExplorationCycleManager:
             responses, cycle_type, context, model_weights=model_weights
         )
 
+        # P4: Explanatory log for CHALLENGE (0/0 consensus is by design)
+        if cycle_type == CycleType.CHALLENGE:
+            logger.info(
+                "[CycleManager] CHALLENGE cycle: %d counter-arguments collected "
+                "(consensus not expected — evidence feeds ADJUDICATE)",
+                len(responses),
+            )
+
         # 5. Logging du cycle dans la DB
         cycle_id = await self._log_cycle(
             cycle_type=cycle_type,
@@ -307,6 +349,7 @@ class ExplorationCycleManager:
             semantic_dispersion=extraction_result.get("semantic_dispersion"),
             triplets_before_consensus=extraction_result.get("triplets_before_consensus", 0),
             triplets_after_consensus=extraction_result.get("triplets_after_consensus", 0),
+            raw_model_triplets=extraction_result.get("raw_model_triplets", {}),
         )
 
         logger.info(
@@ -402,11 +445,14 @@ class ExplorationCycleManager:
 
                 rows = await cursor.fetchall()
 
-                # Aplatir les resultats
+                # Aplatir les resultats (rows may be sqlite3.Row, tuple, or list)
                 concepts = []
                 for row in rows:
                     if isinstance(row, (list, tuple)):
                         concepts.extend([r for r in row if r])
+                    elif hasattr(row, 'keys'):
+                        # sqlite3.Row — extract all column values
+                        concepts.extend([row[k] for k in row.keys() if row[k]])
                     else:
                         concepts.append(row)
 
@@ -542,6 +588,9 @@ class ExplorationCycleManager:
         try:
             # Phase 4.5.1 — sanitize concepts before template insertion
             safe = [_sanitize_concept(c) for c in concepts]
+            safe = [s for s in safe if s]  # DROP empties (F4: None from DB)
+            if not safe:
+                safe = ["concept"]  # fallback
 
             if cycle_type == CycleType.DIVERGENT:
                 concept = safe[0] if safe else "concept"
@@ -569,6 +618,29 @@ class ExplorationCycleManager:
                 return template.format(
                     recent_triplets=recent_str or "aucun triplet recent",
                     domain=domain
+                )
+
+            # --- VERIFY mode branches ---
+            elif cycle_type == CycleType.ASSESS:
+                claim = _sanitize_concept(context.get("original_claim", safe[0]))
+                return template.format(claim=claim)
+
+            elif cycle_type == CycleType.CHALLENGE:
+                claim = _sanitize_concept(context.get("original_claim", safe[0]))
+                verdict = context.get("verdict", "UNKNOWN")
+                evidence = context.get("evidence", "no evidence provided")
+                return template.format(
+                    claim=claim,
+                    verdict=verdict,
+                    evidence=evidence,
+                )
+
+            elif cycle_type == CycleType.ADJUDICATE:
+                claim = _sanitize_concept(context.get("original_claim", safe[0]))
+                all_verdicts = context.get("all_verdicts", "no verdicts available")
+                return template.format(
+                    claim=claim,
+                    all_verdicts=all_verdicts,
                 )
 
         except KeyError as e:
@@ -627,6 +699,47 @@ class ExplorationCycleManager:
             )
         except Exception as e:
             logger.error(f"[CycleManager] Model query error: {e}")
+
+        return responses
+
+    async def _query_models_isolated(
+        self,
+        model_questions: Dict[str, str],
+        cycle_type: CycleType,
+        timeout: int,
+    ) -> Dict[str, str]:
+        """Query each model with its own question (epistemic isolation).
+
+        Used for CHALLENGE phase where each model sees only one peer's verdict.
+        Calls batch_sequential_providers with single-element provider lists.
+        """
+        system_prompt = get_system_prompt(cycle_type)
+        responses: Dict[str, str] = {}
+
+        for model_name, question in model_questions.items():
+            provider_id = self.model_to_provider.get(model_name)
+            if not provider_id:
+                logger.warning(f"[CycleManager] No provider for model {model_name}")
+                continue
+            try:
+                messages = [{"role": "user", "content": question}]
+                result = await asyncio.wait_for(
+                    self.model_rotator.batch_sequential_providers(
+                        provider_ids=[provider_id],
+                        questions=[messages],
+                        system_prompt=system_prompt,
+                        temperature=0.3,
+                    ),
+                    timeout=timeout,
+                )
+                for pid, provider_responses in result.results.items():
+                    m_name = self.provider_to_model.get(pid, pid)
+                    if provider_responses and len(provider_responses) > 0:
+                        responses[m_name] = provider_responses[0].text
+            except asyncio.TimeoutError:
+                logger.warning(f"[CycleManager] Timeout for model {model_name} in CHALLENGE")
+            except Exception as e:
+                logger.warning(f"[CycleManager] Model {model_name} failed in CHALLENGE: {e}")
 
         return responses
 
@@ -722,6 +835,13 @@ class ExplorationCycleManager:
                 "models_contributed": []
             }
 
+        # VERIFY mode: parse verdict responses per-model, route through consensus
+        _VERIFY_CYCLE_TYPES = {CycleType.ASSESS, CycleType.CHALLENGE, CycleType.ADJUDICATE}
+        if cycle_type in _VERIFY_CYCLE_TYPES:
+            return await self._extract_verdicts_from_responses(
+                responses, cycle_type, context, model_weights
+            )
+
         # Combiner toutes les reponses en un texte
         combined_text = "\n\n".join([
             f"[{model}]: {response}"
@@ -747,6 +867,7 @@ class ExplorationCycleManager:
                 "semantic_dispersion": result.semantic_dispersion,
                 "triplets_before_consensus": result.triplets_before_consensus,
                 "triplets_after_consensus": result.triplets_after_consensus,
+                "raw_model_triplets": result.raw_model_triplets,
             }
 
         # AUDIT[A2-013] 🟡 FRAGILE: échecs d'extraction individuels accumulés sans arrêt.
@@ -756,6 +877,63 @@ class ExplorationCycleManager:
                 "triplets_extracted": 0,
                 "consensus_triplets": [],
                 "error": str(e)
+            }
+
+    async def _extract_verdicts_from_responses(
+        self,
+        responses: Dict[str, str],
+        cycle_type: CycleType,
+        context: Dict[str, Any],
+        model_weights: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, Any]:
+        """Extract verdicts from VERIFY-mode responses using _parse_verdict_response.
+
+        Encodes each model's verdict as triplets, then routes per-model triplet
+        lists through compute_consensus() for real agreement scoring.
+        """
+        from .triplet_extractor import _parse_verdict_response
+        from .verdict_encoder import encode_verdict_as_triplets
+
+        claim_text = context.get("original_claim", "")
+        raw_model_triplets: Dict[str, list] = {}
+
+        for model_id, response_text in responses.items():
+            try:
+                parsed = _parse_verdict_response(response_text, claim_text=claim_text)
+                encoded = encode_verdict_as_triplets(claim_text, parsed)
+                raw_model_triplets[model_id] = encoded
+            except Exception as e:
+                logger.warning(f"[CycleManager] Verdict parse failed for {model_id}: {e}")
+                raw_model_triplets[model_id] = []
+
+        # Route through compute_consensus() for real agreement scoring
+        try:
+            consensus_result = await self.triplet_extractor.consensus_engine.compute_consensus(
+                model_results=raw_model_triplets,
+                model_weights=model_weights,
+            )
+            return {
+                "triplets_extracted": consensus_result.triplets_before_consensus,
+                "consensus_triplets": consensus_result.triplets,
+                "models_contributed": list(responses.keys()),
+                "vote_entropy": consensus_result.vote_entropy,
+                "semantic_dispersion": consensus_result.semantic_dispersion,
+                "triplets_before_consensus": consensus_result.triplets_before_consensus,
+                "triplets_after_consensus": consensus_result.triplets_after_consensus,
+                "raw_model_triplets": raw_model_triplets,
+            }
+        except Exception as e:
+            logger.error(f"[CycleManager] Verdict consensus failed: {e}")
+            return {
+                "triplets_extracted": 0,
+                "consensus_triplets": [],
+                "models_contributed": list(responses.keys()),
+                "vote_entropy": 0.0,
+                "semantic_dispersion": None,
+                "triplets_before_consensus": sum(len(v) for v in raw_model_triplets.values()),
+                "triplets_after_consensus": 0,
+                "raw_model_triplets": raw_model_triplets,
+                "error": str(e),
             }
 
     # ========================================================================
@@ -906,7 +1084,7 @@ async def create_cycle_manager(
             providers[provider_id] = OllamaProvider(model=model, timeout=120.0)
 
     model_rotator = MultiProviderRotator(providers=providers)
-    triplet_extractor = await get_triplet_extractor(models=models, min_consensus=min_consensus)
+    triplet_extractor = await get_triplet_extractor(db=db, models=models, min_consensus=min_consensus)
 
     return ExplorationCycleManager(
         db=db,

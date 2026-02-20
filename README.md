@@ -24,7 +24,7 @@ Herite de Lyra ACE. Combine **trajectoires de Bezier** pour controler les parame
 
 - **Physique Bezier** : Parametres LLM (temperature, penalties) controles par courbes cubiques
 - **3 niveaux de conscience** : Passif -> Adaptatif -> Memoire semantique
-- **ESMM** : Orchestration multi-modeles pour extraction de triplets et construction de 0-cochaine epistemique
+- **ESMM** : Orchestration multi-modeles dual-mode (EXPLORE : extraction de triplets + 0-cochaine epistemique ; VERIFY : deliberation contradictoire ASSESS/CHALLENGE/ADJUDICATE pour verification factuelle)
 - **Attestation on-chain** : Consensus signe ancre sur Solana via programme Anchor (Phase 1 MVP)
 
 ## Prerequis
@@ -152,7 +152,7 @@ EPP_Verdict/
 │   └── static/index.html   # Interface web
 ├── services/
 │   ├── consciousness/      # Metriques, adaptation, memoire
-│   ├── esmm/               # Protocole ESMM Phase 1-3
+│   ├── esmm/               # Protocole ESMM dual-mode (EXPLORE + VERIFY)
 │   ├── providers/          # Abstraction multi-providers (Ollama, Anthropic, OpenAI)
 │   └── solana/             # Integration Solana (config, bridge, client, frame)
 ├── programs/
@@ -161,10 +161,10 @@ EPP_Verdict/
 ├── cli/
 │   └── epp_cli.py          # CLI EPP (ask, submit, query, frame, graph)
 ├── database/
-│   ├── engine.py           # ISpaceDB (~80 methodes)
+│   ├── engine.py           # ISpaceDB (~100 methodes)
 │   ├── pool.py             # Pool connexions async, cache LRU, concurrency limiter
 │   ├── graph_delta.py      # GraphDelta + KappaCalculator (Ollivier + Jaccard)
-│   └── schema.sql          # 23 tables SQLite
+│   └── schema.sql          # 24 tables SQLite
 ├── core/physics/bezier.py  # Moteur trajectoires
 ├── scripts/esmm_cli.py     # CLI ESMM
 ├── tools/                  # Utilitaires (hydrate/migrate embeddings)
@@ -193,7 +193,7 @@ python -m cli.epp_cli graph stats
 
 ## Tests
 
-**548 passed, 0 failed, 11 skipped** (16 fevrier 2026)
+**663 passed, 0 failed, 11 skipped** (20 fevrier 2026)
 
 ```bash
 # Executer tous les tests

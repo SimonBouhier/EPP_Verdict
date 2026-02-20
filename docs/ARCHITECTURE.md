@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-02-16
+**Dernière mise à jour** : 2026-02-20
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -14,16 +14,35 @@
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `orchestrator.py` | Pilote les runs ESMM (cycles, timeouts, checkpoints) | ✅ Fonctionnel, couplé Lyra |
-| `cycle_manager.py` | Exécution des 3 types de cycles | ✅ Fonctionnel |
-| `cycle_prompts.py` | Prompts DIVERGENT / DEBATE / META (anglais, Phase 4.8) | ✅ Fonctionnel |
-| `triplet_extractor.py` | Pipeline complet extraction → validation → consensus | ✅ Fonctionnel |
+| `orchestrator.py` | Pilote les runs ESMM dual-mode (EXPLORE: divergent→debate→meta, VERIFY: assess→challenge→adjudicate). Propagation context inter-phases VERIFY, `_verify_model_verdicts` accumulator. | ✅ Fonctionnel |
+| `cycle_manager.py` | Exécution des 6 types de cycles. `_query_models_isolated()` (isolation épistémique CHALLENGE, rotation circulaire). `_extract_verdicts_from_responses()` (routage verdict → consensus). | ✅ Fonctionnel |
+| `cycle_prompts.py` | Prompts dual-mode : DIVERGENT/DEBATE/META (EXPLORE) + ASSESS/CHALLENGE/ADJUDICATE (VERIFY), anglais | ✅ Fonctionnel |
+| `triplet_extractor.py` | Pipeline complet extraction → validation → consensus. `_parse_verdict_response()` pour mode VERIFY. | ✅ Fonctionnel |
+| `verdict_encoder.py` | Encodage verdict → triplets (claim→verdict→SUPPORTED/REFUTED, +evidence, +reasoning). Réutilise la pipeline de cristallisation. | ✅ Fonctionnel |
 | `triplet_validator.py` | Validation Pydantic, détection patterns invalides | ✅ Fonctionnel |
-| `consensus_engine.py` | Vote 2 passes (hash exact + semantic merge), normalize_triplet(), ambiguity detection, ConsensusResult (vote_entropy, semantic_dispersion) | ✅ Fonctionnel |
+| `relation_vocabulary.py` | Source unique de vérité : 11 groupes de relations synonymes (superset CE 10 + FM 6). Exports : `build_synonym_map()`, `get_canonical()`, `are_relations_compatible()`. Flag `use_legacy_relation_groups` pour déploiement progressif. | ✅ Fonctionnel |
+| `consensus_engine.py` | Vote 2 passes (hash exact + semantic merge), normalize_triplet(), ambiguity detection, ConsensusResult (vote_entropy, semantic_dispersion). Relations via relation_vocabulary.py (flag-conditioned). | ✅ Fonctionnel |
 | `response_deduplicator.py` | Déduplication sémantique des réponses (embedding cosine) | ✅ Fonctionnel |
 | `cochain_builder.py` | Signature 5D normalisée, typage épistémique | ✅ Fonctionnel |
 | `gap_detector.py` | Concepts isolés, triplets instables, ponts manquants | ✅ Fonctionnel |
 | `coverage_analyzer.py` | Shannon entropy, métriques de couverture | ✅ Fonctionnel |
+
+**Dual-Mode ESMM** (2026-02-20) :
+
+Le pipeline ESMM supporte deux modes d'opération, auto-détectés par `classify_input()` :
+
+| Mode | Séquence de cycles | Usage |
+|------|-------------------|-------|
+| **EXPLORE** (défaut) | DIVERGENT → DEBATE → META | Exploration sémantique ouverte |
+| **VERIFY** | ASSESS → CHALLENGE → ADJUDICATE | Vérification factuelle d'une claim |
+
+VERIFY impose :
+
+- `cycles_per_type = {1, 1, 1}` (chaque cycle query tous les modèles)
+- Pas de convergence gaps ni d'adaptation (séquence fixe)
+- Isolation épistémique : ASSESS = modèles isolés, CHALLENGE = rotation circulaire (modèle[i] voit uniquement verdict de modèle[(i+1)%N]), ADJUDICATE = synthèse (tous verdicts visibles)
+- Verdict triplets routés via `compute_consensus()` pour agreement_ratio réel
+- `consensus_meta.verify` enrichi post-cristallisation : `final_verdict`, `verdict_confidence`, `model_verdicts`, `evidence_corpus` (triplets sub-consensus, cap 20)
 
 ### Provider Layer (Phase 0.1 — fonctionnel)
 
@@ -61,10 +80,10 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph (+ esmm_config param) | ✅ Fonctionnel |
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. Propagation `esmm_config` via 4-tuple return. Enrichissement post-cristallisation : `final_verdict`, `evidence_corpus` (sub-consensus, ADR-010). | ✅ Fonctionnel |
 | `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
 | `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
-| `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7) | ✅ Fonctionnel |
+| `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7). `InputType` enum + `classify_input()` auto-détection EXPLORE/VERIFY. | ✅ Fonctionnel |
 | `services/esmm/post_crystallization.py` | Hook track record + tier transitions + diversity bonus (D8, R2) | ✅ Fonctionnel |
 | `services/providers/mock_provider.py` | MockProvider + make_synthetic_triplets() (D10) | ✅ Fonctionnel |
 | `services/providers/base.py` | + infer_architecture_family() pour mesure diversité | ✅ Fonctionnel |
@@ -192,7 +211,7 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 
 ### Architecture Decision Records (Phase 3.3+)
 
-9 ADR actifs dans `docs/adr/` :
+10 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -206,6 +225,7 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | ADR-008 | Stratégie auth submitter Solana (keypair, devnet guard) | Actif |
 | ADR-009 | Language Neutrality in ESMM Protocol | Actif |
 | ADR-010 | Traçabilité méthodologique du consensus (consensus_meta) | Actif |
+| ADR-011 | Réconciliation lexicale par empreinte sémantique (Semantic Fingerprinting) | Actif (v2) |
 
 ### Phase 4 — Corrections systématiques (2026-02-15)
 
@@ -281,8 +301,13 @@ triplet_extractor.py
   ├── multi_provider_rotator.py  ← provider-agnostique
   ├── triplet_validator.py
   ├── consensus_engine.py  ← normalize_triplet(), model_weights
+  │     └── relation_vocabulary.py  ← source unique de vérité relations
   ├── response_deduplicator.py  ← embedding cosine dedup
+  ├── verdict_encoder.py  ← verdict → triplets (VERIFY mode)
   └── prompts.py
+
+fingerprint_match.py
+  └── relation_vocabulary.py  ← source unique de vérité relations
 
 engine.py (ISpaceDB)
   ├── pool.py

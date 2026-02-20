@@ -132,13 +132,21 @@ class RelationNormalizer:
 _normalizer_instance: Optional[RelationNormalizer] = None
 
 
-async def get_relation_normalizer() -> RelationNormalizer:
+async def get_relation_normalizer(db=None) -> RelationNormalizer:
     """
     Retourne l'instance singleton du normaliseur.
+
+    If db is explicitly provided and differs from the current instance's db,
+    the singleton is invalidated and recreated with the new db.
+    When db is None, falls back to get_db() (config-based default).
     """
     global _normalizer_instance
+    if db is not None and _normalizer_instance is not None:
+        if _normalizer_instance.db is not db:
+            _normalizer_instance = None
     if _normalizer_instance is None:
-        db = await get_db()
+        if db is None:
+            db = await get_db()
         _normalizer_instance = RelationNormalizer(db)
     return _normalizer_instance
 

@@ -112,8 +112,11 @@ class ESMMRunConfig:
     build_cochain: bool = True
     detect_gaps: bool = True
     adaptive_cycles: bool = True
-    max_total_cycles: int = 20
+    max_total_cycles: int = 9  # ~3 phases × 3 iterations
     max_duration_hours: float = 24.0
+    # Dual-mode: VERIFY support
+    input_mode: str = "explore"               # "explore" or "verify"
+    original_claim: Optional[str] = None      # Full claim text for VERIFY mode
 
 
 @dataclass
@@ -174,6 +177,8 @@ class ESMMRunResult:
     semantic_dispersion: Optional[float] = None
     triplets_before_consensus: int = 0
     triplets_after_consensus: int = 0
+    # ADR-011-v2: reconciliation metadata
+    reconciliation_meta: Optional[Dict] = None
 
 
 # ============================================================================
@@ -217,11 +222,23 @@ class ESMMOrchestrator:
         self._run_id: Optional[int] = None
         self._collected_triplets: List = []
 
+        # ADR-011-v2: Semantic Fingerprinting state
+        self._raw_model_triplets: Dict[str, List] = {}
+        self._final_consensus_triplets: Optional[List] = None
+        self._reconciliation_meta: Optional[Dict] = None
+        self._model_weights: Optional[Dict[str, float]] = None
+
+        # Convergence detection: previous gap signature
+        self._prev_gap_signature: Optional[tuple] = None
+
         # Statistiques accumulees
         self._stats = {
             "divergent": 0,
             "debate": 0,
             "meta": 0,
+            "assess": 0,
+            "challenge": 0,
+            "adjudicate": 0,
             "total_cycles": 0,
             "total_triplets": 0,
             "triplets_injected": 0,
@@ -262,6 +279,9 @@ class ESMMOrchestrator:
 
             # Phase 2: Execution des cycles
             await self.execute_cycles(run_id)
+
+            # Phase 2.5: ADR-011-v2 Semantic Fingerprinting
+            await self.reconcile()
 
             # Phase 3: Finalisation
             return await self.finalize_run(run_id)
@@ -363,9 +383,25 @@ class ESMMOrchestrator:
         # R-2.1.1: Compute Brier-based model weights if not provided
         if model_weights is None:
             model_weights = await self._compute_model_weights()
+        # ADR-011-v2: store weights for reconcile()
+        self._model_weights = model_weights
         cycles_per_type = dict(self.config.cycles_per_type)
 
-        for cycle_type_str in self.config.cycle_sequence:
+        # VERIFY mode: override cycle sequence and cycles_per_type
+        # Each execute_cycle() queries ALL models, so cycles_per_type=1 per phase.
+        cycle_sequence = list(self.config.cycle_sequence)
+        if self.config.input_mode == "verify":
+            cycle_sequence = ["assess", "challenge", "adjudicate"]
+            cycles_per_type = {
+                "assess": 1,
+                "challenge": 1,
+                "adjudicate": 1,
+            }
+
+        # VERIFY state: accumulate per-model verdicts across phases
+        _verify_model_verdicts: Dict[str, str] = {}
+
+        for cycle_type_str in cycle_sequence:
             cycle_type = CycleType(cycle_type_str)
 
             for i in range(cycles_per_type.get(cycle_type_str, 1)):
@@ -398,15 +434,37 @@ class ESMMOrchestrator:
 
                 # Executer le cycle
                 try:
+                    # Build context — VERIFY mode includes original_claim
+                    cycle_context: Dict[str, Any] = {"domain": "general"}
+                    if self.config.input_mode == "verify" and self.config.original_claim:
+                        cycle_context["original_claim"] = self.config.original_claim
+
+                        # CHALLENGE: circular rotation — pass per-model verdicts
+                        if cycle_type_str == "challenge" and _verify_model_verdicts:
+                            cycle_context["_verify_model_verdicts"] = _verify_model_verdicts
+
+                        # ADJUDICATE: synthesis — all verdicts visible
+                        if cycle_type_str == "adjudicate" and _verify_model_verdicts:
+                            verdicts_summary = "; ".join(
+                                f"{m}: {r[:200]}"
+                                for m, r in _verify_model_verdicts.items()
+                            )
+                            cycle_context["all_verdicts"] = verdicts_summary
+
                     result = await self.cycle_manager.execute_cycle(
                         cycle_type=cycle_type,
                         iteration=i + 1,
-                        context={"domain": "general"},
+                        context=cycle_context,
                         model_weights=model_weights,
                     )
 
+                    # VERIFY: capture per-model responses after ASSESS
+                    if self.config.input_mode == "verify" and cycle_type_str == "assess":
+                        for mid, rtxt in result.responses.items():
+                            _verify_model_verdicts[mid] = rtxt
+
                     # Accumuler les statistiques
-                    self._stats[cycle_type_str] += 1
+                    self._stats[cycle_type_str] = self._stats.get(cycle_type_str, 0) + 1
                     self._stats["total_cycles"] += 1
                     self._stats["total_triplets"] += result.triplets_extracted
                     self._state.triplets_extracted += result.triplets_extracted
@@ -435,6 +493,24 @@ class ESMMOrchestrator:
                     if result.consensus_triplets:
                         self._collected_triplets.extend(result.consensus_triplets)
 
+                    # ADR-011-v2: accumulate raw per-model triplets (normalized to dicts)
+                    if result.raw_model_triplets:
+                        for model_id, triplets in result.raw_model_triplets.items():
+                            as_dicts = []
+                            for t in triplets:
+                                if isinstance(t, dict):
+                                    as_dicts.append(t)
+                                elif hasattr(t, '__dict__'):
+                                    as_dicts.append(vars(t))
+                                else:
+                                    as_dicts.append({
+                                        "subject": getattr(t, "subject", ""),
+                                        "relation": getattr(t, "relation", ""),
+                                        "object": getattr(t, "object", ""),
+                                        "confidence": getattr(t, "confidence", 0.0),
+                                    })
+                            self._raw_model_triplets.setdefault(model_id, []).extend(as_dicts)
+
                     logger.info(
                         "[ESMMOrchestrator] Cycle completed",
                         extra={
@@ -454,17 +530,27 @@ class ESMMOrchestrator:
                     self._stats["errors"].append(f"{cycle_type_str}_{i+1}: {str(e)}")
                     continue
 
-                # Detection de lacunes (apres chaque cycle si active)
-                if self.config.detect_gaps:
+                # Detection de lacunes (EXPLORE only — gaps are meaningless in VERIFY)
+                if self.config.detect_gaps and self.config.input_mode != "verify":
                     try:
                         gaps = await self.gap_detector.detect_all_gaps(max_per_type=10)
                         stored = await self.gap_detector.store_gaps(gaps[:20])
                         self._stats["gaps_detected"] += stored
+
+                        # Convergence: if gaps identical to previous cycle, stop
+                        sig = self._gap_signature(gaps)
+                        if self._prev_gap_signature is not None and sig == self._prev_gap_signature:
+                            logger.info(
+                                "[ESMMOrchestrator] Convergence detected — gaps unchanged",
+                                extra={"total_cycles": self._stats["total_cycles"]}
+                            )
+                            return
+                        self._prev_gap_signature = sig
                     except Exception as e:
                         logger.warning(f"[ESMMOrchestrator] Gap detection error: {e}")
 
-                # Adaptation dynamique
-                if self.config.adaptive_cycles:
+                # Adaptation dynamique (EXPLORE only — VERIFY sequence is fixed)
+                if self.config.adaptive_cycles and self.config.input_mode != "verify":
                     try:
                         metrics = await self.coverage_analyzer.compute_metrics()
                         adaptations = self._should_adapt_cycles(metrics)
@@ -487,6 +573,107 @@ class ESMMOrchestrator:
 
                 # Checkpoint
                 await self._save_state()
+
+    async def reconcile(self) -> Optional[Dict]:
+        """ADR-011-v2: Semantic Fingerprinting — EXPAND + MATCH + APPLY.
+
+        Returns reconciliation_meta dict, or None if skipped/failed.
+        Side effect: sets self._final_consensus_triplets if alignment found.
+        Never mutates self._collected_triplets.
+        """
+        from services.esmm.fingerprint_config import load_fingerprint_config
+        from services.esmm.fingerprint_expand import expand_terms, _extract_unique_terms
+        from services.esmm.fingerprint_match import match_fingerprints
+        from services.esmm.fingerprint_apply import build_alignment_table, apply_alignment_to_triplets
+        from services.esmm.consensus_engine import ConsensusEngine
+
+        config = load_fingerprint_config()
+
+        if not config.enabled:
+            self._reconciliation_meta = {"method": "skipped", "reason": "disabled"}
+            return self._reconciliation_meta
+
+        if not self._raw_model_triplets:
+            self._reconciliation_meta = {"method": "skipped", "reason": "no raw model triplets"}
+            return self._reconciliation_meta
+
+        # Count unique terms across all models
+        all_terms = set()
+        for triplets in self._raw_model_triplets.values():
+            all_terms.update(_extract_unique_terms(triplets))
+
+        if len(all_terms) < config.min_unique_terms:
+            self._reconciliation_meta = {
+                "method": "skipped",
+                "reason": f"min_unique_terms not met ({len(all_terms)} < {config.min_unique_terms})",
+            }
+            return self._reconciliation_meta
+
+        try:
+            # Get provider info from cycle_manager
+            if self.cycle_manager:
+                rotator = self.cycle_manager.model_rotator
+                provider_ids = self.cycle_manager.provider_ids
+                provider_to_model = self.cycle_manager.provider_to_model
+            else:
+                # Fallback: use model names as provider IDs
+                rotator = None
+                provider_ids = list(self._raw_model_triplets.keys())
+                provider_to_model = {m: m for m in provider_ids}
+
+            # Phase 1: EXPAND
+            expand_result = await asyncio.wait_for(
+                expand_terms(
+                    model_triplets=self._raw_model_triplets,
+                    rotator=rotator,
+                    provider_ids=provider_ids,
+                    provider_to_model=provider_to_model,
+                    config=config,
+                ),
+                timeout=config.timeout_seconds / 2,
+            )
+
+            # Phase 2: MATCH
+            match_result = await asyncio.wait_for(
+                match_fingerprints(
+                    expand_result=expand_result,
+                    config=config,
+                ),
+                timeout=config.timeout_seconds / 2,
+            )
+
+            # Phase 3: APPLY
+            alignment_table = build_alignment_table(match_result.clusters, match_result.pair_scores)
+
+            if alignment_table.entries:
+                aligned = apply_alignment_to_triplets(self._raw_model_triplets, alignment_table)
+                engine = ConsensusEngine(min_agreement=self.config.min_consensus)
+                consensus = await engine.compute_consensus(aligned, model_weights=self._model_weights)
+                self._final_consensus_triplets = list(consensus.triplets)
+
+            self._reconciliation_meta = {
+                "method": "semantic_fingerprinting",
+                "version": "v1",
+                "terms_fingerprinted": expand_result.terms_fingerprinted,
+                "models_participated": expand_result.models_participated,
+                "clusters_found": len(match_result.clusters),
+                "alignments_applied": len(alignment_table.entries),
+                "expand_duration_ms": expand_result.duration_ms,
+                "match_duration_ms": match_result.duration_ms,
+                "config": {
+                    "merge_threshold": config.merge_threshold,
+                    "matching_algorithm": config.matching_algorithm,
+                },
+            }
+            return self._reconciliation_meta
+
+        except asyncio.TimeoutError:
+            self._reconciliation_meta = {"method": "skipped", "reason": "timeout"}
+            return self._reconciliation_meta
+        except Exception as e:
+            logger.error(f"[ESMMOrchestrator] Fingerprinting failed: {e}")
+            self._reconciliation_meta = {"method": "skipped", "reason": f"error: {e}"}
+            return self._reconciliation_meta
 
     async def finalize_run(self, run_id: int) -> ESMMRunResult:
         """
@@ -569,11 +756,17 @@ class ESMMOrchestrator:
             structural_stability=metrics.structural_stability,
             duration_ms=round(duration_ms, 2),
             errors=self._stats["errors"],
-            consensus_triplets=list(self._collected_triplets),
+            # ADR-011-v2: use fingerprinted consensus if available, else per-cycle
+            consensus_triplets=list(
+                self._final_consensus_triplets
+                if self._final_consensus_triplets is not None
+                else self._collected_triplets
+            ),
             vote_entropy=self._stats.get("vote_entropy", 0.0),
             semantic_dispersion=self._stats.get("semantic_dispersion"),
             triplets_before_consensus=self._stats.get("triplets_before_consensus", 0),
             triplets_after_consensus=self._stats.get("triplets_after_consensus", 0),
+            reconciliation_meta=self._reconciliation_meta,
         )
 
         logger.info(
@@ -692,6 +885,16 @@ class ESMMOrchestrator:
     # ========================================================================
     # HELPERS
     # ========================================================================
+
+    @staticmethod
+    def _gap_signature(gaps: list) -> tuple:
+        """Hashable signature of gaps for convergence detection."""
+        import json
+        parts = sorted(
+            json.dumps({"t": g.gap_type.value, "d": g.details}, sort_keys=True, default=str)
+            for g in gaps
+        )
+        return tuple(parts)
 
     def _check_timeout(self) -> bool:
         """Verifie si le timeout global est atteint."""

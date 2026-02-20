@@ -72,10 +72,18 @@ from .cycle_prompts import (
     DIVERGENT_TEMPLATES,
     DEBATE_TEMPLATES,
     META_TEMPLATES,
+    ASSESS_TEMPLATES,
+    CHALLENGE_TEMPLATES,
+    ADJUDICATE_TEMPLATES,
     get_template,
     get_system_prompt,
     format_triplets_for_prompt
 )
+
+# Dual-mode: Claim Verification (VERIFY)
+from .question_seeder import InputType, classify_input
+from .verdict_encoder import encode_verdict_as_triplets
+from .triplet_extractor import _parse_verdict_response
 from .cycle_manager import (
     ExplorationCycleManager,
     CycleResult,
@@ -105,6 +113,26 @@ from .orchestrator import (
     ESMMRunState,
     run_esmm_protocol,
     resume_esmm_protocol
+)
+
+# Relation Vocabulary — Source unique de vérité (11 groupes)
+from .relation_vocabulary import (
+    RELATION_GROUPS as RELATION_VOCABULARY_GROUPS,
+    build_synonym_map, get_canonical, are_relations_compatible,
+)
+
+# ADR-011-v2: Semantic Fingerprinting
+from .fingerprint_config import FingerprintConfig, load_fingerprint_config
+from .fingerprint_expand import MicroGraph, ExpandResult, build_expand_prompt, parse_expand_response, expand_terms
+from .fingerprint_match import (
+    ClassifiedNeighbor, MatchResult,
+    jaro_winkler_similarity, classify_neighbor,
+    match_neighbor_pair, compute_weighted_overlap,
+    find_connected_components, match_fingerprints,
+)
+from .fingerprint_apply import (
+    AlignmentEntry, AlignmentTable,
+    select_canonical, build_alignment_table, apply_alignment_to_triplets,
 )
 
 __all__ = [
@@ -147,9 +175,16 @@ __all__ = [
     "DIVERGENT_TEMPLATES",
     "DEBATE_TEMPLATES",
     "META_TEMPLATES",
+    "ASSESS_TEMPLATES",
+    "CHALLENGE_TEMPLATES",
+    "ADJUDICATE_TEMPLATES",
     "get_template",
     "get_system_prompt",
     "format_triplets_for_prompt",
+    # Dual-mode: Claim Verification
+    "InputType",
+    "classify_input",
+    "encode_verdict_as_triplets",
     # Phase 3: Cycle Manager
     "ExplorationCycleManager",
     "CycleResult",
@@ -175,4 +210,30 @@ __all__ = [
     "ESMMRunState",
     "run_esmm_protocol",
     "resume_esmm_protocol",
+    # Relation Vocabulary
+    "RELATION_VOCABULARY_GROUPS",
+    "build_synonym_map",
+    "get_canonical",
+    "are_relations_compatible",
+    # ADR-011-v2: Semantic Fingerprinting
+    "FingerprintConfig",
+    "load_fingerprint_config",
+    "MicroGraph",
+    "ExpandResult",
+    "build_expand_prompt",
+    "parse_expand_response",
+    "expand_terms",
+    "ClassifiedNeighbor",
+    "MatchResult",
+    "jaro_winkler_similarity",
+    "classify_neighbor",
+    "match_neighbor_pair",
+    "compute_weighted_overlap",
+    "find_connected_components",
+    "match_fingerprints",
+    "AlignmentEntry",
+    "AlignmentTable",
+    "select_canonical",
+    "build_alignment_table",
+    "apply_alignment_to_triplets",
 ]

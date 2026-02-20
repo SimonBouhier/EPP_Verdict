@@ -4,6 +4,121 @@
 
 ---
 
+## [2026-02-20] Polissage Final — VERIFY Mode Hackathon-Ready (P1-P4)
+
+- pipeline.py: `_extract_triplets_from_question()` retourne 4-tuple incluant `esmm_config`
+  (était 3-tuple → `esmm_config` perdu → `pipeline_mode` affichait "explore" au lieu de "verify")
+- pipeline.py: `_build_consensus_meta()` écrit `pipeline_mode=verify` + section `verify`
+  (original_claim, final_verdict, verdict_confidence, model_verdicts) — ADR-010
+- pipeline.py: enrichissement post-cristallisation — `final_verdict` + `evidence_corpus`
+  (triplets sub-consensus preservés dans consensus_meta, cap 20 items)
+- cycle_manager.py: log INFO explicatif pour CHALLENGE (0/0 consensus est by design,
+  counter-arguments alimentent ADJUDICATE)
+- scenario_4_live_ollama.py: display conditionnel VERIFY (verdict box, split, evidence corpus,
+  phases, methodology) — EXPLORE display preservé
+- scenario_4_live_ollama.py: fix display Dissent — `v` (dict verify) → `att.object` (texte verdict) ;
+  renommage variable shadowed `v` → `vname` dans split_parts
+- 4 tests RED-GREEN-FIX. Baseline: 659 → 663 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-20] A1-A3 — Corrections runtime VERIFY mode (post-Scenario 4 live)
+
+- orchestrator.py: `cycles_per_type` fixé à `{assess: 1, challenge: 1, adjudicate: 1}` (était n_models,
+  causant n×n queries ASSESS au lieu de n)
+- orchestrator.py: skip convergence gaps + skip adaptation en mode VERIFY (les gaps sont un concept
+  EXPLORE ; convergence prématurée empêchait CHALLENGE et ADJUDICATE d'exécuter)
+- orchestrator.py: propagation context inter-phases — `_verify_model_verdicts` capturés après ASSESS,
+  passés à CHALLENGE (per-model isolation) et ADJUDICATE (synthèse all_verdicts)
+- cycle_manager.py: `_query_models_isolated()` — isolation épistémique CHALLENGE, rotation circulaire
+  (modèle[i] voit uniquement le verdict de modèle[(i+1) % N], directive §4.2 / ADR-011-v2 §2.2)
+- cycle_manager.py: `_extract_verdicts_from_responses()` — routage des verdicts par
+  `_parse_verdict_response()` + `encode_verdict_as_triplets()` → `compute_consensus()`
+  (agreement_ratio réel, vote_entropy, pas de construction manuelle ConsensusTriplet)
+- scenario_4_live_ollama.py: affichage `pipeline_mode` + section `verify` dans consensus_meta
+- 4 tests RED-GREEN-FIX. Baseline: 655 → 659 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-20] Dual-Mode ESMM — Claim Verification (VERIFY mode, S1-S7)
+
+- Nouveau enum `CycleType` (str, Enum) : 6 valeurs — DIVERGENT/DEBATE/META (EXPLORE) +
+  ASSESS/CHALLENGE/ADJUDICATE (VERIFY)
+- Nouveau enum `InputType` : EXPLORE (défaut) ou VERIFY, auto-détecté par `classify_input()`
+  dans question_seeder.py (détection mots-clés : "is it true", "verify", "fact-check", etc.)
+- cycle_prompts.py: 3 SYSTEM_PROMPTS + 6 templates VERIFY (ASSESS ×2, CHALLENGE ×2, ADJUDICATE ×2)
+- triplet_extractor.py: `_parse_verdict_response()` — extraction verdict/confidence/evidence/reasoning
+  depuis JSON ou texte libre LLM (fallback regex robuste)
+- Nouveau module `verdict_encoder.py` : `encode_verdict_as_triplets()` — encode un verdict en triplets
+  réutilisant la pipeline de cristallisation (claim → verdict → SUPPORTED/REFUTED/UNCERTAIN,
+  evidence triplet, reasoning triplet)
+- orchestrator.py: `ESMMRunConfig.input_mode` (explore/verify) + `original_claim` ;
+  séquence VERIFY = ASSESS→CHALLENGE→ADJUDICATE
+- pipeline.py: auto-détection du mode via `classify_input()`, propagation `input_mode`
+  et `original_claim` dans `ESMMRunConfig`
+- pipeline.py: `_build_consensus_meta()` enrichi section `verify` (original_claim, final_verdict,
+  verdict_confidence)
+- attestation.py: `epistemic_type="verdict"` pour les attestations VERIFY
+- `__init__.py`: exports verdict_encoder, `_parse_verdict_response`, InputType, classify_input
+- 19 tests RED-GREEN-FIX. Baseline: 636 → 655 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-20] Refactoring — relation_vocabulary.py (source unique de vérité)
+
+- Nouveau module `relation_vocabulary.py` : 11 groupes, superset consensus_engine (10) +
+  fingerprint_match (6). Résolution conflits relies_on→DEPENDS_ON, produces∈CAUSES (ADR-006).
+- `consensus_engine.py` : `_RELATION_GROUPS` local remplacé par import depuis relation_vocabulary
+  (legacy snapshot conservé sous flag)
+- `fingerprint_match.py` : `RELATION_GROUPS` local remplacé par import depuis relation_vocabulary
+  (legacy snapshot conservé sous flag)
+- Flag `use_legacy_relation_groups` dans `config.yaml` pour déploiement progressif (true=legacy)
+- 29 tests ajoutés (19 relation_vocabulary + 10 fingerprint_match). Baseline: 595 → 624 passed, 0 failed
+- 10 CI gate hash stability tests (ADR-006) verrouillent les hashes SHA-256 existants
+
+---
+
+## [2026-02-18] ADR-011-v2 — Corrections audit Semantic Fingerprinting (C1-C5)
+
+- fingerprint_match.py: suppression import fantôme depuis consensus_engine, 3 fonctions
+  self-contained (`_normalize_entity`, `_normalize_relation` avec RELATION_GROUPS, `_cosine_similarity`)
+- orchestrator.py: fix attribut `self.cycle_manager.rotator` → `self.cycle_manager.model_rotator`
+- fingerprint_expand.py: réécriture boucle expand_terms — un appel batch_sequential_providers
+  par provider au lieu d'un seul appel global (zéro contamination inter-modèles structurelle)
+- fingerprint_expand.py: format questions aligné sur pattern triplet_extractor
+  `[[{"role": "user", "content": prompt}]]`
+- orchestrator.py: normalisation raw_model_triplets en dicts au point d'accumulation
+  (isinstance/vars/__dict__, défense contre ExtractedTriplet non-dict)
+- fingerprint_apply.py: filet de sécurité `hasattr(new_t, "subject")` pour objets non-dict
+- 7 tests ajoutés (3 normalisation C1, 1 assertion single-provider C3, 2 objets C5, 1 accumulation)
+- Baseline: 590 → 595 passed, 0 failed, 11 skipped
+
+---
+
+## [2026-02-18] ADR-011-v2 — Semantic Fingerprinting (implémentation initiale)
+
+- 4 nouveaux modules : fingerprint_config.py (~60 lignes), fingerprint_expand.py (~120 lignes),
+  fingerprint_match.py (~180 lignes), fingerprint_apply.py (~90 lignes)
+- fingerprint_config.py: FingerprintConfig dataclass + load_fingerprint_config() depuis config.yaml
+- fingerprint_expand.py: MicroGraph/ExpandResult, build_expand_prompt(), parse_expand_response(),
+  expand_terms() async — chaque modèle décrit SES propres termes (zéro contamination)
+- fingerprint_match.py: Jaro-Winkler (rapidfuzz), classify_neighbor (Strong Anchor 2.0 / Weak 1.0),
+  match_neighbor_pair (cascade relation-aware), compute_weighted_overlap, Union-Find components
+- fingerprint_apply.py: select_canonical (fréquence → longueur → alpha), build_alignment_table,
+  apply_alignment_to_triplets (S/R/O, sans mutation input)
+- triplet_extractor.py: ExtractionResult.raw_model_triplets exposé
+- cycle_manager.py: CycleResult.raw_model_triplets propagé
+- orchestrator.py: accumulation bruts cross-cycle, reconcile() publique (EXPAND → MATCH → APPLY),
+  `_final_consensus_triplets` (jamais mutation `_collected_triplets`), `reconciliation_meta`
+- orchestrator.py: ESMMRunResult.reconciliation_meta, run() appelle reconcile() entre execute/finalize
+- pipeline.py: appel explicite reconcile(), _build_consensus_meta enrichi section reconciliation
+- config.yaml: section esmm.fingerprint (9 clés)
+- __init__.py: exports des 4 modules
+- requirements.txt: rapidfuzz ajouté
+- 37 tests RED-GREEN-FIX. Baseline: 553 → 590 passed, 0 failed, 11 skipped
+
+---
+
 ## [2026-02-17] Phase 1.2 — Fix désérialiseur on-chain + tests relecture
 
 - client.py: fix _deserialize_attestation_account() — ajout champ last_revalidated

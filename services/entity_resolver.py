@@ -228,13 +228,21 @@ class EntityResolver:
 _resolver_instance: Optional[EntityResolver] = None
 
 
-async def get_entity_resolver() -> EntityResolver:
+async def get_entity_resolver(db=None) -> EntityResolver:
     """
     Retourne l'instance singleton du resolveur.
+
+    If db is explicitly provided and differs from the current instance's db,
+    the singleton is invalidated and recreated with the new db.
+    When db is None, falls back to get_db() (config-based default).
     """
     global _resolver_instance
+    if db is not None and _resolver_instance is not None:
+        if _resolver_instance.db is not db:
+            _resolver_instance = None
     if _resolver_instance is None:
-        db = await get_db()
+        if db is None:
+            db = await get_db()
         _resolver_instance = EntityResolver(db)
     return _resolver_instance
 
