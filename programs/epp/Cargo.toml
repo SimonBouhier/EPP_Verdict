@@ -1,16 +1,20 @@
-[workspace]
-members = [
-    "programs/*"
-]
+[package]
+name = "epp"
+version = "0.1.0"
+description = "Epistemic Proof Program - On-chain attestations from multi-LLM consensus"
+edition = "2021"
 
-resolver = "2"
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "epp"
 
-[profile.release]
-overflow-checks = true
-lto = "fat"
-codegen-units = 1
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
 
-[profile.release.build-override]
-opt-level = 3
-incremental = false
-codegen-units = 1
+[dependencies]
+anchor-lang = "0.32.1"
