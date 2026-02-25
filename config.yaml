@@ -70,3 +70,27 @@ embeddings:
 # ============================================================================
 solana:
   cluster: "devnet"                    # "devnet" ou "localnet" — JAMAIS mainnet
+
+# ============================================================================
+# RWA — Sources autoritaires externes (ADR-012)
+# Credentials via env vars UNIQUEMENT — jamais en clair dans ce fichier.
+# ============================================================================
+rwa:
+  sources:
+    opensanctions:
+      enabled: true
+      ttl_hours: 24
+      # OPENSANCTIONS_ENDPOINT env var (défaut: http://localhost:8080)
+    ofac_sdn:
+      enabled: false
+      ttl_hours: 24
+      # OFAC_API_KEY env var (requis si enabled: true)
+      # OFAC_ENDPOINT env var (optionnel, défaut API publique)
+    eu_cfsp:
+      enabled: false
+      ttl_hours: 24
+      # EU_CFSP_ENDPOINT env var (optionnel, défaut sanctions.io)
+    verra_vcs:
+      enabled: false
+      ttl_hours: 24
+      # Pas de credentials — API publique Verra Registry

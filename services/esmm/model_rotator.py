@@ -506,8 +506,8 @@ async def get_model_rotator(
 
     if _rotator_instance is None:
         import os
-        actual_url = base_url or os.environ.get("LYRA_OLLAMA_URL", "http://localhost:11434")
-        actual_ctx = num_ctx or int(os.environ.get("LYRA_NUM_CTX", "8192"))
+        actual_url = base_url or os.environ.get("EPP_OLLAMA_URL", "http://localhost:11434")
+        actual_ctx = num_ctx or int(os.environ.get("EPP_NUM_CTX", "8192"))
 
         _rotator_instance = ModelRotator(
             base_url=actual_url,

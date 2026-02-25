@@ -27,19 +27,12 @@ from services.solana.config import SolanaConfig, SolanaCluster
 from services.solana.client import EppSolanaClient
 from services.solana.metrological_frame import (
     MetrologicalFrame,
-    create_blockchain_tps_frame,
-    create_general_knowledge_frame,
+    PREDEFINED_FRAMES,
 )
 from services.esmm.attestation import (
     EpistemicAttestation, Signature5D, ModelVote, crystallize,
 )
 
-
-# === PREDEFINED FRAMES ===
-PREDEFINED_FRAMES = {
-    "blockchain_tps_v1.0": create_blockchain_tps_frame,
-    "general_knowledge_v1.0": create_general_knowledge_frame,
-}
 
 
 def get_frame(frame_id: str) -> Optional[MetrologicalFrame]:
@@ -392,6 +385,98 @@ def frame_show(frame_id: str, output: str):
         click.echo(f"    Target authority: {f.governance.target_authority}")
         click.echo()
         click.echo(f"  Frame hash: {f.compute_frame_hash()}")
+
+
+@cli.command("verify-rwa")
+@click.option(
+    "--source",
+    required=True,
+    type=click.Choice(["opensanctions", "ofac_sdn", "eu_cfsp", "verra_vcs"]),
+    help="Source autoritaire à interroger (ADR-012)",
+)
+@click.option("--entity", required=True, help="Entité à vérifier (nom ou numéro de série)")
+@click.option(
+    "--frame",
+    required=True,
+    type=click.Choice([
+        "compliance_sanctions_v1.0",
+        "carbon_credits_vcs_v1.0",
+        "rwa_identity_v1.0",
+    ]),
+    help="Frame métrologique applicable",
+)
+@click.pass_context
+def verify_rwa(ctx: click.Context, source: str, entity: str, frame: str) -> None:
+    """
+    Vérification déterministe d'un claim via source autoritaire externe (ADR-012).
+
+    Bypass complet de l'ESMM — la source fait foi.
+    Le source_anchor (SHA-256 de la réponse brute) est ancré on-chain.
+
+    \b
+    Exemples :
+      epp verify-rwa --source opensanctions --entity "Acme Corp" --frame compliance_sanctions_v1.0
+      epp verify-rwa --source verra_vcs --entity "VCU-123456" --frame carbon_credits_vcs_v1.0
+    """
+    asyncio.run(_run_verify_rwa(ctx, source, entity, frame))
+
+
+async def _run_verify_rwa(
+    ctx: click.Context, source: str, entity: str, frame: str
+) -> None:
+    from database.engine import ISpaceDB
+    from database.pool import ConnectionPool
+    from services.esmm.pipeline import run_pipeline
+    from services.esmm.orchestrator import ESMMRunConfig, ClaimNature
+    from services.esmm.source_anchor_builder import SourceAnchorSpec
+
+    db_path = ctx.obj.get("db_path", "data/epp.db") if ctx.obj else "data/epp.db"
+
+    # Construire query selon la source
+    query: dict = {"name": entity}
+    if source == "verra_vcs":
+        # serial ou project_id selon le format de l'entité
+        if entity.upper().startswith("VCU-"):
+            query = {"serial": entity}
+        else:
+            query = {"project_id": entity}
+
+    spec = SourceAnchorSpec(
+        source_id=source,
+        frame_id=frame,
+        query=query,
+    )
+    esmm_config = ESMMRunConfig(
+        models=[],
+        claim_nature=ClaimNature.DETERMINISTIC,
+        source_anchor_spec=spec,
+    )
+
+    click.echo(f"[verify-rwa] Source: {source} | Entity: {entity} | Frame: {frame}")
+    click.echo("[verify-rwa] Fetching from authoritative source...")
+
+    try:
+        async with ISpaceDB(db_path) as db:
+            result = await run_pipeline(
+                question=entity,
+                db=db,
+                esmm_config=esmm_config,
+                metrological_frame=frame,
+            )
+
+        if result.attestations:
+            att = result.attestations[0]
+            click.echo(f"\n[verify-rwa] Result: {att.object} (score: {att.consensus_score:.3f})")
+            click.echo(f"[verify-rwa] Source anchor: {att.source_anchor}")
+            click.echo(f"[verify-rwa] Confidence tier: {att.confidence_tier}")
+        else:
+            click.echo("[verify-rwa] No attestation produced.")
+            if result.errors:
+                for err in result.errors:
+                    click.echo(f"  Error: {err}", err=True)
+    except Exception as exc:
+        click.echo(f"[verify-rwa] Failed: {exc}", err=True)
+        raise SystemExit(1)
 
 
 def main():

@@ -643,6 +643,7 @@ def _parse_verdict_response(
             "confidence": 0.0,
             "evidence": [],
             "reasoning": "Failed to parse LLM response as JSON",
+            "claim_type": "empirical",
             "triplets": [],
         }
 
@@ -650,6 +651,14 @@ def _parse_verdict_response(
     confidence = float(parsed.get("confidence", 0.0))
     evidence = parsed.get("evidence", [])
     reasoning = parsed.get("reasoning", "")
+
+    # Extract and normalize claim_type
+    claim_type = parsed.get("claim_type", "empirical")
+    valid_claim_types = {"empirical", "definitional", "normative", "speculative"}
+    if claim_type.lower() not in valid_claim_types:
+        claim_type = "empirical"
+    else:
+        claim_type = claim_type.lower()
 
     # Normalize verdict value
     valid_verdicts = {"SUPPORTED", "CONTESTED", "INSUFFICIENT_EVIDENCE"}
@@ -684,6 +693,7 @@ def _parse_verdict_response(
         "confidence": confidence,
         "evidence": evidence,
         "reasoning": reasoning,
+        "claim_type": claim_type,
         "triplets": triplets,
     }
 

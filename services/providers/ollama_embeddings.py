@@ -203,8 +203,8 @@ async def get_ollama_embedding_provider(
     Get or create singleton Ollama embedding provider.
 
     Environment variables:
-        LYRA_OLLAMA_URL: Ollama base URL (default: http://localhost:11434)
-        LYRA_EMBEDDING_MODEL: Embedding model (default: nomic-embed-text)
+        EPP_OLLAMA_URL: Ollama base URL (default: http://localhost:11434)
+        EPP_EMBEDDING_MODEL: Embedding model (default: nomic-embed-text)
 
     Args:
         base_url: Override base URL
@@ -219,9 +219,9 @@ async def get_ollama_embedding_provider(
         import os
 
         actual_url = base_url or os.environ.get(
-            "LYRA_OLLAMA_URL", "http://localhost:11434"
+            "EPP_OLLAMA_URL", "http://localhost:11434"
         )
-        actual_model = model or os.environ.get("LYRA_EMBEDDING_MODEL", "nomic-embed-text")
+        actual_model = model or os.environ.get("EPP_EMBEDDING_MODEL", "nomic-embed-text")
 
         logger.info(f"Initializing OllamaEmbeddingProvider with model: {actual_model}")
         _ollama_embedding_instance = OllamaEmbeddingProvider(

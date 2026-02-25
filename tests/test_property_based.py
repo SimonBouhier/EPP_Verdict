@@ -83,9 +83,3 @@ class TestConfidenceTierRoundtrip:
         for u8_val, tier in CONFIDENCE_TIER_REVERSE.items():
             assert tier in self.CANONICAL_TIERS, f"Reverse maps {u8_val} to non-canonical '{tier}'"
 
-    def test_legacy_tiers_backward_compat(self):
-        """Legacy tiers (low/medium/high) sont dans MAP mais pas dans REVERSE."""
-        legacy = {"low": 0, "medium": 1, "high": 2}
-        for old_tier, expected_u8 in legacy.items():
-            assert CONFIDENCE_TIER_MAP[old_tier] == expected_u8
-            assert old_tier not in CONFIDENCE_TIER_REVERSE.values()

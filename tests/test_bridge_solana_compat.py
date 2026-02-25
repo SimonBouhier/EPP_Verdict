@@ -15,7 +15,7 @@ def test_score_scale_matches_anchor():
     """SCORE_SCALE Python == SCORE_SCALE Rust."""
     from services.solana.bridge import SCORE_SCALE
 
-    with open("programs/epp/programs/epp/src/constants.rs") as f:
+    with open("programs/epp/src/constants.rs") as f:
         rust_code = f.read()
     match = re.search(r"SCORE_SCALE.*?=\s*(\d+)", rust_code)
     assert match, "SCORE_SCALE not found in constants.rs"
@@ -28,7 +28,7 @@ def test_max_lengths_match_anchor():
     """MAX_*_LEN Python == Rust constants."""
     from services.solana.bridge import MAX_SUBJECT_LEN, MAX_PREDICATE_LEN, MAX_OBJECT_LEN
 
-    with open("programs/epp/programs/epp/src/constants.rs") as f:
+    with open("programs/epp/src/constants.rs") as f:
         rust_code = f.read()
 
     for name, py_val in [
@@ -97,3 +97,17 @@ def test_string_roundtrip():
         encoded = string_to_fixed_bytes(s, 64)
         decoded = fixed_bytes_to_string(encoded)
         assert decoded == s, f"Roundtrip failed: '{s}' -> '{decoded}'"
+
+
+def test_confidence_tier_map_bijection_with_rust():
+    """Vérifie que CONFIDENCE_TIER_MAP est en bijection stricte avec confidence_tier_to_u8 Rust."""
+    from services.solana.bridge import CONFIDENCE_TIER_MAP
+    rust_values = {"sandbox", "proposition", "validated", "verified"}
+    python_keys = set(CONFIDENCE_TIER_MAP.keys())
+    assert python_keys == rust_values, (
+        f"Désalignement Py↔Rust.\n"
+        f"Clés Python orphelines : {python_keys - rust_values}\n"
+        f"Clés Rust orphelines : {rust_values - python_keys}"
+    )
+    # Bijection des valeurs : 0-3 sans trous
+    assert sorted(CONFIDENCE_TIER_MAP.values()) == [0, 1, 2, 3]

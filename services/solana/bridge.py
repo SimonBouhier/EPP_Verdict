@@ -42,10 +42,6 @@ CONFIDENCE_TIER_MAP = {
     "proposition": 1,
     "validated": 2,
     "verified": 3,
-    # Backward compat
-    "low": 0,
-    "medium": 1,
-    "high": 2,
 }
 
 # Reverse maps for deserialization

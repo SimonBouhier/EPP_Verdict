@@ -150,8 +150,8 @@ class EppSolanaClient:
     def _load_idl(self, idl_path: Optional[str] = None) -> None:
         """Load Anchor IDL for instruction building."""
         if idl_path is None:
-            # Default path relative to programs/epp
-            idl_path = "programs/epp/target/idl/epp.json"
+            # Default path relative to project root
+            idl_path = "target/idl/epp.json"
 
         path = Path(idl_path)
         if not path.exists():
@@ -471,7 +471,7 @@ class EppSolanaClient:
         Query all attestations for a given claim_hash.
         Uses getProgramAccounts with memcmp filter on claim_hash offset.
 
-        # AUDIT_REQUIRED: Verify memcmp offset matches account layout.
+        # AUDIT_CLEARED 2026-02-23 — CLAIM_HASH_OFFSET=41 vérifié vs state.rs (disc8+bump1+submitter32)
         """
         if not _SOLANA_AVAILABLE or self._client is None:
             logger.info(f"MOCK: Would query attestations for claim: {claim_hash[:16]}...")
@@ -508,7 +508,7 @@ class EppSolanaClient:
         Query attestations whose subject field matches.
         Uses getProgramAccounts with memcmp filter on subject offset.
 
-        # AUDIT_REQUIRED: Verify memcmp offset matches account layout.
+        # AUDIT_CLEARED 2026-02-23 — SUBJECT_OFFSET=73 vérifié vs state.rs (disc8+bump1+submitter32+hash32)
         """
         if not _SOLANA_AVAILABLE or self._client is None:
             logger.info(f"MOCK: Would query attestations for subject: {subject}")

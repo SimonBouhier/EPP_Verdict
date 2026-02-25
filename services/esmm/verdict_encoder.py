@@ -33,9 +33,13 @@ def encode_verdict_as_triplets(
     verdict = verdict_response.get("verdict", "INSUFFICIENT_EVIDENCE")
     confidence = float(verdict_response.get("confidence", 0.0))
 
+    # Truncate subject to 64 chars (attestation field limit).
+    # Full claim is preserved in consensus_meta["verify"]["original_claim"].
+    subject = claim[:64]
+
     # 1. Verdict triplet
     triplets.append({
-        "subject": claim,
+        "subject": subject,
         "relation": "verdict",
         "object": verdict,
         "confidence": confidence,
@@ -55,7 +59,7 @@ def encode_verdict_as_triplets(
     reasoning = verdict_response.get("reasoning", "")
     if reasoning:
         triplets.append({
-            "subject": claim,
+            "subject": subject,
             "relation": "reasoning",
             "object": reasoning[:500],  # Truncate long reasoning
             "confidence": confidence,

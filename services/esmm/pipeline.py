@@ -38,6 +38,19 @@ logger = logging.getLogger("esmm.pipeline")
 MAX_QUESTION_LENGTH = 5000
 MAX_FRAME_LENGTH = 2000
 
+# Decidability penalties for VERIFY mode (applied before crystallization)
+VERDICT_PENALTIES = {
+    "SUPPORTED": 1.0,
+    "CONTESTED": 0.65,
+    "INSUFFICIENT_EVIDENCE": 0.45,
+}
+CLAIM_TYPE_PENALTIES = {
+    "empirical": 1.0,
+    "definitional": 0.90,
+    "normative": 0.70,
+    "speculative": 0.75,
+}
+
 
 @dataclass
 class PipelineConfig:
@@ -70,6 +83,151 @@ def _get_default_models() -> List[str]:
         return esmm.get("models", ["mistral:7b", "llama3.1:8b", "qwen2.5:7b"])
     except Exception:
         return ["mistral:7b", "llama3.1:8b", "qwen2.5:7b"]
+
+
+async def _run_deterministic_pipeline(
+    question: str,
+    db: "ISpaceDB",
+    esmm_config: "ESMMRunConfig",
+    config: "PipelineConfig",
+    start_time: float,
+) -> "PipelineResult":
+    """
+    ADR-012 : chemin déterministe — bypass complet de l'ESMM.
+
+    Interroge la source autoritaire via source_anchor_spec, construit une
+    attestation avec consensus_meta.source_anchor_meta, stocke en DB.
+    """
+    from services.esmm.source_anchor_builder import build_source_anchor
+
+    spec = esmm_config.source_anchor_spec
+    errors: List[str] = []
+
+    try:
+        anchor_result = await build_source_anchor(spec)
+    except Exception as exc:
+        logger.error(f"[Pipeline] Deterministic source fetch failed: {exc}")
+        return PipelineResult(
+            run_id=0,
+            question=question,
+            attestations=[],
+            triplets_extracted=0,
+            triplets_attested=0,
+            triplets_injected=0,
+            duration_ms=(time.time() - start_time) * 1000,
+            errors=[str(exc)],
+        )
+
+    # Construire consensus_meta déterministe (ADR-012 + ADR-010 compat)
+    status = anchor_result.normalized_result["status"]
+    score = float(anchor_result.normalized_result.get("score", 0.0))
+    consensus_meta: Dict[str, Any] = {
+        "methodology": {
+            "consensus_method": "deterministic_source_v1",
+            "esmm_invoked": False,
+        },
+        "source_anchor_meta": {
+            "source_id": anchor_result.source_id,
+            "source_version": anchor_result.source_version,
+            "fetched_at": anchor_result.fetched_at,
+            "is_fresh": anchor_result.is_fresh,
+            "snapshot_id": anchor_result.snapshot_id,
+        },
+        "diagnostics": {
+            "sources_checked": spec.min_sources,
+            "concordant_sources": 1,
+            "result": status,
+        },
+    }
+
+    # Signature5D neutre — ESMM non invoqué (B2 FIX : zéros explicites)
+    sig_neutre = Signature5D(
+        agreement=0.0,
+        semantic_consistency=0.0,
+        centrality=0.0,
+        stability=0.0,
+        relation_diversity=0.0,
+    )
+
+    # Triplet synthétique — subject, frame, predicate (P1+P2 FIX ADR-012 audit)
+    # P2 : Verra VCS utilise "serial"/"project_id", pas "name"
+    subject = (
+        spec.query.get("name")
+        or spec.query.get("serial")
+        or spec.query.get("project_id")
+        or question
+    )[:64]
+    frame_id = spec.frame_id or config.metrological_frame
+    # P1 : predicate = metric du frame (pas "sanctions_status" hardcodé)
+    from services.solana.metrological_frame import PREDEFINED_FRAMES as _FRAMES
+    _frame_factory = _FRAMES.get(frame_id)
+    predicate = _frame_factory().metric if _frame_factory else "rwa_status"
+
+    try:
+        attestation = crystallize(
+            subject=subject,
+            predicate=predicate,
+            object_=status,
+            consensus_score=score,
+            model_votes=[],
+            signature_5d=sig_neutre,
+            epistemic_type="deterministic",
+            source_anchor=anchor_result.source_anchor,
+            metrological_frame=frame_id,
+            consensus_meta=consensus_meta,
+        )
+    except Exception as exc:
+        logger.error(f"[Pipeline] Deterministic crystallize failed: {exc}")
+        return PipelineResult(
+            run_id=0,
+            question=question,
+            attestations=[],
+            triplets_extracted=0,
+            triplets_attested=0,
+            triplets_injected=0,
+            duration_ms=(time.time() - start_time) * 1000,
+            errors=[str(exc)],
+        )
+
+    # Stocker l'attestation
+    try:
+        await db.store_attestation(attestation.model_dump())
+    except Exception as exc:
+        logger.warning(f"[Pipeline] Deterministic store_attestation failed: {exc}")
+        errors.append(str(exc))
+
+    # Stocker le snapshot source (disponible après étape 4 — graceful if absent)
+    _store_snap = getattr(db, "store_source_anchor_snapshot", None)
+    if _store_snap is not None:
+        import json as _json
+        import hashlib as _hashlib
+        query_hash = _hashlib.sha256(
+            _json.dumps(spec.query, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        try:
+            await _store_snap({
+                "snapshot_id": anchor_result.snapshot_id,
+                "source_id": anchor_result.source_id,
+                "source_version": anchor_result.source_version,
+                "query_hash": query_hash,
+                "raw_response": _json.dumps(anchor_result.raw_response),
+                "source_anchor": anchor_result.source_anchor,
+                "fetched_at": anchor_result.fetched_at,
+                "frame_id": spec.frame_id,
+            })
+        except Exception as exc:
+            logger.warning(f"[Pipeline] store_source_anchor_snapshot failed: {exc}")
+
+    return PipelineResult(
+        run_id=0,
+        question=question,
+        attestations=[attestation],
+        triplets_extracted=1,
+        triplets_attested=1,
+        triplets_injected=0,  # pas d'injection graphe pour claims déterministes
+        duration_ms=(time.time() - start_time) * 1000,
+        errors=errors,
+    )
 
 
 async def run_pipeline(
@@ -127,6 +285,19 @@ async def run_pipeline(
     try:
         run_logger.phase_start("pipeline", question=question)
 
+        # ADR-012 : chemin déterministe — bypass ESMM
+        if (
+            esmm_config is not None
+            and getattr(esmm_config, "claim_nature", "epistemic") == "deterministic"
+        ):
+            return await _run_deterministic_pipeline(
+                question=question,
+                db=db,
+                esmm_config=esmm_config,
+                config=config,
+                start_time=start_time,
+            )
+
         # Extract triplets via real orchestrator (D1, D2, D3)
         extract_result = await _extract_triplets_from_question(
             question, db, models, run_logger, config.metrological_frame, providers,
@@ -156,6 +327,17 @@ async def run_pipeline(
         # additional debate cycles, or flag for human review. This decision
         # should be made by the open-source community, not by the founding team.
         # See ADR-009 (pending) for context.
+
+        # Fix B: Extract claim_type from consensus triplet, filter before crystallization
+        verify_claim_type = "empirical"
+        if esmm_config and getattr(esmm_config, "input_mode", None) == "verify":
+            for t in extracted_triplets:
+                if t.get("predicate") == "claim_type":
+                    verify_claim_type = t["object"]
+                    break
+            extracted_triplets = [t for t in extracted_triplets if t.get("predicate") != "claim_type"]
+            if consensus_meta and consensus_meta.get("verify"):
+                consensus_meta["verify"]["claim_type"] = verify_claim_type
 
         # F5: dedup within a single run. Cross-run dedup requires DB lookup
         # on attestations.claim_hash — deferred to Phase 2 cleanup.
@@ -193,11 +375,19 @@ async def run_pipeline(
                 for v in triplet.get("votes", [])
             )
 
+            # Fix B: Decidability penalty for VERIFY verdict triplets
+            actual_score = triplet["consensus_score"]
+            if esmm_config and getattr(esmm_config, "input_mode", None) == "verify":
+                if triplet.get("predicate") == "verdict":
+                    v_penalty = VERDICT_PENALTIES.get(triplet["object"], 0.65)
+                    t_penalty = CLAIM_TYPE_PENALTIES.get(verify_claim_type, 1.0)
+                    actual_score = round(actual_score * v_penalty * t_penalty, 4)
+
             attestation = crystallize(
                 subject=triplet["subject"],
                 predicate=triplet["predicate"],
                 object_=triplet["object"],
-                consensus_score=triplet["consensus_score"],
+                consensus_score=actual_score,
                 model_votes=model_votes,
                 signature_5d=Signature5D(**triplet.get("signature_5d", {
                     "agreement": triplet["consensus_score"],
@@ -263,6 +453,15 @@ async def run_pipeline(
                     v.model_id: {"agreed": v.agreed, "confidence": v.confidence}
                     for a in verdict_attestations for v in a.model_votes
                 }
+                # Fix B4: Decidability traceability
+                raw_score = triplet["consensus_score"] if triplet else 0.0
+                consensus_meta["verify"]["raw_consensus_score"] = round(raw_score, 4)
+                consensus_meta["verify"]["decidability_penalty"] = {
+                    "verdict_penalty": VERDICT_PENALTIES.get(best.object, 0.65),
+                    "claim_type_penalty": CLAIM_TYPE_PENALTIES.get(verify_claim_type, 1.0),
+                    "claim_type": verify_claim_type,
+                }
+                consensus_meta["verify"]["adjusted_consensus_score"] = round(best.consensus_score, 4)
 
         # P2: Preserve sub-consensus evidence in verify section (ADR-010)
         if consensus_meta and consensus_meta.get("verify"):

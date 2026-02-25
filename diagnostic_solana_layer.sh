@@ -1,205 +1,381 @@
 #!/usr/bin/env bash
 # ============================================================================
-# DIAGNOSTIC SOLANA LAYER — EPP_Verdict
+# DIAGNOSTIC SOLANA LAYER v2 -- EPP_Verdict
 # ============================================================================
-# BUT : Vérifier que l'architecture Solana est correcte et prête à être
-#        branchée sur un validator réel par un dev Solana.
+# PURPOSE : Verify Solana architecture state + flag known discrepancies
+#            between CHANGELOG claims and actual file state.
 #
-# CE SCRIPT NE TESTE PAS LE DEVNET. Il vérifie les prérequis.
+# VERSION 2 CHANGES vs v1:
+#   - Removed set -euo pipefail (grep returns exit 1 on no match -> killed script)
+#   - Fixed Rust paths (programs/epp/src/ after 24/02 restructuring)
+#   - Added D3: CONFIDENCE_TIER_MAP bijection (known bug post-24/02)
+#   - Added D8: Deserialize integrity (last_revalidated + size assertion)
+#   - Added D11: use_legacy_relation_groups flag + actual active path
+#   - Added D12: VERIFY mode components existence
+#   - Added D13: Bijection test existence
+#   - Fixed skip grep pattern (was too restrictive)
+#   - ASCII-only output (avoids encoding issues on Windows/PowerShell)
 #
-# Usage : bash diagnostic_solana_layer.sh > solana_diagnostic.log 2>&1
+# Usage:
+#   bash diagnostic_solana_layer.sh 2>&1 | tee solana_diagnostic.log
 # ============================================================================
 
-set -euo pipefail
+RUST_SRC="programs/epp/src"
+BRIDGE="services/solana/bridge.py"
+CLIENT="services/solana/client.py"
+CONFIG_PY="services/solana/config.py"
+CONFIG_YAML="config.yaml"
 
 echo "=============================================="
-echo "  DIAGNOSTIC SOLANA LAYER — $(date -Iseconds)"
+echo "  DIAGNOSTIC SOLANA LAYER v2 -- $(date '+%Y-%m-%dT%H:%M:%S')"
 echo "=============================================="
 echo ""
 
 # ----------------------------------------------------------
-# D1 — Inventaire des NotImplementedError (le vrai état)
+# PRE-CHECK: Rust source location
 # ----------------------------------------------------------
-echo "=== D1 — NotImplementedError dans client.py ==="
-echo "Chaque occurrence = une méthode qui n'existe qu'en mock."
+echo "=== PRE-CHECK -- Rust source location ==="
 echo ""
-grep -n "NotImplementedError" services/solana/client.py || echo "  (aucun trouvé — vérifier manuellement)"
-echo ""
-echo "ATTENDU : 3 occurrences (submit_attestation, get_attestation, query_by_claim/subject)"
-echo "SI 0 : Soit implémenté, soit supprimé silencieusement — VÉRIFIER."
-echo ""
+RUST_LIB=$(find . -name "lib.rs" -path "*/epp/*" -not -path "*target/*" 2>/dev/null | head -1)
+RUST_STATE=$(find . -name "state.rs" -path "*/epp/*" -not -path "*target/*" 2>/dev/null | head -1)
+RUST_CONST=$(find . -name "constants.rs" -path "*/epp/*" -not -path "*target/*" 2>/dev/null | head -1)
 
-# ----------------------------------------------------------
-# D2 — Méthode _deserialize_attestation_account (fantôme CHANGELOG)
-# ----------------------------------------------------------
-echo "=== D2 — _deserialize_attestation_account (mentionnée CHANGELOG, existe-t-elle ?) ==="
-echo ""
-grep -rn "_deserialize_attestation_account\|deserialize_attestation" \
-  services/solana/ tests/ || echo "  ABSENT — confirmé fantôme CHANGELOG"
-echo ""
-
-# ----------------------------------------------------------
-# D3 — Cohérence offsets memcmp vs state.rs layout
-# ----------------------------------------------------------
-echo "=== D3 — Vérification offsets memcmp ==="
-echo ""
-echo "--- Layout state.rs (tailles déclarées) ---"
-echo "  discriminator:    8 bytes"
-echo "  bump:             1 byte   -> offset 8"
-echo "  submitter:       32 bytes  -> offset 9"
-echo "  claim_hash:      32 bytes  -> offset 41"
-echo "  subject:         64 bytes  -> offset 73"
-echo "  predicate:       64 bytes  -> offset 137"
-echo "  object:         128 bytes  -> offset 201"
-echo ""
-echo "--- Offsets dans client.py ---"
-grep -n "OFFSET\|offset" services/solana/client.py || echo "  (aucune constante OFFSET trouvée)"
-echo ""
-echo "--- Vérification croisée ---"
-echo "  CLAIM_HASH attendu à offset 8+1+32 = 41"
-CLAIM_OFFSET=$(grep -oP 'CLAIM_HASH_OFFSET\s*=\s*\K\d+' services/solana/client.py 2>/dev/null || echo "")
-if [ -z "$CLAIM_OFFSET" ]; then
-  # Essayer avec l'expression calculée
-  CLAIM_EXPR=$(grep "CLAIM_HASH_OFFSET" services/solana/client.py 2>/dev/null || echo "NON TROUVÉ")
-  echo "  client.py : $CLAIM_EXPR"
+if [ -z "$RUST_LIB" ]; then
+  echo "  CRITICAL: lib.rs not found under any */epp/* path"
+  echo "  Expected: $RUST_SRC/lib.rs"
+  echo "  Run from project root. Anchor restructuring (24/02) moved files."
 else
-  echo "  client.py : CLAIM_HASH_OFFSET = $CLAIM_OFFSET"
-  if [ "$CLAIM_OFFSET" = "41" ]; then
-    echo "  ✅ MATCH"
-  else
-    echo "  ❌ MISMATCH — attendu 41, trouvé $CLAIM_OFFSET"
-  fi
+  echo "  lib.rs       -> $RUST_LIB"
+  echo "  state.rs     -> $RUST_STATE"
+  echo "  constants.rs -> $RUST_CONST"
 fi
 echo ""
-echo "  SUBJECT attendu à offset 8+1+32+32 = 73"
-SUBJECT_EXPR=$(grep "SUBJECT_OFFSET" services/solana/client.py 2>/dev/null || echo "NON TROUVÉ")
-echo "  client.py : $SUBJECT_EXPR"
+
+# ----------------------------------------------------------
+# D1 -- NotImplementedError (mock stubs)
+# ----------------------------------------------------------
+echo "=== D1 -- NotImplementedError in $CLIENT ==="
+echo ""
+COUNT=$(grep -c "NotImplementedError" "$CLIENT" 2>/dev/null)
+COUNT=${COUNT:-0}
+echo "  Found: $COUNT occurrence(s)"
+if [ "$COUNT" = "0" ]; then
+  echo "  OK: All methods implemented (no stubs remaining)"
+else
+  echo "  REVIEW REQUIRED:"
+  grep -n "NotImplementedError" "$CLIENT"
+fi
 echo ""
 
 # ----------------------------------------------------------
-# D4 — Cohérence constantes bridge.py vs constants.rs
+# D2 -- AUDIT marker inventory (REQUIRED vs CLEARED)
 # ----------------------------------------------------------
-echo "=== D4 — Constantes bridge.py vs constants.rs ==="
+echo "=== D2 -- AUDIT marker inventory ==="
+echo ""
+echo "  CHANGELOG 24/02 claims AUDIT_CLEARED on 3 specific markers:"
+echo "    client.py:474  (CLAIM_HASH_OFFSET memcmp)"
+echo "    client.py:511  (SUBJECT_OFFSET memcmp)"
+echo "    lib.rs:113     (PDA seeds)"
+echo ""
+echo "--- AUDIT_REQUIRED in Solana Python files ---"
+grep -n "AUDIT_REQUIRED" "$BRIDGE" "$CLIENT" 2>/dev/null || echo "  (none)"
+echo ""
+echo "--- AUDIT_CLEARED in Solana Python files ---"
+grep -n "AUDIT_CLEARED" "$BRIDGE" "$CLIENT" 2>/dev/null || echo "  (none)"
+echo ""
+echo "--- AUDIT_REQUIRED in Rust files ---"
+if [ -n "$RUST_LIB" ]; then
+  grep -n "AUDIT_REQUIRED" "$RUST_LIB" "$RUST_STATE" "$RUST_CONST" 2>/dev/null || echo "  (none)"
+else
+  echo "  (Rust files not found -- see PRE-CHECK)"
+fi
+echo ""
+echo "--- AUDIT_CLEARED in Rust files ---"
+if [ -n "$RUST_LIB" ]; then
+  grep -n "AUDIT_CLEARED" "$RUST_LIB" "$RUST_STATE" "$RUST_CONST" 2>/dev/null || echo "  (none)"
+else
+  echo "  (Rust files not found -- see PRE-CHECK)"
+fi
+echo ""
+echo "EXPECTED: client.py:474, client.py:511, lib.rs:113 should show AUDIT_CLEARED 2026-02-23"
+echo "IF STILL AUDIT_REQUIRED: CHANGELOG 24/02 claims were not applied to these files -- BUG."
+echo ""
+
+# ----------------------------------------------------------
+# D3 -- CONFIDENCE_TIER_MAP bijection
+# ----------------------------------------------------------
+echo "=== D3 -- CONFIDENCE_TIER_MAP bijection (CRITICAL) ==="
+echo ""
+echo "CHANGELOG 24/02: '3 legacy aliases removed (low/medium/high)'"
+echo "Bijection requirement: exactly 4 keys (sandbox/proposition/validated/verified)"
+echo ""
+echo "--- CONFIDENCE_TIER_MAP in $BRIDGE ---"
+grep -A15 "CONFIDENCE_TIER_MAP" "$BRIDGE" 2>/dev/null | head -20
+echo ""
+echo "--- Checking for legacy aliases ---"
+LEGACY=$(grep -E '"low"|"medium"|"high"' "$BRIDGE" 2>/dev/null | grep -v "#" | grep -v "CONFIDENCE_TIER_REVERSE")
+if [ -n "$LEGACY" ]; then
+  echo "  BUG: Legacy aliases still present:"
+  echo "$LEGACY"
+  echo "  IMPACT: bridge.py accepts 7 keys but state.rs only has 4 arms."
+  echo "          test_confidence_tier_map_bijection_with_rust will FAIL if it tests strict count."
+else
+  echo "  OK: No legacy aliases found -- bijection is strict (4 keys)"
+fi
+echo ""
+
+# ----------------------------------------------------------
+# D4 -- Constants bridge.py vs constants.rs
+# ----------------------------------------------------------
+echo "=== D4 -- Constants bridge.py vs constants.rs ==="
 echo ""
 echo "--- bridge.py ---"
 grep -n "MAX_SUBJECT_LEN\|MAX_PREDICATE_LEN\|MAX_OBJECT_LEN\|SCORE_SCALE" \
-  services/solana/bridge.py | head -10
+  "$BRIDGE" 2>/dev/null | grep "^[0-9].*=" | head -10
 echo ""
 echo "--- constants.rs ---"
-grep -n "MAX_SUBJECT_LEN\|MAX_PREDICATE_LEN\|MAX_OBJECT_LEN\|SCORE_SCALE\|DISCRIMINATOR" \
-  programs/epp/programs/epp/src/constants.rs 2>/dev/null || \
-  grep -n "MAX_SUBJECT_LEN\|MAX_PREDICATE_LEN\|MAX_OBJECT_LEN\|SCORE_SCALE\|DISCRIMINATOR" \
-  constants.rs 2>/dev/null || echo "  (fichier constants.rs non trouvé au chemin attendu)"
+if [ -n "$RUST_CONST" ]; then
+  grep -n "MAX_SUBJECT_LEN\|MAX_PREDICATE_LEN\|MAX_OBJECT_LEN\|SCORE_SCALE\|DISCRIMINATOR_SIZE" \
+    "$RUST_CONST" 2>/dev/null | head -10
+else
+  echo "  (not found -- see PRE-CHECK)"
+fi
 echo ""
-echo "ATTENDU : Valeurs identiques des deux côtés."
-echo ""
-
-# ----------------------------------------------------------
-# D5 — Enum mappings bridge.py vs state.rs
-# ----------------------------------------------------------
-echo "=== D5 — Enum mappings bridge.py vs state.rs ==="
-echo ""
-echo "--- bridge.py epistemic_type ---"
-grep -A5 "EPISTEMIC_TYPE_MAP" services/solana/bridge.py | head -8
-echo ""
-echo "--- state.rs epistemic_type_to_u8 ---"
-grep -A7 "fn epistemic_type_to_u8" programs/epp/programs/epp/src/state.rs 2>/dev/null || \
-  grep -A7 "fn epistemic_type_to_u8" state.rs 2>/dev/null || echo "  (fichier state.rs non trouvé)"
-echo ""
-echo "--- bridge.py confidence_tier ---"
-grep -A5 "CONFIDENCE_TIER_MAP" services/solana/bridge.py | head -7
-echo ""
-echo "--- state.rs confidence_tier_to_u8 ---"
-grep -A6 "fn confidence_tier_to_u8" programs/epp/programs/epp/src/state.rs 2>/dev/null || \
-  grep -A6 "fn confidence_tier_to_u8" state.rs 2>/dev/null || echo "  (fichier state.rs non trouvé)"
+echo "EXPECTED (both sides identical):"
+echo "  MAX_SUBJECT_LEN  = 64"
+echo "  MAX_PREDICATE_LEN = 64"
+echo "  MAX_OBJECT_LEN   = 128"
+echo "  SCORE_SCALE      = 10000"
 echo ""
 
 # ----------------------------------------------------------
-# D6 — Programme ID cohérence
+# D5 -- Enum mappings deep: EPISTEMIC_TYPE + CONFIDENCE_TIER
 # ----------------------------------------------------------
-echo "=== D6 — Programme ID ==="
+echo "=== D5 -- Enum mappings: Python vs Rust ==="
+echo ""
+echo "--- EPISTEMIC_TYPE_MAP in $BRIDGE ---"
+grep -A8 "^EPISTEMIC_TYPE_MAP" "$BRIDGE" 2>/dev/null
+echo ""
+echo "--- epistemic_type_to_u8 in state.rs ---"
+if [ -n "$RUST_STATE" ]; then
+  grep -A10 "fn epistemic_type_to_u8" "$RUST_STATE" 2>/dev/null
+else
+  echo "  (not found)"
+fi
+echo ""
+echo "--- CONFIDENCE_TIER_REVERSE in $BRIDGE (used for deserialization) ---"
+grep -A7 "^CONFIDENCE_TIER_REVERSE" "$BRIDGE" 2>/dev/null
+echo ""
+echo "--- confidence_tier_to_u8 in state.rs ---"
+if [ -n "$RUST_STATE" ]; then
+  grep -A8 "fn confidence_tier_to_u8" "$RUST_STATE" 2>/dev/null
+else
+  echo "  (not found)"
+fi
+echo ""
+echo "EXPECTED: Both Python maps and Rust match arms use identical keys 0-4 / 0-3"
+echo ""
+
+# ----------------------------------------------------------
+# D6 -- Programme ID consistency (4 sources)
+# ----------------------------------------------------------
+echo "=== D6 -- Programme ID consistency ==="
 echo ""
 echo "--- lib.rs ---"
-grep "declare_id" programs/epp/programs/epp/src/lib.rs 2>/dev/null || \
-  grep "declare_id" lib.rs 2>/dev/null || echo "  (non trouvé)"
+if [ -n "$RUST_LIB" ]; then
+  grep "declare_id" "$RUST_LIB" 2>/dev/null
+else
+  echo "  (not found)"
+fi
 echo ""
-echo "--- config.py ---"
-grep "DEFAULT_PROGRAM_ID\|program_id" services/solana/config.py | head -5
+echo "--- Anchor.toml ---"
+grep "epp\s*=" Anchor.toml 2>/dev/null || echo "  (not found)"
+echo ""
+echo "--- $CONFIG_PY ---"
+grep "DEFAULT_PROGRAM_ID\|program_id" "$CONFIG_PY" 2>/dev/null | head -3
 echo ""
 echo "--- ARCHITECTURE.md ---"
-grep "Programme ID\|98Fc" ARCHITECTURE.md 2>/dev/null || echo "  (non trouvé)"
+grep "Programme ID\|98Fc" docs/ARCHITECTURE.md 2>/dev/null | head -3
 echo ""
-echo "ATTENTION : Si lib.rs a un placeholder (EPPxxx...) et config.py a 98Fc...,"
-echo "  c'est normal en dev — le deploy génère l'ID réel."
-echo ""
-
-# ----------------------------------------------------------
-# D7 — Tests existants Solana (ce qui est RÉELLEMENT testé)
-# ----------------------------------------------------------
-echo "=== D7 — Tests Solana existants ==="
-echo ""
-echo "--- Fichiers test Solana ---"
-find tests/ -name "*.py" -exec grep -l "solana\|bridge\|client\|pda\|memcmp\|anchor" {} \; 2>/dev/null || \
-  echo "  (aucun fichier test Solana trouvé dans tests/)"
-echo ""
-echo "--- Tests qui utilisent mock vs tests réels ---"
-grep -rn "MOCK\|mock_mode\|NotImplementedError\|_SOLANA_AVAILABLE" tests/ --include="*.py" 2>/dev/null | head -20
-echo ""
-echo "--- Nombre de tests 'skip' liés Solana ---"
-grep -rn "skip.*solana\|skip.*validator\|skipIf.*SOLANA" tests/ --include="*.py" 2>/dev/null || \
-  echo "  (aucun skip explicite trouvé)"
+echo "EXPECTED: 98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C in all 4 sources"
 echo ""
 
 # ----------------------------------------------------------
-# D8 — PDA derivation Python vs Anchor (seeds cohérents)
+# D7 -- Offsets memcmp: dynamic calculation verification
 # ----------------------------------------------------------
-echo "=== D8 — PDA seeds cohérence ==="
+echo "=== D7 -- Offsets memcmp ==="
 echo ""
-echo "--- client.py ---"
-grep -A3 "seeds\|ATTESTATION_SEED" services/solana/client.py | head -10
+echo "Expected layout (from state.rs field order):"
+echo "  discriminator : 8 bytes   (not in deserialized data -- stripped before call)"
+echo "  bump          : 1 byte    -> offset in raw account = 8"
+echo "  submitter     : 32 bytes  -> offset 9"
+echo "  claim_hash    : 32 bytes  -> offset 41  (= 8+1+32)"
+echo "  subject       : 64 bytes  -> offset 73  (= 8+1+32+32)"
 echo ""
-echo "--- lib.rs ---"
-grep -B1 -A2 "seeds\|ATTESTATION_SEED" programs/epp/programs/epp/src/lib.rs 2>/dev/null || \
-  grep -B1 -A2 "seeds\|ATTESTATION_SEED" lib.rs 2>/dev/null
+echo "--- Offset formulas in $CLIENT ---"
+grep -n "CLAIM_HASH_OFFSET\|SUBJECT_OFFSET" "$CLIENT" 2>/dev/null
 echo ""
-echo "ATTENDU : seeds = [b'attestation', submitter_pubkey, claim_hash] des deux côtés."
+echo "EXPECTED:"
+echo "  CLAIM_HASH_OFFSET = ACCOUNT_DISCRIMINATOR_SIZE + 1 + 32   -> 8+1+32 = 41"
+echo "  SUBJECT_OFFSET    = ACCOUNT_DISCRIMINATOR_SIZE + 1 + 32 + 32 -> 8+1+32+32 = 73"
+echo "  Both should be expressed as formulas (not hardcoded numbers)"
 echo ""
 
 # ----------------------------------------------------------
-# D9 — SIZE total account vs rent calculation
+# D8 -- Deserialize integrity: last_revalidated + size assertion
 # ----------------------------------------------------------
-echo "=== D9 — Taille account ==="
+echo "=== D8 -- Deserialize integrity ==="
 echo ""
-echo "--- state.rs SIZE ---"
-grep -A20 "pub const SIZE" programs/epp/programs/epp/src/state.rs 2>/dev/null || \
-  grep -A20 "pub const SIZE" state.rs 2>/dev/null
+echo "Regression check for Phase 1.2 fix (17/02): last_revalidated field"
+echo "and offset mismatch assertion."
 echo ""
-echo "--- Calcul attendu ---"
-echo "  8 (disc) + 1 (bump) + 32 (sub) + 32 (hash) + 64 (subj) + 64 (pred)"
-echo "  + 128 (obj) + 2 (score) + 1 (m_cons) + 1 (m_agree) + 10 (sig5d)"
-echo "  + 1 (type) + 1 (tier) + 32 (frame) + 32 (source) + 8 (ts)"
-echo "  + 8 (revalid) + 2 (val_count) + 2 (proto_ver) + 1 (is_chall) + 32 (chall_pk)"
-echo "  = 462 bytes"
+echo "--- last_revalidated in _deserialize_attestation_account ---"
+grep -n "last_revalidated" "$CLIENT" 2>/dev/null | grep -v "#"
+echo ""
+echo "--- Size assertion at end of deserialize ---"
+grep -n "offset != len(data)\|offset mismatch\|Deserialization offset" "$CLIENT" 2>/dev/null
+echo ""
+echo "EXPECTED: last_revalidated present, read as '<q' (8 bytes i64)"
+echo "EXPECTED: 'if offset != len(data): raise ValueError' present"
 echo ""
 
 # ----------------------------------------------------------
-# RÉSUMÉ
+# D9 -- PDA seeds: Python vs Rust
+# ----------------------------------------------------------
+echo "=== D9 -- PDA seeds ==="
+echo ""
+echo "--- ATTESTATION_SEED in $CLIENT ---"
+grep -n "ATTESTATION_SEED\|seeds" "$CLIENT" 2>/dev/null | grep -v "#" | head -6
+echo ""
+echo "--- seeds in lib.rs ---"
+if [ -n "$RUST_LIB" ]; then
+  grep -n "seeds\|ATTESTATION_SEED" "$RUST_LIB" 2>/dev/null
+else
+  echo "  (not found)"
+fi
+echo ""
+echo "EXPECTED: [b'attestation', submitter_pubkey, claim_hash] -- both sides"
+echo ""
+
+# ----------------------------------------------------------
+# D10 -- Account SIZE: 462 bytes
+# ----------------------------------------------------------
+echo "=== D10 -- Account SIZE ==="
+echo ""
+if [ -n "$RUST_STATE" ]; then
+  grep -A25 "pub const SIZE" "$RUST_STATE" 2>/dev/null
+else
+  echo "  (state.rs not found)"
+fi
+echo ""
+echo "EXPECTED: 462 bytes total"
+echo ""
+
+# ----------------------------------------------------------
+# D11 -- relation_vocabulary: flag + actual active path
+# ----------------------------------------------------------
+echo "=== D11 -- relation_vocabulary: active path ==="
+echo ""
+echo "--- use_legacy_relation_groups in $CONFIG_YAML ---"
+grep "use_legacy_relation_groups" "$CONFIG_YAML" 2>/dev/null
+echo ""
+echo "IMPACT: When 'true', consensus_engine uses frozen _LEGACY_RELATION_SYNONYMS"
+echo "        (10 groups, defined locally). relation_vocabulary.py is NOT active."
+echo "        When 'false', consensus_engine calls build_synonym_map() from"
+echo "        relation_vocabulary.py (11 groups, updated). fingerprint_match.py"
+echo "        always reads the flag per-call."
+echo ""
+echo "--- Import from relation_vocabulary in consensus_engine.py ---"
+grep -n "from.*relation_vocabulary\|import.*relation_vocabulary" \
+  services/esmm/consensus_engine.py 2>/dev/null || \
+  grep -n "from.*relation_vocabulary\|import.*relation_vocabulary" \
+  consensus_engine.py 2>/dev/null || echo "  (not found -- check path)"
+echo ""
+echo "--- Import from relation_vocabulary in fingerprint_match.py ---"
+grep -n "from.*relation_vocabulary\|import.*relation_vocabulary" \
+  services/esmm/fingerprint_match.py 2>/dev/null || \
+  grep -n "from.*relation_vocabulary\|import.*relation_vocabulary" \
+  fingerprint_match.py 2>/dev/null || echo "  (not found -- check path)"
+echo ""
+echo "EXPECTED: Both import from relation_vocabulary."
+echo "          flag=true is safe (legacy frozen). Set to false to activate new groups."
+echo ""
+
+# ----------------------------------------------------------
+# D12 -- VERIFY mode components
+# ----------------------------------------------------------
+echo "=== D12 -- VERIFY mode components (added 20/02) ==="
+echo ""
+echo "--- verdict_encoder.py ---"
+find . -name "verdict_encoder.py" -not -path "*__pycache__*" 2>/dev/null || \
+  echo "  ABSENT"
+echo ""
+echo "--- classify_input + InputType in question_seeder.py ---"
+find . -name "question_seeder.py" -not -path "*__pycache__*" 2>/dev/null | \
+  xargs grep -l "classify_input\|InputType" 2>/dev/null || echo "  ABSENT"
+echo ""
+echo "--- CycleType enum (ASSESS/CHALLENGE/ADJUDICATE) ---"
+find . -name "cycle_manager.py" -not -path "*__pycache__*" 2>/dev/null | \
+  xargs grep -l "ASSESS\|ADJUDICATE" 2>/dev/null || echo "  ABSENT"
+echo ""
+echo "--- ESMMRunConfig dataclass ---"
+find . -name "orchestrator.py" -not -path "*__pycache__*" 2>/dev/null | \
+  xargs grep -l "ESMMRunConfig" 2>/dev/null || echo "  ABSENT"
+echo ""
+echo "EXPECTED: All 4 components present"
+echo ""
+
+# ----------------------------------------------------------
+# D13 -- Test coverage: skip patterns + bijection test
+# ----------------------------------------------------------
+echo "=== D13 -- Test coverage: solana-related ==="
+echo ""
+echo "--- Skip patterns (actual pattern used) ---"
+grep -rn "skipif.*SOLANA_AVAILABLE\|skip.*solana_available\|pytest.mark.skip" \
+  tests/ --include="*.py" 2>/dev/null | grep -v "__pycache__" | head -10 || \
+  echo "  (none found with these patterns)"
+echo ""
+echo "--- Test files touching Solana ---"
+grep -rl "solana\|bridge\|client\|Anchor\|pda\|memcmp" tests/ \
+  --include="*.py" 2>/dev/null | grep -v "__pycache__"
+echo ""
+echo "--- test_confidence_tier_map_bijection_with_rust (CHANGELOG 24/02) ---"
+grep -rn "test_confidence_tier_map_bijection_with_rust\|bijection_with_rust" \
+  tests/ --include="*.py" 2>/dev/null | grep -v "__pycache__" || \
+  echo "  NOT FOUND -- CHANGELOG 24/02 claims this test was added"
+echo ""
+echo "--- test_legacy_tiers_backward_compat (should be REMOVED per 24/02) ---"
+grep -rn "test_legacy_tiers_backward_compat" \
+  tests/ --include="*.py" 2>/dev/null | grep -v "__pycache__" || \
+  echo "  Not found (expected -- should have been deleted per CHANGELOG 24/02)"
+echo ""
+
+# ----------------------------------------------------------
+# SUMMARY
 # ----------------------------------------------------------
 echo "=============================================="
-echo "  RÉSUMÉ DIAGNOSTIC"
+echo "  SUMMARY"
 echo "=============================================="
 echo ""
-echo "  D1  NotImplementedError    : à vérifier manuellement"
-echo "  D2  _deserialize fantôme   : à confirmer absent"
-echo "  D3  Offsets memcmp         : à vérifier vs layout"
-echo "  D4  Constantes Py/Rust     : à comparer"
-echo "  D5  Enums Py/Rust          : à comparer"
-echo "  D6  Programme ID           : placeholder vs déployé"
-echo "  D7  Tests mock vs réel     : ratio à évaluer"
-echo "  D8  PDA seeds              : cohérence à vérifier"
-echo "  D9  Account SIZE           : 462 bytes attendu"
+echo "  D1  NotImplementedError    : see above"
+echo "  D2  AUDIT markers          : check REQUIRED vs CLEARED count"
+echo "  D3  CONFIDENCE_TIER_MAP    : CHECK for low/medium/high aliases (known bug)"
+echo "  D4  Constants Py/Rust      : values should be identical"
+echo "  D5  Enum mappings          : 5-key epistemic + 4-key confidence tier"
+echo "  D6  Programme ID           : 98Fc... in 4 sources"
+echo "  D7  Offsets memcmp         : dynamic formulas = 41/73"
+echo "  D8  Deserialize integrity  : last_revalidated + size assertion"
+echo "  D9  PDA seeds              : [attestation, submitter, claim_hash]"
+echo "  D10 Account SIZE           : 462 bytes"
+echo "  D11 relation_vocabulary    : flag=true means legacy active"
+echo "  D12 VERIFY components      : verdict_encoder, classify_input, CycleType"
+echo "  D13 Bijection test         : test_confidence_tier_map_bijection_with_rust"
 echo ""
-echo "  Ce diagnostic NE REMPLACE PAS un test devnet."
-echo "  Il confirme que l'architecture est prête pour"
-echo "  qu'un dev Solana implémente les 3-4 méthodes réelles."
+echo "  KNOWN DISCREPANCIES (CHANGELOG 24/02 vs actual files):"
+echo "  - D2/D3: AUDIT_CLEARED markers NOT applied (still AUDIT_REQUIRED)"
+echo "  - D3:    CONFIDENCE_TIER_MAP legacy aliases NOT removed"
+echo "  => Claude Code must fix these 3 items with RED-GREEN-FIX protocol"
+echo ""
+echo "  This diagnostic does NOT replace a devnet test."
+echo "  It confirms architecture readiness for a Solana dev."
 echo "=============================================="

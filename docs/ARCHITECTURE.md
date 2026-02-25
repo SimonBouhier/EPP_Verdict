@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-02-20
+**Dernière mise à jour** : 2026-02-25
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -14,10 +14,10 @@
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `orchestrator.py` | Pilote les runs ESMM dual-mode (EXPLORE: divergent→debate→meta, VERIFY: assess→challenge→adjudicate). Propagation context inter-phases VERIFY, `_verify_model_verdicts` accumulator. | ✅ Fonctionnel |
-| `cycle_manager.py` | Exécution des 6 types de cycles. `_query_models_isolated()` (isolation épistémique CHALLENGE, rotation circulaire). `_extract_verdicts_from_responses()` (routage verdict → consensus). | ✅ Fonctionnel |
-| `cycle_prompts.py` | Prompts dual-mode : DIVERGENT/DEBATE/META (EXPLORE) + ASSESS/CHALLENGE/ADJUDICATE (VERIFY), anglais | ✅ Fonctionnel |
-| `triplet_extractor.py` | Pipeline complet extraction → validation → consensus. `_parse_verdict_response()` pour mode VERIFY. | ✅ Fonctionnel |
+| `orchestrator.py` | Pilote les runs ESMM dual-mode (EXPLORE/VERIFY). `ClaimNature` enum (EPISTEMIC/DETERMINISTIC). `ESMMRunConfig` : +`claim_nature` + `source_anchor_spec` + `__post_init__` guard. `execute_cycles()` : short-circuit immédiat si `claim_nature=DETERMINISTIC`. | ✅ Fonctionnel |
+| `cycle_manager.py` | Exécution des 6 types de cycles. `_query_models_isolated()` (isolation CHALLENGE). `_extract_verdicts_from_responses()` : majority vote `claim_type` sur réponses modèles + injection triplet `claim_type` dans `raw_model_triplets` (propagation via triplet-as-channel). | ✅ Fonctionnel |
+| `cycle_prompts.py` | Prompts dual-mode : DIVERGENT/DEBATE/META (EXPLORE) + ASSESS/CHALLENGE/ADJUDICATE (VERIFY), anglais. ASSESS : STEP 1 classifie `claim_type` (empirical/definitional/normative/speculative) avant STEP 2 verdict. | ✅ Fonctionnel |
+| `triplet_extractor.py` | Pipeline complet extraction → validation → consensus. `_parse_verdict_response()` : extrait `verdict`, `confidence`, `evidence`, `claim_type` (normalisation + fallback `"empirical"`). | ✅ Fonctionnel |
 | `verdict_encoder.py` | Encodage verdict → triplets (claim→verdict→SUPPORTED/REFUTED, +evidence, +reasoning). Réutilise la pipeline de cristallisation. | ✅ Fonctionnel |
 | `triplet_validator.py` | Validation Pydantic, détection patterns invalides | ✅ Fonctionnel |
 | `relation_vocabulary.py` | Source unique de vérité : 11 groupes de relations synonymes (superset CE 10 + FM 6). Exports : `build_synonym_map()`, `get_canonical()`, `are_relations_compatible()`. Flag `use_legacy_relation_groups` pour déploiement progressif. | ✅ Fonctionnel |
@@ -43,6 +43,7 @@ VERIFY impose :
 - Isolation épistémique : ASSESS = modèles isolés, CHALLENGE = rotation circulaire (modèle[i] voit uniquement verdict de modèle[(i+1)%N]), ADJUDICATE = synthèse (tous verdicts visibles)
 - Verdict triplets routés via `compute_consensus()` pour agreement_ratio réel
 - `consensus_meta.verify` enrichi post-cristallisation : `final_verdict`, `verdict_confidence`, `model_verdicts`, `evidence_corpus` (triplets sub-consensus, cap 20)
+- Classification `claim_type` (empirical/definitional/normative/speculative) : majority vote sur réponses ASSESS, propagé via triplet-as-channel, pénalité décidabilité appliquée dans pipeline (VERDICT_PENALTIES × CLAIM_TYPE_PENALTIES)
 
 ### Provider Layer (Phase 0.1 — fonctionnel)
 
@@ -62,7 +63,7 @@ Système de cristallisation des attestations épistémiques, produisant des obje
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/attestation.py` | Modèle EpistemicAttestation (+ consensus_meta ADR-010), crystallize(), compute_claim_hash(), RevalidationInput | ✅ Fonctionnel |
+| `services/esmm/attestation.py` | Modèle EpistemicAttestation (+ consensus_meta ADR-010), crystallize(), compute_claim_hash(), RevalidationInput. `models_consulted ge=0` (attestations déterministes). `epistemic_type` : +`"deterministic"`. Guard `crystallize()` : `consensus_method=deterministic_source_v1` requiert `source_anchor_meta`. | ✅ Fonctionnel |
 | `services/esmm/run_logger.py` | Logs structurés du pipeline (PhaseEvent, RunLogger) | ✅ Fonctionnel |
 | Table `attestations` | Stockage attestations cristallisées (table 20), consensus_meta TEXT (ADR-010) | ✅ Fonctionnel |
 
@@ -80,7 +81,7 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. Propagation `esmm_config` via 4-tuple return. Enrichissement post-cristallisation : `final_verdict`, `evidence_corpus` (sub-consensus, ADR-010). | ✅ Fonctionnel |
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. `_run_deterministic_pipeline()` : chemin court-circuit ADR-012 (fetch source → hash → crystallize → store snapshot + attestation). Constantes `VERDICT_PENALTIES` + `CLAIM_TYPE_PENALTIES` — pénalité décidabilité VERIFY. | ✅ Fonctionnel |
 | `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
 | `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
 | `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7). `InputType` enum + `classify_input()` auto-détection EXPLORE/VERIFY. | ✅ Fonctionnel |
@@ -191,14 +192,14 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | Fichier | Rôle | État |
 |---------|------|------|
 | `services/solana/config.py` | Config cluster, devnet guard, DEFAULT_PROGRAM_ID, keypair path | ✅ Fonctionnel |
-| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256 | ✅ Fonctionnel |
-| `services/solana/bridge.py` | Sérialisation Python <-> Anchor (float↔u16, string↔bytes) | ✅ Fonctionnel (AUDIT_REQUIRED) |
-| `services/solana/client.py` | Transaction builder, PDA derivation, mock mode, account deser (Phase 4.6) | ✅ Fonctionnel (AUDIT_REQUIRED) |
-| `programs/epp/programs/epp/src/lib.rs` | Instructions Anchor : submit_attestation, ping | ✅ Build OK (221 KB .so) |
-| `programs/epp/programs/epp/src/state.rs` | EpistemicAttestation account (462 bytes) | ✅ Build OK |
-| `programs/epp/programs/epp/src/errors.rs` | EppError enum (11 variantes) | ✅ Build OK |
-| `programs/epp/programs/epp/src/constants.rs` | Constantes on-chain (MAX_SUBJECT_LEN, SCORE_SCALE, seeds) | ✅ Build OK |
-| `cli/epp_cli.py` | CLI : ask, submit (--devnet), query, frame list/show, graph stats, models stats | ✅ Fonctionnel |
+| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256. 5 frames : `blockchain_tps_v1.0`, `general_knowledge_v1.0`, `compliance_sanctions_v1.0`, `carbon_credits_vcs_v1.0`, `rwa_identity_v1.0`. | ✅ Fonctionnel |
+| `services/solana/bridge.py` | Sérialisation Python <-> Anchor (float↔u16, string↔bytes). `CONFIDENCE_TIER_MAP` : bijection stricte 4 clés ↔ 4 arms Rust (sandbox/proposition/validated/verified). | ✅ Fonctionnel |
+| `services/solana/client.py` | Transaction builder, PDA derivation, mock mode, account deser (Phase 4.6). CLAIM_HASH_OFFSET=41, SUBJECT_OFFSET=73 vérifiés vs state.rs layout. | ✅ Fonctionnel |
+| `programs/epp/src/lib.rs` | Instructions Anchor : submit_attestation, ping | ✅ Build OK (221 KB .so) |
+| `programs/epp/src/state.rs` | EpistemicAttestation account (462 bytes) | ✅ Build OK |
+| `programs/epp/src/errors.rs` | EppError enum (11 variantes) | ✅ Build OK |
+| `programs/epp/src/constants.rs` | Constantes on-chain (MAX_SUBJECT_LEN, SCORE_SCALE, seeds) | ✅ Build OK |
+| `cli/epp_cli.py` | CLI : ask, submit (--devnet), query, frame list/show, graph stats, models stats, verify-rwa (ADR-012) | ✅ Fonctionnel |
 
 **Décisions architecturales** :
 
@@ -266,6 +267,40 @@ Renforcement du consensus multi-modèles : pondération par Brier score, normali
 - `store_commit()` — Stocke un commit hash (modèle + phase)
 - `get_commit()` — Récupère un commit par run_id + model_id + phase
 - `verify_and_update_commit()` — Vérifie hash et met à jour `verified`
+
+### Sources RWA / Bifurcation déterministe (ADR-012 — 2026-02-25)
+
+Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `claim_nature=DETERMINISTIC` (Axiome 3 — pas d'inférence automatique). Le pipeline court-circuite les cycles LLM, interroge la source autoritaire, hash la réponse brute en SHA-256 (`source_anchor` on-chain), stocke le snapshot complet en SQLite, cristallise une attestation `epistemic_type="deterministic"`.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/esmm/source_anchor_builder.py` | `SourceAnchorSpec`, `SourceAnchorResult`, `build_source_anchor()`, `_canonical_hash()` (SHA-256 JSON canonique sorted-keys) | ✅ Fonctionnel |
+| `services/rwa/adapters/base.py` | ABC `SourceAdapter` : `fetch(query)`, `normalize(raw)`, `get_source_version(raw)` | ✅ Fonctionnel |
+| `services/rwa/adapters/opensanctions.py` | POST `/match` yente (0 credential, testable en local) | ✅ Fonctionnel |
+| `services/rwa/adapters/ofac.py` | POST OFAC SDN — `OFAC_API_KEY` env var | ✅ Fonctionnel |
+| `services/rwa/adapters/eu_cfsp.py` | GET sanctions.network EU CFSP (données ouvertes) | ✅ Fonctionnel |
+| `services/rwa/adapters/verra_vcs.py` | GET Verra Registry L1 (serial/project_id — public) | ✅ Fonctionnel |
+| `services/rwa/adapters/__init__.py` | Registre `_REGISTRY` + `get_adapter()` + `register_adapter()` | ✅ Fonctionnel |
+
+**Frames RWA** (dans `metrological_frame.py`) :
+
+| Frame | Domaine | `esmm_bypass` |
+|-------|---------|--------------|
+| `compliance_sanctions_v1.0` | regulatory_compliance / sanctions_status | `True` |
+| `carbon_credits_vcs_v1.0` | environmental_assets / carbon_credit_validity | `True` (L2 désactivé — ADR-012 Q3) |
+| `rwa_identity_v1.0` | identity_compliance / entity_sanctions_composite | `True` (ESMM on ambiguity désactivé par défaut) |
+
+**Table SQL ajoutée (table 25)** :
+
+- `source_anchor_snapshots` — snapshot raw_response off-chain, `source_anchor` SHA-256 → on-chain. Contrainte UNIQUE `(source_id, query_hash, source_version)`. Index sur `source_anchor` et `(source_id, fetched_at DESC)`.
+
+**Méthodes ISpaceDB ajoutées (ADR-012)** :
+
+- `store_source_anchor_snapshot()` — INSERT OR IGNORE snapshot
+- `get_snapshot_by_anchor()` — Lookup par SHA-256 source_anchor
+- `is_snapshot_fresh()` — TTL check par (source_id, query_hash, max_age_hours)
+
+**`config.yaml`** : section `rwa.sources` — 4 sources (enabled/ttl_hours). Credentials via env vars uniquement.
 - `update_attestation_commit_verified()` — Met à jour `commit_verified` sur attestation
 - `get_all_model_brier_scores()` — Tous les Brier scores pour pondération
 - `update_attestation_diversity_bonus()` — Met à jour bonus diversité post-cristallisation

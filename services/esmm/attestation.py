@@ -66,7 +66,7 @@ class EpistemicAttestation(BaseModel):
 
     # === CONSENSUS ===
     consensus_score: float = Field(ge=0.0, le=1.0, description="Score de consensus [0, 1]")
-    models_consulted: int = Field(ge=1, description="Nombre de modèles consultés")
+    models_consulted: int = Field(ge=0, description="Nombre de modèles consultés (0 pour attestations déterministes ADR-012)")
     models_agreeing: int = Field(ge=0, description="Nombre de modèles en accord")
     model_votes: List[ModelVote] = Field(description="Détail des votes par modèle")
 
@@ -120,7 +120,10 @@ class EpistemicAttestation(BaseModel):
     @field_validator("epistemic_type")
     @classmethod
     def validate_epistemic_type(cls, v: str) -> str:
-        allowed = {"foundational", "bridge", "specialized", "generalist", "hybrid", "verdict"}
+        allowed = {
+            "foundational", "bridge", "specialized", "generalist", "hybrid", "verdict",
+            "deterministic",  # ADR-012 : claims via source autoritaire externe (bypass ESMM)
+        }
         if v not in allowed:
             raise ValueError(f"epistemic_type must be one of {allowed}, got '{v}'")
         return v
@@ -326,6 +329,18 @@ def crystallize(
         EpistemicAttestation cristallisée avec hash SHA-256
     """
     claim_hash = compute_claim_hash(subject, predicate, object_, metrological_frame)
+
+    # ADR-012 : attestation déterministe requiert source_anchor_meta dans consensus_meta
+    if (
+        consensus_meta is not None
+        and consensus_meta.get("methodology", {}).get("consensus_method")
+            == "deterministic_source_v1"
+        and "source_anchor_meta" not in consensus_meta
+    ):
+        raise ValueError(
+            "crystallize: consensus_method=deterministic_source_v1 "
+            "requiert consensus_meta['source_anchor_meta']"
+        )
 
     # Derive confidence tier with full context
     confidence_tier = derive_confidence_tier(

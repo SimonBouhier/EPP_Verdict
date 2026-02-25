@@ -402,9 +402,9 @@ async def get_ollama_provider(
     Get or create singleton Ollama provider.
 
     Environment variables:
-        LYRA_OLLAMA_URL: Ollama base URL (default: http://localhost:11434)
-        LYRA_MODEL: Default model name
-        LYRA_NUM_CTX: Context window size (default: 8192)
+        EPP_OLLAMA_URL: Ollama base URL (default: http://localhost:11434)
+        EPP_MODEL: Default model name
+        EPP_NUM_CTX: Context window size (default: 8192)
 
     Args:
         base_url: Override base URL
@@ -420,10 +420,10 @@ async def get_ollama_provider(
         import os
 
         actual_url = base_url or os.environ.get(
-            "LYRA_OLLAMA_URL", "http://localhost:11434"
+            "EPP_OLLAMA_URL", "http://localhost:11434"
         )
-        actual_model = model or os.environ.get("LYRA_MODEL", "gpt-oss:20b")
-        actual_ctx = num_ctx or int(os.environ.get("LYRA_NUM_CTX", "8192"))
+        actual_model = model or os.environ.get("EPP_MODEL", "gpt-oss:20b")
+        actual_ctx = num_ctx or int(os.environ.get("EPP_NUM_CTX", "8192"))
 
         logger.info(
             f"Initializing OllamaProvider with model: {actual_model}, context: {actual_ctx} tokens"

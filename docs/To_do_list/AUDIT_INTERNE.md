@@ -449,14 +449,14 @@ grep -rn "AUDIT_REQUIRED" --include="*.py" --include="*.rs" \
 
 # Vérifier que les constantes Rust matchent les constantes Python
 grep -n "MAX_SUBJECT_LEN\|MAX_PREDICATE_LEN\|MAX_OBJECT_LEN\|SCORE_SCALE" \
-  services/solana/bridge.py programs/epp/programs/epp/src/constants.rs
+  services/solana/bridge.py programs/epp/src/constants.rs
 
 # Overflow potentiel dans float_to_u16
 grep -n "float_to_u16\|u16_to_float\|SCORE_SCALE" services/solana/bridge.py
 
 # Vérifier que les enums Python matchent les enums Rust
 grep -n "EPISTEMIC_TYPE_MAP\|CONFIDENCE_TIER_MAP" services/solana/bridge.py
-grep -n "EpistemicType\|ConfidenceTier" programs/epp/programs/epp/src/state.rs
+grep -n "EpistemicType\|ConfidenceTier" programs/epp/src/state.rs
 ```
 
 ### Points critiques

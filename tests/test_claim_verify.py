@@ -890,3 +890,98 @@ async def test_verify_evidence_corpus_preserved():
     assert len(evidence) >= 2, (
         f"Expected >= 2 evidence items (sub-consensus), got {len(evidence)}"
     )
+
+
+# ===========================================================================
+# Fix A — claim_type classification
+# ===========================================================================
+
+
+def test_assess_prompt_contains_claim_type_instruction():
+    """System prompt ASSESS exige une classification claim_type."""
+    from services.esmm.cycle_prompts import get_system_prompt, CycleType
+    prompt = get_system_prompt(CycleType.ASSESS)
+    assert "claim_type" in prompt
+    for ct in ["empirical", "definitional", "normative", "speculative"]:
+        assert ct in prompt, f"Missing claim_type '{ct}' in ASSESS prompt"
+
+
+def test_parse_verdict_extracts_claim_type():
+    """_parse_verdict_response extrait claim_type du JSON."""
+    from services.esmm.triplet_extractor import _parse_verdict_response
+    raw = '{"claim_type": "normative", "verdict": "INSUFFICIENT_EVIDENCE", "confidence": 0.3, "reasoning": "opinion", "evidence": []}'
+    result = _parse_verdict_response(raw, claim_text="test claim")
+    assert result["claim_type"] == "normative"
+    assert result["verdict"] == "INSUFFICIENT_EVIDENCE"
+
+
+def test_parse_verdict_defaults_claim_type_to_empirical():
+    """claim_type defaults to 'empirical' when absent from JSON."""
+    from services.esmm.triplet_extractor import _parse_verdict_response
+    raw = '{"verdict": "SUPPORTED", "confidence": 0.9, "reasoning": "clear", "evidence": []}'
+    result = _parse_verdict_response(raw, claim_text="test")
+    assert result["claim_type"] == "empirical"
+
+
+def test_parse_verdict_normalizes_invalid_claim_type():
+    """Invalid claim_type falls back to 'empirical'."""
+    from services.esmm.triplet_extractor import _parse_verdict_response
+    raw = '{"claim_type": "MAGIC", "verdict": "SUPPORTED", "confidence": 0.9, "reasoning": "x", "evidence": []}'
+    result = _parse_verdict_response(raw, claim_text="test")
+    assert result["claim_type"] == "empirical"
+
+
+# ===========================================================================
+# Fix B — decidability penalty
+# ===========================================================================
+
+
+def test_decidability_penalty_supported_empirical_no_change():
+    """SUPPORTED + empirical = no penalty (multiplier 1.0)."""
+    from services.esmm.pipeline import VERDICT_PENALTIES, CLAIM_TYPE_PENALTIES
+    raw = 0.84
+    adjusted = raw * VERDICT_PENALTIES["SUPPORTED"] * CLAIM_TYPE_PENALTIES["empirical"]
+    assert adjusted == raw
+
+
+def test_decidability_penalty_contested_reduces_score():
+    """CONTESTED + empirical reduces score by 35%."""
+    from services.esmm.pipeline import VERDICT_PENALTIES, CLAIM_TYPE_PENALTIES
+    raw = 0.90
+    adjusted = raw * VERDICT_PENALTIES["CONTESTED"] * CLAIM_TYPE_PENALTIES["empirical"]
+    assert 0.55 < adjusted < 0.60  # 0.90 * 0.65 = 0.585
+
+
+def test_decidability_penalty_normative_strongly_reduces():
+    """INSUFFICIENT_EVIDENCE + normative gets double penalty."""
+    from services.esmm.pipeline import VERDICT_PENALTIES, CLAIM_TYPE_PENALTIES
+    raw = 0.82
+    adjusted = raw * VERDICT_PENALTIES["INSUFFICIENT_EVIDENCE"] * CLAIM_TYPE_PENALTIES["normative"]
+    assert adjusted < 0.30  # 0.82 * 0.45 * 0.70 = 0.2583
+
+
+def test_decidability_penalty_contested_definitional():
+    """CONTESTED + definitional gets moderate penalty."""
+    from services.esmm.pipeline import VERDICT_PENALTIES, CLAIM_TYPE_PENALTIES
+    raw = 0.74
+    adjusted = raw * VERDICT_PENALTIES["CONTESTED"] * CLAIM_TYPE_PENALTIES["definitional"]
+    assert 0.40 < adjusted < 0.45  # 0.74 * 0.65 * 0.90 = 0.4329
+
+
+# ===========================================================================
+# Fix C — claim_type consensus
+# ===========================================================================
+
+
+def test_claim_type_majority_vote():
+    """claim_type is determined by majority vote."""
+    type_votes = {"normative": 3, "empirical": 1}
+    consensus_type = max(type_votes, key=type_votes.get)
+    assert consensus_type == "normative"
+
+
+def test_claim_type_majority_tie_is_deterministic():
+    """Tie-breaking is deterministic (max picks first max encountered)."""
+    type_votes = {"empirical": 2, "definitional": 2}
+    consensus_type = max(type_votes, key=type_votes.get)
+    assert consensus_type in {"empirical", "definitional"}

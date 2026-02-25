@@ -896,15 +896,28 @@ class ExplorationCycleManager:
 
         claim_text = context.get("original_claim", "")
         raw_model_triplets: Dict[str, list] = {}
+        type_votes: Dict[str, int] = {}
 
         for model_id, response_text in responses.items():
             try:
                 parsed = _parse_verdict_response(response_text, claim_text=claim_text)
+                ct = parsed.get("claim_type", "empirical")
+                type_votes[ct] = type_votes.get(ct, 0) + 1
                 encoded = encode_verdict_as_triplets(claim_text, parsed)
                 raw_model_triplets[model_id] = encoded
             except Exception as e:
                 logger.warning(f"[CycleManager] Verdict parse failed for {model_id}: {e}")
                 raw_model_triplets[model_id] = []
+
+        # Fix C: claim_type majority vote — inject as consensus triplet
+        consensus_claim_type = max(type_votes, key=type_votes.get) if type_votes else "empirical"
+        for model_id in raw_model_triplets:
+            raw_model_triplets[model_id].append({
+                "subject": claim_text[:64],
+                "relation": "claim_type",
+                "object": consensus_claim_type,
+                "confidence": 1.0,
+            })
 
         # Route through compute_consensus() for real agreement scoring
         try:

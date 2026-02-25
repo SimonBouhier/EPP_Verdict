@@ -4,6 +4,53 @@
 
 ---
 
+## [2026-02-25] Nettoyage héritage Lyra ACE + correctifs post-audit ADR-012
+
+- Renommage variables d'environnement `LYRA_*` → `EPP_*` (`ollama.py`, `ollama_embeddings.py`) : `LYRA_OLLAMA_URL` → `EPP_OLLAMA_URL`, `LYRA_MODEL` → `EPP_MODEL`, `LYRA_NUM_CTX` → `EPP_NUM_CTX`, `LYRA_EMBEDDING_MODEL` → `EPP_EMBEDDING_MODEL`. Valeurs par défaut inchangées.
+- Correctifs post-audit ADR-012 (P1/P2) : `_run_deterministic_pipeline()` — predicate résolu depuis `PREDEFINED_FRAMES[frame_id].metric` (plus de `"sanctions_status"` hardcodé) ; subject résolu sur `name || serial || project_id || question`. `PREDEFINED_FRAMES` déplacé dans `metrological_frame.py` (source unique de vérité). 697 passed, 11 skipped, 0 failed (+3 tests).
+
+---
+
+## [2026-02-25] ADR-012 — Intégration sources RWA / Bifurcation déterministe
+
+- Nouveau chemin `DETERMINISTIC` dans `ESMMRunConfig` (`ClaimNature` enum). `execute_cycles()` court-circuité si `claim_nature=DETERMINISTIC`. Pipeline : `_run_deterministic_pipeline()` — fetch source → `_canonical_hash()` → `crystallize(epistemic_type="deterministic")` → store snapshot + attestation.
+- Nouveau module `services/esmm/source_anchor_builder.py` : `SourceAnchorSpec`, `SourceAnchorResult`, `build_source_anchor()`. Nouveau répertoire `services/rwa/adapters/` : 4 adaptateurs (`OpenSanctionsAdapter`, `OfacAdapter`, `EuCfspAdapter`, `VerraVcsAdapter`) + registre `get_adapter()`.
+- 3 nouveaux `MetrologicalFrame` : `compliance_sanctions_v1.0`, `carbon_credits_vcs_v1.0`, `rwa_identity_v1.0`. Table SQL `source_anchor_snapshots` (25e table). 3 nouvelles méthodes `ISpaceDB` : `store_source_anchor_snapshot()`, `get_snapshot_by_anchor()`, `is_snapshot_fresh()`. CLI : commande `epp verify-rwa`. Config : section `rwa.sources`. `attestation.py` : `models_consulted ge=0`, `epistemic_type` étendu avec `"deterministic"`, guard `source_anchor_meta` dans `crystallize()`.
+- 694 passed, 11 skipped, 0 failed (+21 tests ADR-012).
+
+---
+
+## [2026-02-24] Audit Solana Directives 2-5 — Couche Solana qualifiée
+
+- D5: `CONFIDENCE_TIER_MAP` (bridge.py) — 3 aliases backward compat supprimés (`low`/`medium`/`high`). Désalignement avec `confidence_tier_to_u8` Rust confirmé (hit `_ => err!(InvalidConfidenceTier)`). Bijection stricte 4 clés ↔ 4 arms Rust désormais garantie par `test_confidence_tier_map_bijection_with_rust`. `test_legacy_tiers_backward_compat` supprimé (test du comportement retiré).
+- D7: Guard `_SOLANA_AVAILABLE` — `@pytest.mark.skipif` déplacé au niveau méthode (`test_submit_requires_ready_client` uniquement). Import inutilisé supprimé de `test_phase1_client.py`. 3 tests de `TestSubmitterAuth` restaurés dans le compteur.
+- D6: Program ID `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C` ajouté dans `README.md` section Solana.
+- D5b: 3 marqueurs `AUDIT_REQUIRED` levés — `client.py:474` (CLAIM_HASH_OFFSET=41), `client.py:511` (SUBJECT_OFFSET=73), `lib.rs:113` (PDA seeds). Remplacés par `AUDIT_CLEARED 2026-02-23`.
+- 673 passed, 11 skipped, 0 failed (inchangé : +1 bijection −1 legacy = 0 net).
+
+---
+
+## [2026-02-24] Restructuration Anchor — Convention standard
+
+- Workspace Anchor déplacé à la racine : `Anchor.toml`, `Cargo.toml` [workspace], `Cargo.lock`, `package.json`, `tsconfig.json` → `EPP_Verdict/` (étaient dans `programs/epp/`).
+- Programme Rust remonté d'un niveau : `programs/epp/programs/epp/src/` → `programs/epp/src/`. Dossier `programs/epp/programs/` supprimé.
+- `tests/epp.ts` déplacé vers `tests/` racine. `anchor build`/`anchor test` s'exécutent depuis la racine.
+- `.gitignore` mis à jour : `.anchor/` et `target/` à la racine (étaient `programs/epp/.anchor/`, `programs/epp/target/`).
+- Références mises à jour : `client.py` (IDL path), `test_bridge_solana_compat.py`, `diagnostic_solana_layer.sh` (6 occurrences), `README.md`, `ARCHITECTURE.md`, `AUDIT_INTERNE.md`.
+- 673 passed, 11 skipped, 0 failed (inchangé).
+
+---
+
+## [2026-02-24] Calibration Épistémique VERIFY Mode
+
+- Fix A — `cycle_prompts.py` : prompt ASSESS remplacé — STEP 1 classifie `claim_type` (empirical/definitional/normative/speculative) avant STEP 2 (verdict). Normative → INSUFFICIENT_EVIDENCE obligatoire.
+- Fix A bis — `triplet_extractor.py` : `_parse_verdict_response()` extrait `claim_type` depuis JSON, normalise (fallback `"empirical"`), inclus dans le dict retourné.
+- Fix C — `cycle_manager.py` : majority vote `claim_type` sur réponses de tous les modèles. Résultat injecté comme triplet `{"subject": claim[:64], "relation": "claim_type", "object": consensus_claim_type}` dans `raw_model_triplets` (propagation via triplet-as-channel → `adapt_all()` → `extracted_triplets` dans pipeline).
+- Fix B — `pipeline.py` : constantes `VERDICT_PENALTIES` (SUPPORTED=1.0, CONTESTED=0.65, INSUFFICIENT_EVIDENCE=0.45) + `CLAIM_TYPE_PENALTIES` (empirical=1.0, normative=0.70, speculative=0.75, definitional=0.90). Pénalité appliquée avant `crystallize()` : `adjusted_score = raw × v_penalty × t_penalty`. Traçabilité dans `consensus_meta.verify` : `claim_type`, `raw_consensus_score`, `decidability_penalty`, `adjusted_consensus_score`.
+- 10 tests RED-GREEN-FIX. Baseline : 663 → 673 passed, 0 failed, 11 skipped.
+
+---
+
 ## [2026-02-20] Polissage Final — VERIFY Mode Hackathon-Ready (P1-P4)
 
 - pipeline.py: `_extract_triplets_from_question()` retourne 4-tuple incluant `esmm_config`

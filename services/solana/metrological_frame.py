@@ -11,7 +11,7 @@ est transmis on-chain. Le frame complet est verifiable off-chain.
 
 import hashlib
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -152,3 +152,81 @@ def create_general_knowledge_frame() -> MetrologicalFrame:
         },
         required_sources=1,
     )
+
+
+# --- ADR-012 : Frames RWA / sources déterministes ---
+
+
+def create_compliance_sanctions_frame() -> MetrologicalFrame:
+    """Screening sanctions OFAC/EU/ONU via sources autoritaires. Bypass ESMM."""
+    return MetrologicalFrame(
+        frame_id="compliance_sanctions_v1.0",
+        version="1.0",
+        domain="regulatory_compliance",
+        metric="sanctions_status",
+        description=(
+            "Déterministe : screening sanctions OFAC SDN, EU CFSP, ONU, OpenSanctions. "
+            "Pipeline ESMM court-circuité (esmm_bypass=True). "
+            "Tier assigné par concordance de sources (1→proposition, 2→validated, "
+            "3+score≥0.95→verified)."
+        ),
+        parameters={
+            "authoritative_sources": ["OFAC_SDN", "EU_CFSP", "UN", "opensanctions"],
+            "match_score_threshold": 0.85,
+            "snapshot_ttl_hours": 24,
+            "esmm_bypass": True,
+        },
+        required_sources=1,
+    )
+
+
+def create_carbon_credits_vcs_frame() -> MetrologicalFrame:
+    """Vérification déterministe L1 serial VCS. L2 épistémique désactivé par défaut."""
+    return MetrologicalFrame(
+        frame_id="carbon_credits_vcs_v1.0",
+        version="1.0",
+        domain="environmental_assets",
+        metric="carbon_credit_validity",
+        description=(
+            "L1 déterministe : lookup serial VCS sur Verra Registry. "
+            "L2 épistémique (soundness méthodologique) désactivé par défaut "
+            "(ADR-012 Q3 — durée de validité on-chain ouverte)."
+        ),
+        parameters={
+            "l1_deterministic": True,
+            "l2_epistemic": False,
+            "esmm_bypass": True,
+        },
+        required_sources=1,
+    )
+
+
+def create_rwa_identity_frame() -> MetrologicalFrame:
+    """Frame généraliste multi-sources. ESMM optionnel si score source ambigu."""
+    return MetrologicalFrame(
+        frame_id="rwa_identity_v1.0",
+        version="1.0",
+        domain="identity_compliance",
+        metric="entity_sanctions_composite",
+        description=(
+            "Frame généraliste combinant plusieurs sources RWA. "
+            "Si score source déterministe < ambiguity_threshold, "
+            "une couche ESMM peut être déclenchée (désactivé par défaut)."
+        ),
+        parameters={
+            "ambiguity_threshold": 0.6,
+            "esmm_on_ambiguity": False,
+            "esmm_bypass": True,
+        },
+        required_sources=2,
+    )
+
+
+# Registre canonique — importable par pipeline.py et cli/epp_cli.py
+PREDEFINED_FRAMES: Dict[str, Callable[[], "MetrologicalFrame"]] = {
+    "blockchain_tps_v1.0":       create_blockchain_tps_frame,
+    "general_knowledge_v1.0":    create_general_knowledge_frame,
+    "compliance_sanctions_v1.0": create_compliance_sanctions_frame,
+    "carbon_credits_vcs_v1.0":   create_carbon_credits_vcs_frame,
+    "rwa_identity_v1.0":         create_rwa_identity_frame,
+}

@@ -26,6 +26,7 @@ import time
 import asyncio
 import logging
 from datetime import datetime
+from enum import Enum
 from typing import List, Dict, Optional, Any, TYPE_CHECKING
 from dataclasses import dataclass, field
 
@@ -69,6 +70,18 @@ def _default_min_consensus() -> float:
     except Exception:
         pass
     return 0.4
+
+
+# ============================================================================
+# ADR-012 : Bifurcation déterministe / épistémique
+# ============================================================================
+
+
+class ClaimNature(str, Enum):
+    """Nature épistémique d'un claim — déclarée par l'appelant (Axiome 3)."""
+
+    EPISTEMIC = "epistemic"          # Pipeline ESMM complet (défaut)
+    DETERMINISTIC = "deterministic"  # Lookup source autoritaire, bypass ESMM
 
 
 # ============================================================================
@@ -117,6 +130,18 @@ class ESMMRunConfig:
     # Dual-mode: VERIFY support
     input_mode: str = "explore"               # "explore" or "verify"
     original_claim: Optional[str] = None      # Full claim text for VERIFY mode
+    # ADR-012 : bifurcation déterministe
+    claim_nature: ClaimNature = ClaimNature.EPISTEMIC
+    source_anchor_spec: Optional[Any] = None  # SourceAnchorSpec — Any évite import circulaire
+
+    def __post_init__(self) -> None:
+        if (
+            self.claim_nature == ClaimNature.DETERMINISTIC
+            and self.source_anchor_spec is None
+        ):
+            raise ValueError(
+                "ESMMRunConfig: claim_nature=DETERMINISTIC requiert source_anchor_spec"
+            )
 
 
 @dataclass
@@ -380,6 +405,14 @@ class ESMMOrchestrator:
             model_weights: Optional Brier-based weights per model.
                           If None, weights are computed from DB at run start.
         """
+        # ADR-012 : bypass ESMM pour claims déterministes — la source fait foi
+        if self.config.claim_nature == ClaimNature.DETERMINISTIC:
+            logger.info(
+                "[ESMMOrchestrator] DETERMINISTIC claim — bypassing ESMM cycles",
+                extra={"run_id": run_id},
+            )
+            return
+
         # R-2.1.1: Compute Brier-based model weights if not provided
         if model_weights is None:
             model_weights = await self._compute_model_weights()

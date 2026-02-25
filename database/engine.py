@@ -3081,6 +3081,77 @@ class ISpaceDB:
             return [dict(row) for row in await cursor.fetchall()]
 
     # ========================================================================
+    # ADR-012 : Source Anchor Snapshots
+    # ========================================================================
+
+    async def store_source_anchor_snapshot(self, snap: Dict[str, Any]) -> None:
+        """
+        Stocke un snapshot source_anchor en SQLite.
+        INSERT OR IGNORE — contrainte UNIQUE (source_id, query_hash, source_version).
+        """
+        async with self.connection() as conn:
+            await conn.execute(
+                """
+                INSERT OR IGNORE INTO source_anchor_snapshots
+                    (snapshot_id, source_id, source_version, query_hash,
+                     raw_response, source_anchor, fetched_at, frame_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    snap["snapshot_id"],
+                    snap["source_id"],
+                    snap["source_version"],
+                    snap["query_hash"],
+                    snap["raw_response"],
+                    snap["source_anchor"],
+                    snap["fetched_at"],
+                    snap["frame_id"],
+                ),
+            )
+            await conn.commit()
+
+    async def get_snapshot_by_anchor(self, source_anchor: str) -> Optional[Dict[str, Any]]:
+        """
+        Retourne le snapshot correspondant à un source_anchor (None si absent).
+        Utilisé pour vérifier l'intégrité off-chain avant ancrage on-chain.
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT snapshot_id, source_id, source_version, query_hash,
+                       raw_response, source_anchor, fetched_at, frame_id
+                FROM source_anchor_snapshots
+                WHERE source_anchor = ?
+                LIMIT 1
+                """,
+                (source_anchor,),
+            )
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def is_snapshot_fresh(
+        self, source_id: str, query_hash: str, max_age_hours: int
+    ) -> bool:
+        """
+        True si un snapshot récent (< max_age_hours) existe pour (source_id, query_hash).
+        Utilisé pour décider si un re-fetch est nécessaire (TTL ADR-012).
+        """
+        import time as _time
+        cutoff = _time.time() - max_age_hours * 3600
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT 1
+                FROM source_anchor_snapshots
+                WHERE source_id = ? AND query_hash = ? AND fetched_at >= ?
+                LIMIT 1
+                """,
+                (source_id, query_hash, cutoff),
+            )
+            row = await cursor.fetchone()
+            return row is not None
+
+    # ========================================================================
     # MODEL TRACK RECORD
     # ========================================================================
 

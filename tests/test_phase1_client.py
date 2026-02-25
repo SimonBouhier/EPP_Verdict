@@ -8,7 +8,6 @@ from services.solana.config import SolanaCluster, SolanaConfig
 from services.solana.client import (
     EppSolanaClient,
     derive_attestation_pda,
-    _SOLANA_AVAILABLE,
 )
 from services.esmm.attestation import (
     EpistemicAttestation, Signature5D, ModelVote, crystallize,

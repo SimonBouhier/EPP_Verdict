@@ -1020,6 +1020,30 @@ CREATE INDEX IF NOT EXISTS idx_commit_reveal_run ON commit_reveal(run_id, model_
 
 
 -- ============================================================================
+-- ADR-012 : Snapshots sources RWA
+-- raw_response stocké off-chain (SQLite), source_anchor → on-chain
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS source_anchor_snapshots (
+    snapshot_id    TEXT PRIMARY KEY,
+    source_id      TEXT NOT NULL,
+    source_version TEXT NOT NULL,
+    query_hash     TEXT NOT NULL,   -- SHA-256(canonical query JSON)
+    raw_response   TEXT NOT NULL,   -- JSON complet de la réponse source
+    source_anchor  TEXT NOT NULL,   -- SHA-256(raw_response canonique) → valeur on-chain
+    fetched_at     REAL NOT NULL,
+    frame_id       TEXT NOT NULL,
+    UNIQUE (source_id, query_hash, source_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_anchor
+    ON source_anchor_snapshots (source_anchor);
+
+CREATE INDEX IF NOT EXISTS idx_snapshots_freshness
+    ON source_anchor_snapshots (source_id, fetched_at DESC);
+
+
+-- ============================================================================
 -- NOTES DE PERFORMANCE
 -- ============================================================================
 -- 

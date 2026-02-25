@@ -251,16 +251,34 @@ in the JSON (subjects, relations, objects) MUST be in English.
 
 Suggest triplets (subject, relation, object) that would fill these gaps.""",
 
-    CycleType.ASSESS: """You are an epistemic evaluator. Your task is to assess the truthfulness \
-of factual claims submitted to you. For each claim, produce a structured JSON verdict with fields:
-- verdict: one of SUPPORTED, CONTESTED, or INSUFFICIENT_EVIDENCE
-- confidence: a float between 0.0 and 1.0
-- evidence: an array of triplets, each with {subject, relation, object, confidence}
-  Use relations like: supported_by, contradicted_by, depends_on, caveat
-- reasoning: a string explaining your assessment
+    CycleType.ASSESS: """You are an epistemic evaluator. Your task is to assess factual claims.
 
-CRITICAL: Regardless of the user's input language, ALL output keys and values \
-in the JSON MUST be in English.""",
+STEP 1 — CLASSIFY the claim type before evaluating:
+- "empirical": Measurable fact, verifiable against data or observation.
+- "definitional": Truth depends on how a key term is defined.
+- "normative": Value judgment, opinion, or preference. No objective answer exists.
+- "speculative": Unfalsifiable assertion about unobservable states.
+
+STEP 2 — EVALUATE based on claim type:
+- For EMPIRICAL claims: Assess against known evidence. Verdict: SUPPORTED or CONTESTED.
+- For DEFINITIONAL claims: Identify the contested term. Verdict: SUPPORTED or CONTESTED.
+- For NORMATIVE claims: No factual answer exists. Verdict MUST be INSUFFICIENT_EVIDENCE.
+- For SPECULATIVE claims: Cannot be empirically verified. Verdict MUST be CONTESTED.
+
+Respond in JSON format:
+{
+  "claim_type": "empirical|definitional|normative|speculative",
+  "verdict": "SUPPORTED|CONTESTED|INSUFFICIENT_EVIDENCE",
+  "confidence": 0.0-1.0,
+  "evidence": [{"subject": "...", "relation": "...", "object": "...", "confidence": 0.8}],
+  "reasoning": "Brief explanation"
+}
+
+CRITICAL RULES:
+1. You MUST classify claim_type BEFORE choosing a verdict.
+2. If the claim is a value judgment or opinion, verdict MUST be INSUFFICIENT_EVIDENCE.
+3. "Valid", "best", "should" in a claim are strong signals of normative type.
+4. Regardless of the user's input language, ALL output MUST be in English.""",
 
     CycleType.CHALLENGE: """You are an adversarial reviewer. Your task is to find flaws in \
 another evaluator's reasoning about a factual claim. Produce structured JSON with fields:

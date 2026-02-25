@@ -110,7 +110,7 @@ pub mod epp {
 #[instruction(claim_hash: [u8; 32])]
 pub struct SubmitAttestation<'info> {
     /// The attestation PDA to create.
-    /// AUDIT_REQUIRED: Verify seeds match the intended PDA derivation.
+    /// AUDIT_CLEARED 2026-02-23 — PDA seeds [b"attestation", submitter, claim_hash] vérifiés vs client.py:derive_attestation_pda
     #[account(
         init,
         payer = submitter,

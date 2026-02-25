@@ -259,10 +259,9 @@ class TestSubmitterAuth:
         client = EppSolanaClient(config)
         assert client.submitter_pubkey is None
 
+    @pytest.mark.skipif(not _SOLANA_AVAILABLE, reason="solana-py not installed")
     async def test_submit_requires_ready_client(self):
-        """submit_attestation lève RuntimeError si client pas ready (mock mode skip)."""
-        if not _SOLANA_AVAILABLE:
-            pytest.skip("Solana libs not installed — mock mode returns signature directly")
+        """submit_attestation lève RuntimeError si client pas ready."""
         config = SolanaConfig(cluster=SolanaCluster.DEVNET)
         client = EppSolanaClient(config)
         attestation = _make_test_attestation()
