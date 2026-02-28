@@ -4,6 +4,14 @@
 
 ---
 
+## [2026-02-28] Audit unifié epp_audit.py — Nettoyage legacy
+
+- `epp_audit.py` : script unifié 4 phases remplaçant `audit_runner.py`, `audit.sh`, `find_orphans.sh`. 21 mutations (M1.1-M7.3), 7 groupes, 0 SURVIVED. Corrections : orphan detector false positives Windows/WSL, C4/C5 schema/config drift, C8 VERIFY coverage grep, pytest collection abort. Outputs → `tests/audits/`. `REPORT_PATH`/`CHECKSUMS_PATH` mis à jour.
+- Tests Solana localnet validés : 26/26 (11 unit, 6 mock, 9 E2E). Total projet : 723 tests (sans vars Solana : 697 passed, 11 skipped).
+- Supprimés : `audit_runner.py`, `audit.sh`, `find_orphans.sh`, `MUTATION_REPORT.md`.
+
+---
+
 ## [2026-02-25] Nettoyage héritage Lyra ACE + correctifs post-audit ADR-012
 
 - Renommage variables d'environnement `LYRA_*` → `EPP_*` (`ollama.py`, `ollama_embeddings.py`) : `LYRA_OLLAMA_URL` → `EPP_OLLAMA_URL`, `LYRA_MODEL` → `EPP_MODEL`, `LYRA_NUM_CTX` → `EPP_NUM_CTX`, `LYRA_EMBEDDING_MODEL` → `EPP_EMBEDDING_MODEL`. Valeurs par défaut inchangées.

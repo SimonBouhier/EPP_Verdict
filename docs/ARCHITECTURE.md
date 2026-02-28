@@ -373,3 +373,25 @@ cli/epp_cli.py
 - **Ollama** comme provider LLM local (à abstraire)
 - **Solana CLI** 3.0+ / **Anchor** 0.32+ / **Rust** 1.70+ (couche on-chain)
 - **Click** pour CLI EPP
+
+---
+
+## Audit Tooling
+
+`epp_audit.py` — Script unifié (remplace `audit_runner.py`, `audit.sh`, `find_orphans.sh`)
+
+| Phase | Contenu |
+| :--- | :--- |
+| 1 — Statique | Contrôles C2-C8 : singletons, silent except, schema drift, config drift, weak assertions, VERIFY coverage |
+| 2 — Orphelins | Détection modules Python non importés (cross-platform, pas de shell) |
+| 3 — Régression | `pytest tests/` complet, résilience aux erreurs de collection |
+| 4 — Mutations | 21 mutations (M1.1-M7.3), 7 groupes — baseline : 21 KILLED, 0 SURVIVED |
+
+Outputs → `tests/audits/` (`EPP_AUDIT_REPORT.md`, `audit_checksums.txt`)
+
+```bash
+python epp_audit.py                  # Audit complet (~10 min)
+python epp_audit.py --no-mutations   # Phases 1-3 (~30 sec)
+python epp_audit.py --static         # Phase 1 seule
+python epp_audit.py --mutations      # Phase 4 seule
+```

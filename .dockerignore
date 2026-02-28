@@ -1,9 +1,9 @@
 # ============================================================
 # .dockerignore — EPP_Verdict
 # ============================================================
-# Exclut du contexte Docker tout ce qui n'est pas nécessaire
-# à l'exécution de l'application.
-# Les tests et la doc RESTENT dans git mais sont exclus de l'image.
+# Image Python-only : ESMM pipeline + providers + database.
+# Solana programs se déploient on-chain (pas dans l'image).
+# Tests et docs restent dans git mais exclus de l'image.
 
 # === Python ===
 __pycache__/
@@ -25,6 +25,7 @@ env/
 ENV/
 
 # === Caches & Tests Python ===
+.hypothesis/
 .mypy_cache/
 .pytest_cache/
 .tox/
@@ -32,6 +33,7 @@ ENV/
 coverage/
 *.lcov
 htmlcov/
+.mutmut-cache
 
 # === Jupyter ===
 .ipynb_checkpoints/
@@ -40,13 +42,15 @@ htmlcov/
 tests/
 *.test.py
 pytest.ini
+conftest.py
+epp_audit.py
 
 # === Documentation (pas dans l'image, reste dans git) ===
 docs/
 *.md
 !README.md
 
-# === Data / SQLite ===
+# === Data / SQLite (créées au runtime, pas embarquées) ===
 data/*.db
 data/*.db-shm
 data/*.db-wal
@@ -70,6 +74,8 @@ yarn-error.log*
 .env.*
 secrets.json
 config.local.json
+*.pem
+*.keypair.json
 
 # === IDE ===
 .vscode/
@@ -90,25 +96,26 @@ ehthumbs.db
 .git/
 .gitignore
 
-# === Anchor / Solana (pas dans l'image Python) ===
+# === Anchor / Solana (déployé on-chain, pas dans l'image Python) ===
 programs/
+Anchor.toml
+Cargo.toml
 node_modules/
+target/
+.anchor/
+test-ledger/
 
 # === Claude Code ===
 .claude/
 
-# === Saves / Sessions locales ===
+# === Saves / Sessions / Demos ===
 saves/
-gpt-oss_20b/
+demos/
 
 # === Docker (éviter récursion) ===
 Dockerfile
 docker-compose.yml
 .dockerignore
 
-# === Demos & Scripts de dev ===
-demos/
-tools/
-scripts/
-*.bat
-audit*.log
+# === Artefacts résiduels ===
+=3.0.0
