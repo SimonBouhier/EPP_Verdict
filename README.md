@@ -77,14 +77,15 @@ EPP_Verdict/
 
 ## Long-term Vision — The Epistemic Flywheel
 
-Today EPP_Verdict is an oracle that doesn’t trust itself.  
-Tomorrow, it will be the decentralized verifiable truth layer the AI and RWA ecosystem needs.
+ Today EPP_Verdict is an oracle that doesn’t trust itself.  
+ Tomorrow, it will be the decentralized verifiable truth layer the AI and RWA ecosystem needs.
 
-Every attestation produced (5D epistemic signature, metrological frame, source anchor) becomes a node in a growing **decentralized weighted consensus graph**. Over thousands, then millions of attestations, this graph forms a living map of human knowledge: every triplet, every verification, every debate is weighted by real-world Brier score, semantic diversity, and historical reliability.
+ Every attestation produced (5D epistemic signature, metrological frame, source anchor) becomes a node in a growing **decentralized weighted consensus graph**.
+ Over thousands, then millions of attestations, this graph forms a living map of human knowledge: every triplet, every verification, every debate is weighted by real-world Brier score, semantic diversity, and historical reliability.
 
-Because the architecture is model-agnostic and obsolescence-proof, any LLM (local via Ollama or via xAI, OpenAI, Anthropic, Grok, Claude, Gemini APIs…) can join the protocol. Each participant brings its own “brand” and is publicly scored on epistemic performance. The best naturally gain more weight in future consensus; the others are incentivized to improve or specialize.
+ Because the architecture is model-agnostic and obsolescence-proof, any LLM (local via Ollama or via xAI, OpenAI, Anthropic, Grok, Claude, Gemini APIs…) can join the protocol. Each participant brings its own “brand” and is publicly scored on epistemic performance. The best naturally gain more weight in future consensus; the others are incentivized to improve or specialize.
 
-This creates a true **self-improving virtuous cycle**:
+ This creates a true **self-improving virtuous cycle**:
 
 1. Models debate and produce higher-quality attestations.  
 2. The graph grows richer with verified, structured, traceable data.  
@@ -92,14 +93,16 @@ This creates a true **self-improving virtuous cycle**:
 4. New, more powerful and more honest models join the protocol… and the cycle continues.
 
 In the long run, EPP_Verdict becomes:
-- **The decentralized reliable source** for anything that must be proven (RWA, regulatory compliance, real-time claim verification on X, anti-deepfake fact-checking, carbon validation, digital identity, etc.).
-- **The permanent public benchmark** for future AI models: a living, transparent, on-chain epistemic leaderboard.
-- **The truth infrastructure** that super-apps (X Money, future Grok agents, etc.) will be able to call natively so they never again have to say “trust me”.
+ - **The decentralized reliable source** for anything that must be proven (RWA, regulatory compliance, real-time claim verification on X, anti-deepfake fact-checking, carbon validation, digital identity, etc.).
 
-We didn’t build just another oracle.  
+ - **The permanent public benchmark** for future AI models: a living, transparent, on-chain epistemic leaderboard.
+
+ - **The truth infrastructure** that super-apps (X Money, future Grok agents, etc.) will be able to call natively so they never again have to say “trust me”.
+
+ We didn’t build just another oracle.  
 We built the engine that forces collective artificial intelligence to become, by design, more and more worthy of trust.
 
-And it all starts with 462 bytes on Solana.
+ And it all starts with 462 bytes on Solana.
 
 ### Les 4 axiomes fondateurs
 
