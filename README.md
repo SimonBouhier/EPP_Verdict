@@ -194,6 +194,8 @@ Douze ADRs documentent l'évolution du protocole. Les plus structurantes :
 | ADR-010 | Traçabilité méthodologique — `consensus_meta` obligatoire à la cristallisation |
 | ADR-011 | Réconciliation sémantique par empreinte structurelle (Semantic Fingerprinting) |
 | ADR-012 | Bifurcation déterministe / épistémique — intégration sources RWA |
+| ADR-013 | Graphe persistant & cache-hit épistémique — réutilisation des délibérations passées |
+
 
 ---
 
