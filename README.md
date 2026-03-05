@@ -192,7 +192,7 @@ Douze ADRs documentent l'évolution du protocole. Les plus structurantes :
 | ADR-005 | Tiers de confiance multi-critères (sandbox → proposition → validated → verified) |
 | ADR-006 | Claim hash = SHA-256(subject \| predicate \| object \| frame) — immuable |
 | ADR-010 | Traçabilité méthodologique — `consensus_meta` obligatoire à la cristallisation |
-| ADR-011-v2 | Réconciliation sémantique par empreinte structurelle (Semantic Fingerprinting) |
+| ADR-011 | Réconciliation sémantique par empreinte structurelle (Semantic Fingerprinting) |
 | ADR-012 | Bifurcation déterministe / épistémique — intégration sources RWA |
 
 ---
