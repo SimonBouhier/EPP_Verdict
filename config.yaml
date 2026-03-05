@@ -12,17 +12,17 @@
 # DATABASE
 # ============================================================================
 database:
-  path: "data/epp.db"
+  path: "data/epp_devnet.db"
 
 # ============================================================================
 # ESMM (Exploration Sémantique Multi-Modèles)
 # ============================================================================
 esmm:
   default_models: 3                    # Nombre de modèles par run
-  models:                              # Liste des modèles par défaut (pipeline.py)
-    - "mistral:7b"
-    - "llama3.1:8b"
-    - "qwen2.5:7b"
+  models:
+  - "mistral:latest"
+  - "llama3.1:8b"
+  - "gemma3:latest"
   min_consensus: 0.4                   # Seuil min de consensus (orchestrator.py)
   cycle_sequence:                      # Séquence des types de cycles ESMM
     - "divergent"
@@ -75,8 +75,8 @@ solana:
 # RWA — Sources autoritaires externes (ADR-012)
 # Credentials via env vars UNIQUEMENT — jamais en clair dans ce fichier.
 # ============================================================================
-rwa:
-  sources:
+sources:
+  adapters:
     opensanctions:
       enabled: true
       ttl_hours: 24
@@ -94,3 +94,11 @@ rwa:
       enabled: false
       ttl_hours: 24
       # Pas de credentials — API publique Verra Registry
+
+# ============================================================================
+# CACHE ÉPISTÉMIQUE (ADR-013)
+# ============================================================================
+cache:
+  enabled: true
+  ttl_hours: 168          # 7 jours — re-délibération si attestation plus ancienne
+  min_tier_for_cache: "proposition"  # En dessous de ce tier : toujours re-délibérer

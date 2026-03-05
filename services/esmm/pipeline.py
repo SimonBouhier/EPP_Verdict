@@ -59,6 +59,8 @@ class PipelineConfig:
     min_confidence_for_injection: float = 0.5    # En dessous = pas d'injection graphe
     default_epistemic_type: str = "foundational"
     metrological_frame: Optional[str] = None
+    cache_ttl_hours: float = 168.0    # ADR-013 : TTL cache (7 jours par défaut)
+    use_cache: bool = True             # ADR-013 : désactivable pour les benchmarks
 
 
 @dataclass
@@ -72,6 +74,8 @@ class PipelineResult:
     triplets_injected: int
     duration_ms: float
     errors: List[str]
+    from_cache: bool = False              # ADR-013 : True si retourné depuis graphe persistant
+    cache_hit_hash: Optional[str] = None  # ADR-013 : claim_hash de l'attestation trouvée
 
 
 def _get_default_models() -> List[str]:
@@ -230,6 +234,101 @@ async def _run_deterministic_pipeline(
     )
 
 
+async def _check_cache(
+    question: str,
+    db: "ISpaceDB",
+    config: "PipelineConfig",
+    esmm_config: Optional["ESMMRunConfig"],
+) -> Optional["PipelineResult"]:
+    """
+    ADR-013 : Vérifie si une attestation récente existe pour ce claim.
+
+    Retourne PipelineResult(from_cache=True) si hit, None si miss.
+    Ne fait AUCUNE modification en base.
+    """
+    import time as _time
+    from .attestation import EpistemicAttestation, Signature5D
+
+    try:
+        from services.config_loader import get_section
+        cache_cfg = get_section("cache", {})
+        min_tier_str = cache_cfg.get("min_tier_for_cache", "proposition")
+
+        rows = await db.get_attestations_by_question(
+            question=question,
+            min_consensus=config.min_consensus_for_attestation,
+        )
+
+        if not rows:
+            return None
+
+        # Filtrer par TTL
+        now = _time.time()
+        ttl_seconds = config.cache_ttl_hours * 3600
+        fresh_rows = [
+            r for r in rows
+            if (now - r.get("timestamp", 0)) < ttl_seconds
+        ]
+
+        if not fresh_rows:
+            return None
+
+        # Filtrer par tier minimum
+        TIER_ORDER = {"sandbox": 0, "proposition": 1, "validated": 2, "verified": 3}
+        min_tier_val = TIER_ORDER.get(min_tier_str, 1)
+        eligible = [
+            r for r in fresh_rows
+            if TIER_ORDER.get(r.get("confidence_tier", "sandbox"), 0) >= min_tier_val
+        ]
+
+        if not eligible:
+            return None
+
+        best = eligible[0]
+
+        # Reconstruire un EpistemicAttestation minimal depuis le dict DB
+        cached_att = EpistemicAttestation(
+            claim_hash=best["claim_hash"],
+            subject=best["subject"],
+            predicate=best["predicate"],
+            object=best["object"],
+            consensus_score=best.get("consensus_score", 0.0),
+            models_consulted=best.get("models_consulted", 0),
+            models_agreeing=best.get("models_agreeing", 0),
+            model_votes=[],
+            signature_5d=Signature5D(
+                agreement=best.get("sig_agreement", 0.0),
+                semantic_consistency=best.get("sig_semantic_consistency", 0.0),
+                centrality=best.get("sig_centrality", 0.0),
+                stability=best.get("sig_stability", 0.0),
+                relation_diversity=best.get("sig_relation_diversity", 0.0),
+            ),
+            epistemic_type=best.get("epistemic_type", "foundational"),
+            confidence_tier=best.get("confidence_tier", "sandbox"),
+            metrological_frame=best.get("metrological_frame", ""),
+            consensus_meta=best.get("consensus_meta", {}),
+            timestamp=best.get("timestamp", 0),
+        )
+
+        return PipelineResult(
+            run_id=best.get("run_id", 0),
+            question=question,
+            attestations=[cached_att],
+            triplets_extracted=0,
+            triplets_attested=1,
+            triplets_injected=0,
+            duration_ms=0.0,
+            errors=[],
+            from_cache=True,
+            cache_hit_hash=best["claim_hash"],
+        )
+
+    except Exception as e:
+        # Cache miss en cas d'erreur — ne pas bloquer le pipeline
+        logger.warning("[Pipeline] Cache lookup failed (continuing): %s", e)
+        return None
+
+
 async def run_pipeline(
     question: str,
     db: "ISpaceDB",
@@ -284,6 +383,18 @@ async def run_pipeline(
 
     try:
         run_logger.phase_start("pipeline", question=question)
+
+        # ADR-013 : Cache-hit — vérifier si une attestation récente existe
+        if config.use_cache and config.cache_ttl_hours > 0:
+            cached = await _check_cache(
+                question=question,
+                db=db,
+                config=config,
+                esmm_config=esmm_config,
+            )
+            if cached is not None:
+                logger.info("[Pipeline] Cache-hit: %s", cached.cache_hit_hash)
+                return cached
 
         # ADR-012 : chemin déterministe — bypass ESMM
         if (
@@ -563,6 +674,7 @@ async def _build_consensus_meta(
         "variations": [],
         "triplets_before_consensus": getattr(esmm_result, "triplets_before_consensus", 0),
         "triplets_after_consensus": getattr(esmm_result, "triplets_after_consensus", 0),
+        "fingerprint_merges": getattr(esmm_result, "fingerprint_merges", None),
     }
 
     meta = {

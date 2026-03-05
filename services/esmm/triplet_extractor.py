@@ -77,6 +77,7 @@ class ExtractionResult:
     semantic_dispersion: Optional[float] = None
     triplets_before_consensus: int = 0
     triplets_after_consensus: int = 0
+    fingerprint_merges: int = 0
     # ADR-011-v2: raw per-model triplets for fingerprinting
     raw_model_triplets: Dict[str, List] = field(default_factory=dict)
 
@@ -492,6 +493,7 @@ class TripletExtractor:
             semantic_dispersion=consensus_result.semantic_dispersion,
             triplets_before_consensus=consensus_result.triplets_before_consensus,
             triplets_after_consensus=consensus_result.triplets_after_consensus,
+            fingerprint_merges=consensus_result.fingerprint_merges,
             raw_model_triplets=dict(model_triplets),
         )
 

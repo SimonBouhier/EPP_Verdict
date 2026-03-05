@@ -4,6 +4,46 @@
 
 ---
 
+## [2026-03-05] Migration services/rwa/ → services/sources/ (ADR-014 §2.1)
+
+- `git mv services/rwa services/sources` — déplacement physique du répertoire.
+- Imports mis à jour : `services/sources/adapters/__init__.py` (5 lignes), 4 adaptateurs (1 ligne chacun), `services/esmm/source_anchor_builder.py`, `tests/test_adr012_source_anchor.py` (9 lignes), `demos/scenario_6_full_pipeline.py` (4 lignes).
+- `config.yaml` : section `rwa:` → `sources:` ; `tests/test_rwa_source_anchor.py` → `tests/test_adr012_source_anchor.py`.
+- Phase A préalable : correctifs `services/solana/client.py` (3 bugs : derive_pda try/except, submit_attestation ordre + garde keypair, query_attestations_by_claim garde). `tests/test_phase4_solana.py` : `@pytest.mark.skipif(_SOLANA_AVAILABLE)` sur `TestTransactionBuildingMockMode`. Baseline : 698 passed, 14 skipped, 0 failed.
+
+---
+
+## [2026-03-05] graph_seeder_blockchain.py — correctifs démarrage + ESMMRunConfig
+
+- Correctifs d'import et de signature DB : `from config_loader import get_config` → `from services.config_loader import get_section` ; `ISpaceDB(pool)` → `ISpaceDB(db_path)` (signature correcte, pool géré en interne) ; `await pool.close()` → `await db.close()` ; import `SQLiteConnectionPool` supprimé.
+- Unicode Windows (cp1252) : `→` → `->`, `──` → `--`, `ℹ` → `i`, `⚡` → `*`, `≥` → `>=` (4 familles de caractères hors cp1252).
+- `run_claim()` : `ESMMRunConfig(models=MODELS, input_mode="verify", original_claim=..., max_duration_hours=400/3600)` passé à `run_pipeline()` — timeout 400s pour phi4-reasoning.
+
+---
+
+## [2026-03-05] Correctifs post-ADR-013
+
+- `_check_cache()` (pipeline.py) : `timestamp=best.get("timestamp", 0)` ajouté à la reconstruction `EpistemicAttestation` — champ requis par Pydantic.
+- `cli/epp_cli.py` `_run_ask()` : `ESMMRunConfig(models=selected_models, input_mode="verify", original_claim=question)` ajouté et passé à `run_pipeline()` — aligne la CLI sur le pattern de scenario_6.
+- `config.yaml` + fichier physique : `data/epp.db` → `data/epp_devnet.db` (isolation pré-mainnet).
+
+---
+
+## [2026-03-05] ADR-011-v2 — Semantic Fingerprinting : fingerprint_merges exposé
+
+- `ConsensusResult` +`fingerprint_merges: int = 0` ; `_semantic_merge()` retourne 3-tuple `(triplet_data, semantic_dispersion, len(merge_groups))`. Champ threadé : `consensus_engine` → `triplet_extractor` (`ExtractionResult`) → `cycle_manager` (`CycleResult`, extraction dict) → `pipeline.py` diagnostics (`consensus_meta.diagnostics.fingerprint_merges`).
+- Test RED-GREEN-FIX ajouté : `test_fingerprint_merges_exposed_in_consensus_result` dans `tests/test_adr010_consensus_meta.py`. 701 passed, 0 failed.
+
+---
+
+## [2026-03-01] ADR-013 — Graphe persistant & cache-hit épistémique
+
+- `PipelineConfig` : +`cache_ttl_hours` (défaut 168h), +`use_cache` (défaut True). `PipelineResult` : +`from_cache`, +`cache_hit_hash`. `run_pipeline()` : cache-hit lookup avant cycles ESMM via `_check_cache()` (lecture seule, filtrage TTL + tier minimum, non-bloquant).
+- `database/engine.py` : +`get_attestations_by_question()` — lookup par question exacte (`WHERE question = ?`, tri timestamp DESC). `config.yaml` : section `cache` (enabled, ttl_hours=168, min_tier_for_cache="proposition"). Scénarios benchmark `scenario_6` : `use_cache=False` (délibération complète).
+- 701 passed, 11 skipped, 0 failed (+3 tests RED-GREEN-FIX). Baseline 698 → 701.
+
+---
+
 ## [2026-02-28] Audit unifié epp_audit.py — Nettoyage legacy
 
 - `epp_audit.py` : script unifié 4 phases remplaçant `audit_runner.py`, `audit.sh`, `find_orphans.sh`. 21 mutations (M1.1-M7.3), 7 groupes, 0 SURVIVED. Corrections : orphan detector false positives Windows/WSL, C4/C5 schema/config drift, C8 VERIFY coverage grep, pytest collection abort. Outputs → `tests/audits/`. `REPORT_PATH`/`CHECKSUMS_PATH` mis à jour.

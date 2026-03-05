@@ -64,7 +64,7 @@ EPP_Verdict/
 │   │   ├── consensus_engine.py  # Brier scores, diversity bonus, semantic merge
 │   │   ├── fingerprint_*.py     # ADR-011 : réconciliation sémantique (4 modules)
 │   │   └── source_anchor_builder.py  # ADR-012 : chemin déterministe RWA
-│   ├── rwa/adapters/       # OpenSanctions, OFAC, EU CFSP, Verra VCS
+│   ├── sources/adapters/   # OpenSanctions, OFAC, EU CFSP, Verra VCS
 │   └── solana/             # Config, bridge Python↔Anchor, client, frames
 ├── programs/epp/           # Programme Anchor (Rust) — lib.rs, state.rs
 ├── database/
@@ -72,7 +72,7 @@ EPP_Verdict/
 │   ├── schema.sql          # 25 tables SQLite
 │   └── pool.py             # Pool connexions, cache LRU
 ├── cli/epp_cli.py          # ask, submit, query, frame, verify-rwa
-└── tests/                  # 697 tests — RED-GREEN-FIX strict
+└── tests/                  # 698 tests — RED-GREEN-FIX strict
 ```
 
 ## Long-term Vision — The Epistemic Flywheel
@@ -172,7 +172,7 @@ python -m cli.epp_cli graph stats
 
 ```bash
 pytest tests/ -v                              # Suite complète
-pytest tests/test_rwa_source_anchor.py -v    # ADR-012 RWA
+pytest tests/test_adr012_source_anchor.py -v # ADR-012 Sources
 pytest tests/test_adr011_*.py -v             # Semantic Fingerprinting
 pytest tests/test_phase1_*.py -v             # Couche Solana
 

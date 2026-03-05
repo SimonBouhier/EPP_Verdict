@@ -125,6 +125,17 @@ async def _run_ask(question: str, models: int, frame: str):
     """Helper async pour exécuter le pipeline."""
     from database.engine import get_db
     from services.esmm.pipeline import run_pipeline, PipelineConfig
+    from services.esmm.orchestrator import ESMMRunConfig
+    from services.config_loader import get_section
+
+    selected_models = get_section("esmm", {}).get(
+        "models", ["mistral:7b", "llama3.1:8b", "qwen2.5:7b"]
+    )[:models]
+    esmm_config = ESMMRunConfig(
+        models=selected_models,
+        input_mode="verify",
+        original_claim=question,
+    )
 
     db = await get_db()
     config = PipelineConfig(metrological_frame=frame)
@@ -132,6 +143,7 @@ async def _run_ask(question: str, models: int, frame: str):
         question=question,
         db=db,
         config=config,
+        esmm_config=esmm_config,
     )
 
 

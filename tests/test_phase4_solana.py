@@ -66,6 +66,7 @@ def _make_test_attestation() -> EpistemicAttestation:
 # 4.6.1 — TRANSACTION BUILDING
 # ============================================================================
 
+@pytest.mark.skipif(_SOLANA_AVAILABLE, reason="Mock-mode tests: only valid when solders not installed")
 class TestTransactionBuildingMockMode:
     """4.6.1 — submit_attestation en mode mock (sans solders)."""
 

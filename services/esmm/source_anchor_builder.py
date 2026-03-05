@@ -45,7 +45,7 @@ async def build_source_anchor(spec: SourceAnchorSpec) -> SourceAnchorResult:
     Import tardif de get_adapter pour éviter le cycle esmm → rwa → esmm.
     Lève ValueError si source_id inconnu.
     """
-    from services.rwa.adapters import get_adapter  # import tardif — évite cycle circulaire
+    from services.sources.adapters import get_adapter  # import tardif — évite cycle circulaire
 
     adapter = get_adapter(spec.source_id)
     raw = await adapter.fetch(spec.query)

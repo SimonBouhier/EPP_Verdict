@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 import httpx
 
-from services.rwa.adapters.base import SourceAdapter
+from services.sources.adapters.base import SourceAdapter
 
 
 class EuCfspAdapter(SourceAdapter):

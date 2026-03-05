@@ -74,9 +74,9 @@ CYCLE_TIMEOUTS = {
     CycleType.DIVERGENT: 60,     # Exploration simple (60s: cold models need warmup)
     CycleType.DEBATE: 60,        # Dialectique complexe
     CycleType.META: 60,          # Meta-reflexion
-    CycleType.ASSESS: 90,        # VERIFY: verdict elicitation (slower)
-    CycleType.CHALLENGE: 90,     # VERIFY: adversarial review
-    CycleType.ADJUDICATE: 90,    # VERIFY: final synthesis
+    CycleType.ASSESS: 180,        # VERIFY: verdict elicitation (slower)
+    CycleType.CHALLENGE: 180,     # VERIFY: adversarial review
+    CycleType.ADJUDICATE: 180,    # VERIFY: final synthesis
 }
 
 
@@ -110,6 +110,7 @@ class CycleResult:
     semantic_dispersion: Optional[float] = None
     triplets_before_consensus: int = 0
     triplets_after_consensus: int = 0
+    fingerprint_merges: int = 0
     # ADR-011-v2: raw per-model triplets for fingerprinting
     raw_model_triplets: Dict[str, List] = field(default_factory=dict)
 
@@ -349,6 +350,7 @@ class ExplorationCycleManager:
             semantic_dispersion=extraction_result.get("semantic_dispersion"),
             triplets_before_consensus=extraction_result.get("triplets_before_consensus", 0),
             triplets_after_consensus=extraction_result.get("triplets_after_consensus", 0),
+            fingerprint_merges=extraction_result.get("fingerprint_merges", 0),
             raw_model_triplets=extraction_result.get("raw_model_triplets", {}),
         )
 
@@ -867,6 +869,7 @@ class ExplorationCycleManager:
                 "semantic_dispersion": result.semantic_dispersion,
                 "triplets_before_consensus": result.triplets_before_consensus,
                 "triplets_after_consensus": result.triplets_after_consensus,
+                "fingerprint_merges": result.fingerprint_merges,
                 "raw_model_triplets": result.raw_model_triplets,
             }
 

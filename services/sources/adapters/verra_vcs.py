@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import httpx
 
-from services.rwa.adapters.base import SourceAdapter
+from services.sources.adapters.base import SourceAdapter
 
 # Base URL de l'API publique Verra Registry
 _VERRA_BASE = "https://registry.verra.org/uiapi/resource/resourceSummary"

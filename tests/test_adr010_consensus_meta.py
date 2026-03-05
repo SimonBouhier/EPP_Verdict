@@ -248,6 +248,25 @@ async def test_semantic_dispersion_identical_is_zero():
     assert result.semantic_dispersion == 0.0
 
 
+@pytest.mark.asyncio
+async def test_fingerprint_merges_exposed_in_consensus_result():
+    """ADR-011-v2 RED: fingerprint_merges doit être exposé dans ConsensusResult."""
+    from services.esmm.consensus_engine import ConsensusEngine
+    from tests.test_semantic_merge import MockDeterministicEmbeddingProvider
+
+    engine = ConsensusEngine(min_agreement=0.3)
+    provider = MockDeterministicEmbeddingProvider()
+
+    model_results = {
+        "model_a": [{"subject": "sun", "relation": "is", "object": "star", "confidence": 0.9}],
+        "model_b": [{"subject": "moon", "relation": "orbits", "object": "earth", "confidence": 0.8}],
+    }
+    result = await engine.compute_consensus(model_results, embedding_provider=provider)
+    assert hasattr(result, "fingerprint_merges")
+    assert isinstance(result.fingerprint_merges, int)
+    assert result.fingerprint_merges >= 0
+
+
 # ============================================================================
 # SP-4: Ollama version resolution
 # ============================================================================

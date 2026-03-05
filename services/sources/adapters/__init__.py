@@ -1,9 +1,9 @@
 """ADR-012 : Registre des adaptateurs sources autoritaires."""
-from services.rwa.adapters.base import SourceAdapter
-from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
-from services.rwa.adapters.ofac import OfacAdapter
-from services.rwa.adapters.eu_cfsp import EuCfspAdapter
-from services.rwa.adapters.verra_vcs import VerraVcsAdapter
+from services.sources.adapters.base import SourceAdapter
+from services.sources.adapters.opensanctions import OpenSanctionsAdapter
+from services.sources.adapters.ofac import OfacAdapter
+from services.sources.adapters.eu_cfsp import EuCfspAdapter
+from services.sources.adapters.verra_vcs import VerraVcsAdapter
 
 _REGISTRY: dict[str, type[SourceAdapter]] = {
     "opensanctions": OpenSanctionsAdapter,

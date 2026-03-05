@@ -275,12 +275,12 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 | Fichier | Rôle | État |
 |---------|------|------|
 | `services/esmm/source_anchor_builder.py` | `SourceAnchorSpec`, `SourceAnchorResult`, `build_source_anchor()`, `_canonical_hash()` (SHA-256 JSON canonique sorted-keys) | ✅ Fonctionnel |
-| `services/rwa/adapters/base.py` | ABC `SourceAdapter` : `fetch(query)`, `normalize(raw)`, `get_source_version(raw)` | ✅ Fonctionnel |
-| `services/rwa/adapters/opensanctions.py` | POST `/match` yente (0 credential, testable en local) | ✅ Fonctionnel |
-| `services/rwa/adapters/ofac.py` | POST OFAC SDN — `OFAC_API_KEY` env var | ✅ Fonctionnel |
-| `services/rwa/adapters/eu_cfsp.py` | GET sanctions.network EU CFSP (données ouvertes) | ✅ Fonctionnel |
-| `services/rwa/adapters/verra_vcs.py` | GET Verra Registry L1 (serial/project_id — public) | ✅ Fonctionnel |
-| `services/rwa/adapters/__init__.py` | Registre `_REGISTRY` + `get_adapter()` + `register_adapter()` | ✅ Fonctionnel |
+| `services/sources/adapters/base.py` | ABC `SourceAdapter` : `fetch(query)`, `normalize(raw)`, `get_source_version(raw)` | ✅ Fonctionnel |
+| `services/sources/adapters/opensanctions.py` | POST `/match` yente (0 credential, testable en local) | ✅ Fonctionnel |
+| `services/sources/adapters/ofac.py` | POST OFAC SDN — `OFAC_API_KEY` env var | ✅ Fonctionnel |
+| `services/sources/adapters/eu_cfsp.py` | GET sanctions.network EU CFSP (données ouvertes) | ✅ Fonctionnel |
+| `services/sources/adapters/verra_vcs.py` | GET Verra Registry L1 (serial/project_id — public) | ✅ Fonctionnel |
+| `services/sources/adapters/__init__.py` | Registre `_REGISTRY` + `get_adapter()` + `register_adapter()` | ✅ Fonctionnel |
 
 **Frames RWA** (dans `metrological_frame.py`) :
 
@@ -300,7 +300,7 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 - `get_snapshot_by_anchor()` — Lookup par SHA-256 source_anchor
 - `is_snapshot_fresh()` — TTL check par (source_id, query_hash, max_age_hours)
 
-**`config.yaml`** : section `rwa.sources` — 4 sources (enabled/ttl_hours). Credentials via env vars uniquement.
+**`config.yaml`** : section `sources.adapters` — 4 sources (enabled/ttl_hours). Credentials via env vars uniquement.
 - `update_attestation_commit_verified()` — Met à jour `commit_verified` sur attestation
 - `get_all_model_brier_scores()` — Tous les Brier scores pour pondération
 - `update_attestation_diversity_bonus()` — Met à jour bonus diversité post-cristallisation

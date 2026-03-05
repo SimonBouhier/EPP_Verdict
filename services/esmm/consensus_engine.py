@@ -229,6 +229,7 @@ class ConsensusResult:
     triplets_after_consensus: int
     vote_entropy: float
     semantic_dispersion: Optional[float] = None
+    fingerprint_merges: int = 0
 
 
 def _compute_vote_entropy(triplet_data: Dict[str, Dict], total_models: int) -> float:
@@ -375,8 +376,9 @@ class ConsensusEngine:
 
         # Pass 2: Semantic merge via embeddings (if provider available)
         semantic_dispersion = None
+        fingerprint_merges = 0
         if embedding_provider is not None:
-            triplet_data, semantic_dispersion = await self._semantic_merge(
+            triplet_data, semantic_dispersion, fingerprint_merges = await self._semantic_merge(
                 triplet_data, embedding_provider
             )
 
@@ -486,13 +488,14 @@ class ConsensusEngine:
             triplets_after_consensus=triplets_after,
             vote_entropy=vote_entropy,
             semantic_dispersion=semantic_dispersion,
+            fingerprint_merges=fingerprint_merges,
         )
 
     async def _semantic_merge(
         self,
         triplet_data: Dict[str, Dict],
         embedding_provider: "EmbeddingProvider",
-    ) -> Tuple[Dict[str, Dict], float]:
+    ) -> Tuple[Dict[str, Dict], float, int]:
         """
         Pass 2: Cluster triplets by embedding cosine similarity.
 
@@ -512,7 +515,7 @@ class ConsensusEngine:
         """
         hashes = list(triplet_data.keys())
         if len(hashes) <= 1:
-            return triplet_data, 0.0
+            return triplet_data, 0.0, 0
 
         # Build triplet text for each hash group
         hash_texts: Dict[str, str] = {}
@@ -597,7 +600,7 @@ class ConsensusEngine:
             f"from {len(hashes)} unique hashes, dispersion={semantic_dispersion}"
         )
 
-        return triplet_data, semantic_dispersion
+        return triplet_data, semantic_dispersion, len(merge_groups)
 
     def _hash_triplet(self, triplet) -> str:
         """

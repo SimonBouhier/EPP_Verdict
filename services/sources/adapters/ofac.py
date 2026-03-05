@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import httpx
 
-from services.rwa.adapters.base import SourceAdapter
+from services.sources.adapters.base import SourceAdapter
 
 
 class OfacAdapter(SourceAdapter):

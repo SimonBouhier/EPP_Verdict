@@ -86,8 +86,8 @@ def test_source_anchor_spec_custom_ttl():
 
 def test_get_adapter_opensanctions():
     """get_adapter retourne OpenSanctionsAdapter pour 'opensanctions'."""
-    from services.rwa.adapters import get_adapter
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters import get_adapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = get_adapter("opensanctions")
     assert isinstance(adapter, OpenSanctionsAdapter)
@@ -95,7 +95,7 @@ def test_get_adapter_opensanctions():
 
 def test_get_adapter_unknown_raises():
     """get_adapter lève ValueError pour source_id inconnu."""
-    from services.rwa.adapters import get_adapter
+    from services.sources.adapters import get_adapter
 
     with pytest.raises(ValueError, match="Unknown source_id"):
         get_adapter("inexistant_source")
@@ -108,7 +108,7 @@ def test_get_adapter_unknown_raises():
 
 def test_opensanctions_normalize_match():
     """Score ≥ 0.85 → status 'match'."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {
@@ -127,7 +127,7 @@ def test_opensanctions_normalize_match():
 
 def test_opensanctions_normalize_clear_low_score():
     """Score < 0.85 → status 'clear'."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {
@@ -146,7 +146,7 @@ def test_opensanctions_normalize_clear_low_score():
 
 def test_opensanctions_normalize_empty_results():
     """Aucun résultat → status 'clear', score 0.0."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {"responses": {"q": {"results": []}}}
@@ -157,7 +157,7 @@ def test_opensanctions_normalize_empty_results():
 
 def test_opensanctions_normalize_best_score_selected():
     """Plusieurs résultats → le meilleur score est retenu."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {
@@ -178,7 +178,7 @@ def test_opensanctions_normalize_best_score_selected():
 
 def test_opensanctions_get_source_version_from_raw():
     """get_source_version extrait 'version' de la réponse brute."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {"version": "20260225", "responses": {}}
@@ -187,7 +187,7 @@ def test_opensanctions_get_source_version_from_raw():
 
 def test_opensanctions_get_source_version_fallback():
     """get_source_version retourne fallback si 'version' absent."""
-    from services.rwa.adapters.opensanctions import OpenSanctionsAdapter
+    from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 
     adapter = OpenSanctionsAdapter()
     raw = {"responses": {}}

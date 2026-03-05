@@ -2948,6 +2948,46 @@ class ISpaceDB:
             rows = await cursor.fetchall()
             return [self._row_to_attestation_dict(row) for row in rows]
 
+    async def get_attestations_by_question(
+        self,
+        question: str,
+        min_consensus: float = 0.0,
+        limit: int = 10,
+    ) -> List[Dict]:
+        """
+        Récupère les attestations correspondant à une question exacte.
+        ADR-013 : utilisé pour le cache-hit épistémique.
+
+        Args:
+            question: Texte exact de la question
+            min_consensus: Score minimum de consensus
+            limit: Nombre max de résultats
+
+        Returns:
+            Liste d'attestations triées par timestamp DESC (plus récentes en premier)
+        """
+        async with self.connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT
+                    attestation_id, claim_hash, subject, predicate, object,
+                    consensus_score, models_consulted, models_agreeing, model_votes,
+                    sig_agreement, sig_semantic_consistency, sig_centrality,
+                    sig_stability, sig_relation_diversity,
+                    epistemic_type, confidence_tier,
+                    metrological_frame, source_anchor, run_id, question,
+                    timestamp, protocol_version,
+                    validation_count, previous_hash, portable_json
+                FROM attestations
+                WHERE question = ? AND consensus_score >= ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                (question, min_consensus, limit),
+            )
+            rows = await cursor.fetchall()
+            return [self._row_to_attestation_dict(row) for row in rows]
+
     async def get_attestation_history(self, claim_hash: str) -> List[Dict]:
         """
         Récupère l'historique de revalidation d'un claim.
