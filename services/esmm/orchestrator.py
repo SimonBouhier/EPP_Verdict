@@ -133,6 +133,7 @@ class ESMMRunConfig:
     # ADR-012 : bifurcation déterministe
     claim_nature: ClaimNature = ClaimNature.EPISTEMIC
     source_anchor_spec: Optional[Any] = None  # SourceAnchorSpec — Any évite import circulaire
+    subject_override: Optional[str] = None    # Fix 1 (Lot A) : override subject pour les audits
 
     def __post_init__(self) -> None:
         if (
@@ -425,6 +426,7 @@ class ESMMOrchestrator:
         cycle_sequence = list(self.config.cycle_sequence)
         if self.config.input_mode == "verify":
             cycle_sequence = ["assess", "challenge", "adjudicate"]
+            self.config.cycle_sequence = cycle_sequence  # sync → _build_consensus_meta reads truth
             cycles_per_type = {
                 "assess": 1,
                 "challenge": 1,

@@ -68,12 +68,18 @@ def test_assess_system_prompt_is_generic():
 
 
 def test_verify_cycle_types_in_cycle_templates():
-    """All 6 CycleTypes must have entries in CYCLE_TEMPLATES."""
+    """All CycleTypes must have entries in CYCLE_TEMPLATES.
+    EXPLORE/VERIFY types require >= 2 templates; AUDIT types require >= 1.
+    """
     from services.esmm.cycle_prompts import CycleType, CYCLE_TEMPLATES
 
+    _audit_types = {CycleType.ASSESS_AUDIT, CycleType.CHALLENGE_AUDIT, CycleType.ADJUDICATE_AUDIT}
     for ct in CycleType:
         assert ct in CYCLE_TEMPLATES, f"{ct} missing from CYCLE_TEMPLATES"
-        assert len(CYCLE_TEMPLATES[ct]) >= 2, f"{ct} needs at least 2 templates"
+        min_templates = 1 if ct in _audit_types else 2
+        assert len(CYCLE_TEMPLATES[ct]) >= min_templates, (
+            f"{ct} needs at least {min_templates} template(s)"
+        )
 
 
 # ===========================================================================

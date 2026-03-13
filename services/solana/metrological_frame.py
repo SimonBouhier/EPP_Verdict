@@ -222,11 +222,64 @@ def create_rwa_identity_frame() -> MetrologicalFrame:
     )
 
 
+def create_smartcontract_audit_frame() -> MetrologicalFrame:
+    """Référentiel audit épistémique de smart contracts — ADR-014."""
+    return MetrologicalFrame(
+        frame_id="smartcontract_audit_v1.0",
+        version="1.0",
+        domain="smart_contract_security",
+        metric="vulnerability_presence",
+        description=(
+            "Epistemic audit frame for smart contract security analysis. "
+            "Each claim asserts presence/absence of a vulnerability in a contract unit. "
+            "Consensus across N models measures epistemic confidence. "
+            "Severity follows Trail of Bits 4-level taxonomy by default."
+        ),
+        parameters={
+            "severity_taxonomy": "tob_4level",
+            "severity_levels_tob": ["high", "medium", "low", "informational"],
+            "severity_levels_swc": ["critical", "high", "medium", "low", "informational"],
+            "slice_strategy": "function_level_v1",
+            "claim_type": "security_audit",
+            "swc_registry_version": "1.0",
+            "tob_classes": [
+                "access_controls", "timing", "undefined_behavior",
+                "patching", "data_validation", "auditing_logging",
+                "configuration", "cryptography",
+            ],
+        },
+        required_sources=1,
+    )
+
+
+def create_geopolitical_forecast_frame() -> "MetrologicalFrame":
+    """Frame géopolitique — données de conflit ACLED + ESMM. ADR-016."""
+    return MetrologicalFrame(
+        frame_id="geopolitical_forecast_v1.0",
+        version="1.0",
+        domain="geopolitical_analysis",
+        metric="conflict_forecast_assessment",
+        description=(
+            "Evaluation epistemique et deterministe des predictions geopolitiques "
+            "fondees sur les donnees de conflit ACLED. Chemin VERIFY (LLMs) + "
+            "chemin deterministe (ACLED events/CAST) coexistent."
+        ),
+        parameters={
+            "authoritative_sources": ["acled_events", "acled_cast"],
+            "esmm_bypass": False,
+            "baseline_events_12m": 500,
+        },
+        required_sources=1,
+    )
+
+
 # Registre canonique — importable par pipeline.py et cli/epp_cli.py
 PREDEFINED_FRAMES: Dict[str, Callable[[], "MetrologicalFrame"]] = {
-    "blockchain_tps_v1.0":       create_blockchain_tps_frame,
-    "general_knowledge_v1.0":    create_general_knowledge_frame,
-    "compliance_sanctions_v1.0": create_compliance_sanctions_frame,
-    "carbon_credits_vcs_v1.0":   create_carbon_credits_vcs_frame,
-    "rwa_identity_v1.0":         create_rwa_identity_frame,
+    "blockchain_tps_v1.0":          create_blockchain_tps_frame,
+    "general_knowledge_v1.0":       create_general_knowledge_frame,
+    "compliance_sanctions_v1.0":    create_compliance_sanctions_frame,
+    "carbon_credits_vcs_v1.0":      create_carbon_credits_vcs_frame,
+    "rwa_identity_v1.0":            create_rwa_identity_frame,
+    "smartcontract_audit_v1.0":     create_smartcontract_audit_frame,  # ADR-014
+    "geopolitical_forecast_v1.0":   create_geopolitical_forecast_frame,  # ADR-016
 }

@@ -49,6 +49,7 @@ CLAIM_TYPE_PENALTIES = {
     "definitional": 0.90,
     "normative": 0.70,
     "speculative": 0.75,
+    "security_audit": 1.0,  # ADR-014 — pas de pénalité (claim empirique vérifiable)
 }
 
 
@@ -450,12 +451,26 @@ async def run_pipeline(
             if consensus_meta and consensus_meta.get("verify"):
                 consensus_meta["verify"]["claim_type"] = verify_claim_type
 
+        # Fix 5 (Lot A) : override claim_type pour les audits de sécurité
+        if config.default_epistemic_type == "security_audit":
+            verify_claim_type = "security_audit"
+            # Fix 5 corrigé : propager dans consensus_meta (construit avant cet override)
+            if consensus_meta and "verify" in consensus_meta:
+                consensus_meta["verify"]["claim_type"] = "security_audit"
+
         # F5: dedup within a single run. Cross-run dedup requires DB lookup
         # on attestations.claim_hash — deferred to Phase 2 cleanup.
         seen_hashes = set()
+        _pending: list = []  # (attestation, triplet) — storage deferred until consensus_meta enriched
         for triplet in extracted_triplets:
+            # Fix 1 (Lot A) : subject_override pour les audits (remplace le prompt brut)
+            effective_subject = (
+                esmm_config.subject_override
+                if esmm_config and getattr(esmm_config, "subject_override", None)
+                else triplet["subject"]
+            )
             h = compute_claim_hash(
-                triplet["subject"], triplet["predicate"], triplet["object"],
+                effective_subject, triplet["predicate"], triplet["object"],
                 metrological_frame=config.metrological_frame,
             )
             if h in seen_hashes:
@@ -495,7 +510,7 @@ async def run_pipeline(
                     actual_score = round(actual_score * v_penalty * t_penalty, 4)
 
             attestation = crystallize(
-                subject=triplet["subject"],
+                subject=effective_subject,
                 predicate=triplet["predicate"],
                 object_=triplet["object"],
                 consensus_score=actual_score,
@@ -507,27 +522,17 @@ async def run_pipeline(
                     "stability": 0.5,
                     "relation_diversity": len(families) / max(len(model_votes), 1),
                 })),
-                epistemic_type=triplet.get("epistemic_type", config.default_epistemic_type),
+                epistemic_type=(
+                    config.default_epistemic_type
+                    if config.default_epistemic_type != "foundational"
+                    else triplet.get("epistemic_type", "foundational")
+                ),
                 run_id=run_id,
                 question=question,
                 metrological_frame=config.metrological_frame,
                 architecture_families=len(families),
                 consensus_meta=consensus_meta,
             )
-
-            # Stocker en DB
-            attestation_dict = attestation.model_dump()
-            attestation_dict["portable_json"] = attestation.to_portable_json()
-            # AUDIT[A3-005] 🟡 FRAGILE: store_attestation() attend un dict — conversion implicite via model_dump().
-            await db.store_attestation(attestation_dict)
-
-            # Hook post-cristallisation (D8)
-            try:
-                from .post_crystallization import post_crystallization_hook
-                await post_crystallization_hook(attestation, db)
-            # AUDIT[A2-011] 🟡 FRAGILE: post_crystallization_hook failure ignorée — attestation stockée quand même.
-            except Exception as e:
-                logger.warning(f"Post-crystallization hook failed: {e}")
 
             # Logger
             run_logger.crystallization(
@@ -537,19 +542,7 @@ async def run_pipeline(
             )
 
             attestations.append(attestation)
-
-            # Injecter dans le graphe si confiance suffisante
-            if triplet["consensus_score"] >= config.min_confidence_for_injection:
-                try:
-                    await _inject_triplet_to_graph(
-                        db, triplet["subject"], triplet["predicate"], triplet["object"],
-                        confidence=triplet["consensus_score"],
-                        model_source=f"esmm_run_{run_id}",
-                    )
-                    triplets_injected += 1
-                except Exception as e:
-                    # AUDIT[A2-010,A9-001] 🟡 FRAGILE: erreurs accumulées sans arrêt du pipeline.
-                    errors.append(f"Injection failed for {triplet['subject']}: {e}")
+            _pending.append((attestation, triplet))  # defer storage until consensus_meta enriched
 
         # P1: Enrich verify section with final verdict post-crystallization
         if consensus_meta and consensus_meta.get("verify") and attestations:
@@ -589,6 +582,34 @@ async def run_pipeline(
             if sub_consensus_evidence:
                 consensus_meta["verify"]["evidence_corpus"] = sub_consensus_evidence[:20]
                 consensus_meta["verify"]["evidence_total"] = len(sub_consensus_evidence)
+
+        # Passe 2: store + inject with enriched consensus_meta (final_verdict now populated)
+        for _att, _triplet in _pending:
+            # AUDIT[A3-005] 🟡 FRAGILE: store_attestation() attend un dict — conversion implicite via model_dump().
+            _att_dict = _att.model_dump()
+            _att_dict["portable_json"] = _att.to_portable_json()
+            await db.store_attestation(_att_dict)
+
+            # Hook post-cristallisation (D8)
+            try:
+                from .post_crystallization import post_crystallization_hook
+                await post_crystallization_hook(_att, db)
+            # AUDIT[A2-011] 🟡 FRAGILE: post_crystallization_hook failure ignorée — attestation stockée quand même.
+            except Exception as e:
+                logger.warning(f"Post-crystallization hook failed: {e}")
+
+            # Injecter dans le graphe si confiance suffisante
+            if _triplet["consensus_score"] >= config.min_confidence_for_injection:
+                try:
+                    await _inject_triplet_to_graph(
+                        db, _triplet["subject"], _triplet["predicate"], _triplet["object"],
+                        confidence=_triplet["consensus_score"],
+                        model_source=f"esmm_run_{run_id}",
+                    )
+                    triplets_injected += 1
+                except Exception as e:
+                    # AUDIT[A2-010,A9-001] 🟡 FRAGILE: erreurs accumulées sans arrêt du pipeline.
+                    errors.append(f"Injection failed for {_triplet['subject']}: {e}")
 
         run_logger.phase_end("pipeline", attestations=len(attestations))
 
@@ -742,12 +763,13 @@ async def _extract_triplets_from_question(
     elif not esmm_config.models:
         esmm_config.models = effective_models
 
-    # Dual-mode: auto-detect VERIFY claims
-    input_mode = classify_input(question)
-    if input_mode == InputType.VERIFY:
-        esmm_config.input_mode = "verify"
-        esmm_config.original_claim = question
-        logger.info(f"Auto-detected VERIFY mode for claim: {question[:80]}")
+    # Dual-mode: auto-detect VERIFY claims only if caller hasn't already set input_mode
+    if getattr(esmm_config, "input_mode", None) != "verify":
+        input_mode = classify_input(question)
+        if input_mode == InputType.VERIFY:
+            esmm_config.input_mode = "verify"
+            esmm_config.original_claim = question
+            logger.info(f"Auto-detected VERIFY mode for claim: {question[:80]}")
 
     orchestrator = ESMMOrchestrator(db=db, config=esmm_config, providers=providers)
 

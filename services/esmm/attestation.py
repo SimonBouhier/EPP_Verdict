@@ -123,6 +123,7 @@ class EpistemicAttestation(BaseModel):
         allowed = {
             "foundational", "bridge", "specialized", "generalist", "hybrid", "verdict",
             "deterministic",  # ADR-012 : claims via source autoritaire externe (bypass ESMM)
+            "security_audit",  # ADR-014 Lot A : attestations d'audit de contrats
         }
         if v not in allowed:
             raise ValueError(f"epistemic_type must be one of {allowed}, got '{v}'")

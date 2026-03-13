@@ -200,7 +200,8 @@ class TripletValidator:
         if not output or not output.strip():
             return []
 
-        output = output.strip()
+        from services.esmm.triplet_extractor import _strip_thinking_tags
+        output = _strip_thinking_tags(output)
 
         # Essayer de trouver un JSON array
         # 1. D'abord, extraire du markdown code block

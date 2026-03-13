@@ -1,0 +1,77 @@
+{
+  "benchmark_id": "not_so_smart_v1",
+  "source": "crytic/not-so-smart-contracts",
+  "contracts": [
+    {
+      "file": "reentrancy.sol",
+      "pragma": "^0.4.15",
+      "contract_name": "Reentrance",
+      "expected_skipped_count": 0,
+      "units_with_external_calls": ["withdrawBalance", "withdrawBalance_fixed", "withdrawBalance_fixed_2"],
+      "ground_truth": [
+        {
+          "unit_name": "withdrawBalance",
+          "swc_id": "SWC-107",
+          "tob_class": "undefined_behavior",
+          "severity": "high",
+          "description": "External call (msg.sender.call.value()) before state update — reentrancy window"
+        }
+      ]
+    },
+    {
+      "file": "integer_overflow.sol",
+      "pragma": "^0.4.15",
+      "contract_name": "Overflow",
+      "expected_skipped_count": 0,
+      "units_with_external_calls": [],
+      "ground_truth": [
+        {
+          "unit_name": "add",
+          "swc_id": "SWC-101",
+          "tob_class": "undefined_behavior",
+          "severity": "high",
+          "description": "Integer overflow: sellerBalance += value without SafeMath or bounds check"
+        }
+      ]
+    },
+    {
+      "file": "unprotected_function.sol",
+      "pragma": "^0.4.15",
+      "contract_name": "Unprotected",
+      "expected_skipped_count": 0,
+      "units_with_external_calls": [],
+      "ground_truth": [
+        {
+          "unit_name": "changeOwner",
+          "swc_id": "SWC-105",
+          "tob_class": "access_controls",
+          "severity": "high",
+          "description": "Missing onlyowner modifier — any caller can replace the contract owner"
+        }
+      ]
+    },
+    {
+      "file": "unchecked_call.sol",
+      "pragma": "^0.4.19",
+      "contract_name": "KingOfTheEtherThrone",
+      "expected_skipped_count": 0,
+      "units_with_external_calls": ["claimThrone", "sweepCommission"],
+      "ground_truth": [
+        {
+          "unit_name": "claimThrone",
+          "swc_id": "SWC-104",
+          "tob_class": "data_validation",
+          "severity": "medium",
+          "description": "send() return values not checked — silent ETH transfer failures"
+        },
+        {
+          "unit_name": "sweepCommission",
+          "swc_id": "SWC-104",
+          "tob_class": "data_validation",
+          "severity": "medium",
+          "description": "wizardAddress.send(amount) return value not checked"
+        }
+      ]
+    }
+  ]
+}

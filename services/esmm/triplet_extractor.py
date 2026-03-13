@@ -605,6 +605,13 @@ class TripletExtractor:
 # ============================================================================
 
 
+def _strip_thinking_tags(text: str) -> str:
+    """Remove <think>...</think> and <thinking>...</thinking> blocks from reasoning models."""
+    import re
+    text = re.sub(r'<think(?:ing)?>[\s\S]*?</think(?:ing)?>', '', text, flags=re.IGNORECASE)
+    return text.strip()
+
+
 def _parse_verdict_response(
     text: str,
     claim_text: str = "",
@@ -623,8 +630,8 @@ def _parse_verdict_response(
     import json
     import re
 
-    # Try to extract JSON from the response
-    text = text.strip()
+    # Strip reasoning model thinking blocks, then extract JSON
+    text = _strip_thinking_tags(text)
 
     # Try direct JSON parse first
     parsed = None

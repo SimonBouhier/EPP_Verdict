@@ -491,6 +491,100 @@ async def _run_verify_rwa(
         raise SystemExit(1)
 
 
+@cli.command("audit")
+@click.argument("contract_path", type=click.Path(exists=True))
+@click.option("--frame", "-f", default="smartcontract_audit_v1.0", help="Metrological frame ID")
+@click.option("--models", "-m", default=3, help="Number of models")
+@click.option("--slither/--no-slither", default=False, help="Use Slither for static pre-analysis")
+@click.option("--output", "-o", type=click.Choice(["json", "text"]), default="text")
+def audit(contract_path: str, frame: str, models: int, slither: bool, output: str):
+    """Run epistemic audit on a smart contract.
+
+    Example:
+        epp audit contracts/TokenVault.sol --models 3
+    """
+    from services.config_loader import get_value
+
+    enabled = get_value("audit", "enabled", True)
+    if not enabled:
+        click.echo("Error: audit is disabled in config.yaml (audit.enabled: false)", err=True)
+        sys.exit(1)
+
+    result = asyncio.run(_run_audit(contract_path, frame, models, slither, output))
+
+    if output == "json":
+        import dataclasses
+        click.echo(json.dumps({
+            "contract_path": result.contract_path,
+            "contract_hash": result.contract_hash,
+            "contract_name": result.contract_name,
+            "aggregate_severity": result.aggregate_severity,
+            "aggregate_consensus": result.aggregate_consensus,
+            "total_vulnerabilities": result.total_vulnerabilities,
+            "total_units_audited": result.total_units_audited,
+            "total_units_skipped": result.total_units_skipped,
+            "duration_ms": result.duration_ms,
+            "errors": result.errors,
+        }, indent=2))
+    else:
+        click.echo(f"Contract: {result.contract_name} ({result.contract_hash[:8]}...)")
+        click.echo(
+            f"Aggregate severity: {result.aggregate_severity.upper()} "
+            f"| Consensus: {result.aggregate_consensus:.2f}"
+        )
+        click.echo(
+            f"Audited: {result.total_units_audited} units "
+            f"| Skipped: {result.total_units_skipped}"
+        )
+        click.echo(f"Vulnerabilities: {result.total_vulnerabilities}")
+        click.echo(f"Duration: {result.duration_ms:.0f}ms")
+        click.echo()
+        click.echo("Units:")
+        for r in result.unit_results:
+            unit = r["unit"]
+            severity = r["severity"]
+            pipeline_res = r["pipeline_result"]
+            consensus = (
+                pipeline_res.attestations[0].consensus_score
+                if pipeline_res.attestations else 0.0
+            )
+            click.echo(
+                f"  [{severity.upper():>13}] {unit.unit_name:<30} "
+                f"— confidence: {consensus:.2f}"
+            )
+
+
+async def _run_audit(
+    contract_path: str,
+    frame: str,
+    models: int,
+    slither: bool,
+    output: str,
+):
+    """Helper async pour exécuter l'audit."""
+    from database.engine import ISpaceDB
+    from services.audit.audit_runner import run_audit
+    from services.config_loader import get_section, get_value
+
+    # DB isolée (jamais le singleton get_db() !)
+    audit_db_path = get_value("audit", "db_path", "data/epp_audit_devnet.db")
+    db = ISpaceDB(audit_db_path)
+    await db.initialize()
+
+    selected_models = get_section("esmm", {}).get(
+        "models", ["mistral:7b", "llama3.1:8b", "qwen2.5:7b"]
+    )[:models]
+
+    return await run_audit(
+        contract_path=contract_path,
+        db=db,
+        models=selected_models,
+        frame=frame,
+        use_slither=slither,
+        use_cache=True,
+    )
+
+
 def main():
     """Entry point for the CLI."""
     cli()

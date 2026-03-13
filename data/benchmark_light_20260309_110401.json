@@ -1,0 +1,17 @@
+{
+  "timestamp": "20260309_110401",
+  "contract": "reentrancy",
+  "db_path": "C:\\Users\\simon\\PROJECTS\\EPP_Verdict\\data\\epp_audit_devnet.db",
+  "models": [
+    "mistral:latest",
+    "llama3.1:8b",
+    "gemma3:latest"
+  ],
+  "slither_enabled": false,
+  "aggregate_severity": "informational",
+  "aggregate_consensus": 0.5468,
+  "total_vulnerabilities": 0,
+  "units_audited": 5,
+  "duration_s": 521.1003193855286,
+  "errors": []
+}

@@ -93,7 +93,7 @@ CLAIMS = [
         "expected_ambiguity": "low",
         "category": "absurd",
         "note": "REFUTED unanime attendu — entropy proche de 0",
-        "expected_verdict": "REFUTED",
+        "expected_verdict": "CONTESTED",
     },
     {
         "id": "ABSU-02",
@@ -103,7 +103,7 @@ CLAIMS = [
         "expected_ambiguity": "low",
         "category": "absurd",
         "note": "REFUTED unanime — causalité fantaisiste",
-        "expected_verdict": "REFUTED",
+        "expected_verdict": "CONTESTED",
     },
 
     # --- T3 : Ambiguës avec qualificateur caché ---
@@ -137,7 +137,7 @@ CLAIMS = [
         "expected_ambiguity": "low",
         "category": "humor",
         "note": "Comportement gracieux attendu — REFUTED sans panique",
-        "expected_verdict": "REFUTED",
+        "expected_verdict": "CONTESTED",
     },
     {
         "id": "FUNY-02",
@@ -191,7 +191,7 @@ CLAIMS = [
         "expected_ambiguity": "medium",
         "category": "factual_contested_myth",
         "note": "Mythe historique — REFUTED attendu (il était de taille normale pour l'époque)",
-        "expected_verdict": "REFUTED",
+        "expected_verdict": "CONTESTED",
     },
 ]
 

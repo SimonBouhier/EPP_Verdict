@@ -4,12 +4,17 @@ from services.sources.adapters.opensanctions import OpenSanctionsAdapter
 from services.sources.adapters.ofac import OfacAdapter
 from services.sources.adapters.eu_cfsp import EuCfspAdapter
 from services.sources.adapters.verra_vcs import VerraVcsAdapter
+from services.sources.adapters.acled import ACLEDAdapter  # ADR-016
+from services.sources.adapters.wikidata import WikidataAdapter  # ADR-016
 
 _REGISTRY: dict[str, type[SourceAdapter]] = {
     "opensanctions": OpenSanctionsAdapter,
     "ofac_sdn": OfacAdapter,
     "eu_cfsp": EuCfspAdapter,
     "verra_vcs": VerraVcsAdapter,
+    "acled_events": ACLEDAdapter,   # ADR-016 — événements de conflit
+    "acled_cast": ACLEDAdapter,     # ADR-016 — prédictions CAST
+    "wikidata": WikidataAdapter,    # ADR-016 — faits vérifiables CC-0
 }
 
 

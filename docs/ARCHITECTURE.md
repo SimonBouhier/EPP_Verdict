@@ -281,14 +281,25 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 | `services/sources/adapters/eu_cfsp.py` | GET sanctions.network EU CFSP (données ouvertes) | ✅ Fonctionnel |
 | `services/sources/adapters/verra_vcs.py` | GET Verra Registry L1 (serial/project_id — public) | ✅ Fonctionnel |
 | `services/sources/adapters/__init__.py` | Registre `_REGISTRY` + `get_adapter()` + `register_adapter()` | ✅ Fonctionnel |
+| `services/sources/adapters/acled.py` | OAuth2 POST `acleddata.com/oauth/token` (token 24h caché). Dual-mode : events (`/api/acled/read`) + forecast CAST (`/api/cast/read`). `normalize()` → score=min(1, count/baseline), status=stable/escalation/de-escalation. ADR-016. | ✅ Fonctionnel |
 
-**Frames RWA** (dans `metrological_frame.py`) :
+**Frames** (dans `metrological_frame.py`) :
 
 | Frame | Domaine | `esmm_bypass` |
 |-------|---------|--------------|
 | `compliance_sanctions_v1.0` | regulatory_compliance / sanctions_status | `True` |
 | `carbon_credits_vcs_v1.0` | environmental_assets / carbon_credit_validity | `True` (L2 désactivé — ADR-012 Q3) |
 | `rwa_identity_v1.0` | identity_compliance / entity_sanctions_composite | `True` (ESMM on ambiguity désactivé par défaut) |
+| `geopolitical_forecast_v1.0` | geopolitical_analysis / conflict_forecast_assessment | `False` (deux chemins coexistent — ADR-016) |
+
+### Oracle Géopolitique ACLED (ADR-016 — 2026-03-10)
+
+Données de conflit ACLED ancrent les prédictions géopolitiques. Double chemin : VERIFY épistémique (ESMM) + DETERMINISTIC ACLED.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/sources/adapters/acled.py` | ACLEDAdapter — OAuth2, events/forecast dual-mode, normalize() | ✅ Fonctionnel |
+| `demos/scenario_jiang.py` | 8 claims Jiang Xueqin (Iran/proxy/Hormuz + contrôles). VERIFY + DETERMINISTIC ACLED si credentials. Output JSON horodaté `demos/benchmark_runs/jiang_{ts}.json`. | ✅ Fonctionnel |
 
 **Table SQL ajoutée (table 25)** :
 

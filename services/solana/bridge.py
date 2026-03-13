@@ -35,6 +35,8 @@ EPISTEMIC_TYPE_MAP = {
     "specialized": 2,
     "generalist": 3,
     "hybrid": 4,
+    "security_audit": 5,  # ADR-014 Lot A — attestations d'audit (off-chain uniquement pour l'instant)
+    # Note: "verdict" et "deterministic" (ADR-012) absents — limitation pré-existante
 }
 
 CONFIDENCE_TIER_MAP = {

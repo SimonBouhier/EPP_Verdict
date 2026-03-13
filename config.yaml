@@ -102,3 +102,22 @@ cache:
   enabled: true
   ttl_hours: 168          # 7 jours — re-délibération si attestation plus ancienne
   min_tier_for_cache: "proposition"  # En dessous de ce tier : toujours re-délibérer
+
+# ============================================================================
+# AUDIT SMART CONTRACTS (ADR-014)
+# ============================================================================
+audit:
+  enabled: true
+  db_path: "data/epp_audit_devnet.db"
+  slice_strategy: "function_level_v1"
+  severity_taxonomy: "tob_4level"
+  slither_path: "slither"
+
+# ============================================================================
+# GÉOPOLITIQUE — Oracle ACLED (ADR-016)
+# Credentials via env vars UNIQUEMENT.
+# ============================================================================
+geopolitical:
+  acled_email_env: "ACLED_EMAIL"
+  acled_password_env: "ACLED_PASSWORD"
+  default_limit: 500

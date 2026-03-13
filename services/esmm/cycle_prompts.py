@@ -24,12 +24,15 @@ from enum import Enum
 
 class CycleType(str, Enum):
     """Exploration cycle types."""
-    DIVERGENT = "divergent"   # Broad exploration from seed concepts
-    DEBATE = "debate"         # Dialectic on contradictions
-    META = "meta"             # Reflection on extracted knowledge
-    ASSESS = "assess"         # VERIFY: Independent truthfulness evaluation
-    CHALLENGE = "challenge"   # VERIFY: Adversarial counter-argumentation
-    ADJUDICATE = "adjudicate" # VERIFY: Final weighted judgment
+    DIVERGENT = "divergent"           # Broad exploration from seed concepts
+    DEBATE = "debate"                 # Dialectic on contradictions
+    META = "meta"                     # Reflection on extracted knowledge
+    ASSESS = "assess"                 # VERIFY: Independent truthfulness evaluation
+    CHALLENGE = "challenge"           # VERIFY: Adversarial counter-argumentation
+    ADJUDICATE = "adjudicate"         # VERIFY: Final weighted judgment
+    ASSESS_AUDIT = "assess_audit"     # AUDIT: Independent vulnerability assessment
+    CHALLENGE_AUDIT = "challenge_audit"   # AUDIT: Adversarial challenge on peer verdict
+    ADJUDICATE_AUDIT = "adjudicate_audit" # AUDIT: Final synthesis of all audit verdicts
 
 
 # ============================================================================
@@ -197,6 +200,88 @@ ADJUDICATE_TEMPLATES: List[str] = [
 
 
 # ============================================================================
+# TEMPLATES ASSESS_AUDIT — ADR-014: Independent vulnerability assessment
+# ============================================================================
+
+ASSESS_AUDIT_TEMPLATES: List[str] = [
+    "<CONTRACT_CONTEXT>\n{contract_context}\n</CONTRACT_CONTEXT>\n\n"
+    "<FUNCTION_UNDER_AUDIT>\n{function_code}\n</FUNCTION_UNDER_AUDIT>\n\n"
+    "<UNIT_METADATA>\n{unit_metadata}\n</UNIT_METADATA>\n\n"
+    "Assess this function for security vulnerabilities. "
+    "For EACH potential vulnerability found, respond in JSON:\n"
+    "{\n"
+    '  "vulnerabilities": [\n'
+    "    {\n"
+    '      "swc_id": "SWC-107",\n'
+    '      "tob_class": "undefined_behavior",\n'
+    '      "severity": "high",\n'
+    '      "verdict": "VULNERABLE|SAFE|UNCERTAIN",\n'
+    '      "confidence": 0.0,\n'
+    '      "evidence": "Brief explanation with line references",\n'
+    '      "affected_lines": [13, 14, 15]\n'
+    "    }\n"
+    "  ],\n"
+    '  "overall_risk": "high|medium|low|informational",\n'
+    '  "reasoning": "Brief synthesis"\n'
+    "}\n"
+    "If no vulnerability is found, return an empty vulnerabilities array "
+    'with overall_risk "informational".',
+]
+
+
+# ============================================================================
+# TEMPLATES CHALLENGE_AUDIT — ADR-014: Adversarial challenge on peer verdict
+# ============================================================================
+
+CHALLENGE_AUDIT_TEMPLATES: List[str] = [
+    "<CONTRACT_CONTEXT>\n{contract_context}\n</CONTRACT_CONTEXT>\n\n"
+    "<FUNCTION_UNDER_AUDIT>\n{function_code}\n</FUNCTION_UNDER_AUDIT>\n\n"
+    "<PEER_VERDICT>\n{peer_verdict}\n</PEER_VERDICT>\n\n"
+    "Review the peer verdict above. Challenge or confirm each finding with specific "
+    "code evidence. Respond in JSON:\n"
+    "{\n"
+    '  "challenges": [\n'
+    "    {\n"
+    '      "swc_id": "...",\n'
+    '      "position": "AGREE|DISAGREE|PARTIAL",\n'
+    '      "reasoning": "...",\n'
+    '      "counter_evidence": "..."\n'
+    "    }\n"
+    "  ],\n"
+    '  "additional_vulnerabilities": [],\n'
+    '  "overall_assessment": "..."\n'
+    "}",
+]
+
+
+# ============================================================================
+# TEMPLATES ADJUDICATE_AUDIT — ADR-014: Final synthesis of all audit verdicts
+# ============================================================================
+
+ADJUDICATE_AUDIT_TEMPLATES: List[str] = [
+    "<CONTRACT_CONTEXT>\n{contract_context}\n</CONTRACT_CONTEXT>\n\n"
+    "<FUNCTION_UNDER_AUDIT>\n{function_code}\n</FUNCTION_UNDER_AUDIT>\n\n"
+    "<ALL_VERDICTS>\n{all_verdicts}\n</ALL_VERDICTS>\n\n"
+    "Synthesize all verdicts above into a final security assessment. Respond in JSON:\n"
+    "{\n"
+    '  "confirmed_vulnerabilities": [\n'
+    "    {\n"
+    '      "swc_id": "...",\n'
+    '      "tob_class": "...",\n'
+    '      "severity": "...",\n'
+    '      "consensus_verdict": "VULNERABLE|SAFE|UNCERTAIN",\n'
+    '      "confidence": 0.0,\n'
+    '      "evidence_summary": "..."\n'
+    "    }\n"
+    "  ],\n"
+    '  "overall_risk": "high|medium|low|informational",\n'
+    '  "dissenting_points": [],\n'
+    '  "reasoning": "..."\n'
+    "}",
+]
+
+
+# ============================================================================
 # MAPPING BY CYCLE TYPE
 # ============================================================================
 
@@ -207,6 +292,9 @@ CYCLE_TEMPLATES: Dict[CycleType, List[str]] = {
     CycleType.ASSESS: ASSESS_TEMPLATES,
     CycleType.CHALLENGE: CHALLENGE_TEMPLATES,
     CycleType.ADJUDICATE: ADJUDICATE_TEMPLATES,
+    CycleType.ASSESS_AUDIT: ASSESS_AUDIT_TEMPLATES,       # ADR-014
+    CycleType.CHALLENGE_AUDIT: CHALLENGE_AUDIT_TEMPLATES,  # ADR-014
+    CycleType.ADJUDICATE_AUDIT: ADJUDICATE_AUDIT_TEMPLATES,  # ADR-014
 }
 
 
@@ -300,6 +388,53 @@ judgment. Produce structured JSON with fields:
 
 CRITICAL: Regardless of the user's input language, ALL output keys and values \
 in the JSON MUST be in English.""",
+
+    # --- ADR-014 AUDIT mode ---
+
+    CycleType.ASSESS_AUDIT: """You are a smart contract security auditor. \
+Your task is to assess a Solidity function for security vulnerabilities.
+
+For each vulnerability found, classify it using:
+1. SWC Registry ID (e.g. SWC-107 for Reentrancy)
+2. Trail of Bits vulnerability class (access_controls, timing, undefined_behavior, \
+patching, data_validation, auditing_logging, configuration, cryptography)
+3. Severity: high | medium | low | informational (Trail of Bits 4-level taxonomy)
+
+Common patterns to check:
+- Reentrancy (SWC-107): external call before state update
+- Access control issues (SWC-105, SWC-115): missing onlyOwner, tx.origin usage
+- Integer issues (SWC-101): unchecked arithmetic in Solidity < 0.8
+- Unchecked return values (SWC-104): missing success check on .call()
+
+CRITICAL: Regardless of the input language, ALL output MUST be in English.
+You MUST respond in valid JSON only. No prose outside the JSON object.""",
+
+    CycleType.CHALLENGE_AUDIT: """You are an adversarial smart contract security reviewer. \
+Your task is to challenge or confirm a peer's vulnerability findings.
+
+For each finding in the peer verdict:
+- AGREE: The vulnerability is correctly identified. Provide additional evidence.
+- DISAGREE: The finding is a false positive. Explain why the code is safe.
+- PARTIAL: The vulnerability exists but the severity or SWC classification is wrong.
+
+You may also identify additional vulnerabilities the peer missed.
+
+CRITICAL: Regardless of the input language, ALL output MUST be in English.
+You MUST respond in valid JSON only. No prose outside the JSON object.""",
+
+    CycleType.ADJUDICATE_AUDIT: """You are an impartial smart contract security judge. \
+Your task is to synthesize multiple auditor verdicts into a final security assessment. \
+Each confirmed vulnerability must be classified by SWC ID, severity, and Trail of Bits class.
+
+Weigh evidence by:
+- Specificity: findings with line references and concrete evidence over vague claims
+- Consensus: vulnerabilities flagged by multiple auditors get higher confidence
+- SWC classification accuracy: prefer well-established SWC patterns
+
+Resolve disagreements by examining the underlying code logic, not just the verdicts.
+
+CRITICAL: Regardless of the input language, ALL output MUST be in English.
+You MUST respond in valid JSON only. No prose outside the JSON object.""",
 }
 
 

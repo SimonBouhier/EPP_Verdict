@@ -4,6 +4,53 @@
 
 ---
 
+## [2026-03-10] ADR-016 Lot 6 — scenario_jiang.py
+
+- `demos/scenario_jiang.py` : script de démonstration géopolitique — 8 claims issues des prédictions Jiang Xueqin (Yale, "Predictive History") sur la stratégie iranienne et la dynamique du Moyen-Orient 2024-2026.
+- Deux passes par claim : VERIFY épistémique (ESMM multi-LLM) + DETERMINISTIC ACLED (ancrage données de conflit, si `ACLED_EMAIL` défini). Concordance VERIFY↔ACLED calculée et exportée.
+- Output JSON horodaté dans `demos/benchmark_runs/jiang_{ts}.json`. Baseline inchangée : 797 passed, 14 skipped.
+
+---
+
+## [2026-03-09] Fix `<think>` tag stripping — modèles reasoning (phi4/deepseek-r1)
+
+- `services/esmm/triplet_extractor.py` : nouvelle fonction `_strip_thinking_tags()` — supprime `<think>...</think>` et `<thinking>...</thinking>` avant parsing JSON (regex non-greedy, multi-blocs). Appliquée en tête de `_parse_verdict_response()` (remplacement du `.strip()` initial).
+- `services/esmm/triplet_validator.py` : appel `_strip_thinking_tags()` importé depuis `triplet_extractor` (source unique) avant le parser EXPLORE — protège aussi le mode EXPLORE si `<think>` contient du contenu JSON-like.
+- Cause racine : regex `\{[\s\S]*\}` greedy capturait depuis le 1er `{` dans `<think>` jusqu'au dernier `}` → JSON invalide → `INSUFFICIENT_EVIDENCE` → vote perdu → `models_consulted: 2` au lieu de 3. 782 passed, 14 skipped, 0 failed.
+
+---
+
+## [2026-03-09] Correctifs métadonnées Bug A + Bug B (pipeline.py / orchestrator.py)
+
+- **Bug A — cycle\_sequence** : `orchestrator.py:427` — write-back `self.config.cycle_sequence = cycle_sequence` après l'override VERIFY local. `_build_consensus_meta()` enregistrait la valeur config.yaml (`["divergent","debate","meta"]`) au lieu des cycles réels (`["assess","challenge","adjudicate"]`).
+- **Bug B — final\_verdict None** : `pipeline.py` — boucle cristallisation splitée en 2 passes. Passe 1 : crystallize + post_hook + collecte `(attestation, triplet)` sans storage DB. Après blocs P1/P2 d'enrichissement (`final_verdict`, `evidence_corpus`), Passe 2 : `model_dump()` + `store_attestation()` + inject graph. Pydantic v2 shallow-copy confirmée : inner dicts partagés → `consensus_meta["verify"]["final_verdict"]` propagé vers toutes les attestations sans réassignation explicite. 782 passed, 14 skipped, 0 failed.
+
+---
+
+## [2026-03-09] Fix routing EXPLORE→VERIFY (pipeline.py)
+
+- `_extract_triplets_from_question()` : guard `if getattr(esmm_config, "input_mode", None) != "verify"` avant appel `classify_input()`. Le prompt ASSESS_AUDIT ne contient pas les mots-clés de détection VERIFY → `classify_input()` retournait EXPLORE et écrasait `input_mode="verify"` posé par `audit_runner`. Cycles exécutés correctement mais métadonnées mentaient (symptôme observé : `cycle_sequence: ["divergent","debate","meta"]` en DB). 782 passed, 14 skipped, 0 failed.
+
+---
+
+## [2026-03-09] ADR-014 Lots 3+4 — Moteur d'audit smart contract
+
+### Lot 3 — audit_runner + CLI
+
+- Nouveau module `services/audit/audit_runner.py` : `AuditResult` dataclass, `run_audit()` async (slice → pipeline VERIFY par unité), `_safe_format()` (regex substitution évitant `KeyError` sur JSON `{}` dans template ASSESS_AUDIT), `format_unit_for_audit_prompt()`, `_sort_units_by_priority()`, `_extract_severity_from_result()`, `_aggregate_severity()` (pire sévérité gagne).
+- `config.yaml` : section `audit:` (enabled, db_path, slice_strategy, severity_taxonomy, slither_path). `cli/epp_cli.py` : commande `epp audit` avec options `--frame`, `--models`, `--slither/--no-slither`, `--output`. Isolation DB : `ISpaceDB(audit_db_path)` direct, jamais le singleton `get_db()`.
+- `tests/test_adr014_audit_runner.py` : 16 tests (AuditResult shape, contract_hash 64-hex, aggregate_severity propagation, db_path guard, JSON string consensus_meta round-trip).
+
+### Lot 4 — benchmark fixtures
+
+- `tests/fixtures/benchmark/not_so_smart/ground_truth.json` : construit depuis lecture réelle des 4 `.sol` (reentrancy/integer_overflow/unprotected_function/unchecked_call) — pragma, contract_name, units vulnérables, SWC IDs (107/101/105/104), classes ToB.
+- `services/audit/contract_slicer.py:236` : regex `\bcontract\s+(\w+)\s*(?:is\b|\{)` — fix contract_name retournant `"that"` (commentaire `// A contract that...`) au lieu de `"KingOfTheEtherThrone"`.
+- `tests/test_adr014_benchmark.py` : 16 tests slicer-level (noms réels, external_calls, state_writes, priority sort, SWC IDs valides).
+- `scripts/benchmark_reentrancy.py` : script standalone live benchmark — `close_pool()` (pas `db.close()`), ASCII partout (cp1252-safe), modèles `mistral:latest / llama3.1:8b / gemma3:latest`. Dry-run validé.
+- `scripts/benchmark_heavy.py` : benchmark heavy models (phi4-reasoning/deepseek-r1/granite3.3) avec timeout par unité, `--test-models`, `--single`, `--timeout`. Fixes : `close_pool()`, ASCII, SyntaxError `global TIMEOUT_PER_UNIT` déplacé en tête de `main()`.
+
+---
+
 ## [2026-03-05] Migration services/rwa/ → services/sources/ (ADR-014 §2.1)
 
 - `git mv services/rwa services/sources` — déplacement physique du répertoire.

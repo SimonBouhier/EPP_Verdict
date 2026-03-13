@@ -17,6 +17,7 @@ build/
 .venv/
 venv/
 env/
+*.env
 
 # === Caches & Tests Python ===
 .hypothesis/
@@ -41,6 +42,9 @@ data/*.db-wal
 *.db-shm
 *.db-wal
 dump.rdb
+data/backups/*.db
+data/backups/*.json
+*.db
 
 # === Logs & Temporaires ===
 logs/
@@ -100,5 +104,26 @@ saves/
 # === Benchmark runs (données locales, pas du code) ===
 demos/benchmark_runs/
 
-# === Artefacts pip résiduels ===
-=3.0.0
+# === Slither (artefacts temporaires) ===
+slither_out.json
+crytic-export/
+
+# === Solc (compilation locale) ===
+*.abi
+*.bin
+
+# === ADR-014 benchmark (données éphémères, pas du code) ===
+data/benchmark_audit.db
+
+# Lockfiles — npm only
+yarn.lock
+
+# Pitch documents (pas dans le repo code)
+docs/EPP_Pitch_Document*.docx
+
+# Debug temporaire
+tests/debug_acled_auth.py
+
+# === Plans et docs de session Opus (working docs, pas du code) ===
+# NOTE : les ADR-*.md et PLAN_*.md dans docs/ sont versionnés.
+# Seuls les fichiers temporaires de session sont exclus.
