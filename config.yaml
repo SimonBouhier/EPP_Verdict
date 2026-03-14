@@ -121,3 +121,10 @@ geopolitical:
   acled_email_env: "ACLED_EMAIL"
   acled_password_env: "ACLED_PASSWORD"
   default_limit: 500
+
+# ============================================================================
+# FLYWHEEL ÉPISTÉMIQUE (ADR-018)
+# Inject les ancres déterministes dans le contexte des LLMs (VERIFY mode only)
+# ============================================================================
+flywheel:
+  enabled: true

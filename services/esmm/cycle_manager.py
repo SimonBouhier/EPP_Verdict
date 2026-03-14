@@ -229,6 +229,9 @@ class ExplorationCycleManager:
         # 3. Appel multi-modeles avec timeout adaptatif
         timeout = self._get_timeout(cycle_type)
 
+        # ADR-018: Frontière 4 — extraire anchor_ctx du context pour injection prompt
+        anchor_ctx = context.get("anchor_context", "")
+
         # CHALLENGE: epistemic isolation — each model sees only ONE peer's verdict
         if cycle_type == CycleType.CHALLENGE and "_verify_model_verdicts" in context:
             model_verdicts = context["_verify_model_verdicts"]
@@ -249,10 +252,10 @@ class ExplorationCycleManager:
                     evidence=peer_response[:500],
                 )
             responses = await self._query_models_isolated(
-                model_questions, cycle_type, timeout
+                model_questions, cycle_type, timeout, anchor_ctx=anchor_ctx
             )
         else:
-            responses = await self._query_models(question, cycle_type, timeout)
+            responses = await self._query_models(question, cycle_type, timeout, anchor_ctx=anchor_ctx)
 
         # 3b. RETRY LOGIC pour cycles META vides (max 3 retries)
         META_MAX_RETRIES = 3
@@ -659,7 +662,8 @@ class ExplorationCycleManager:
         self,
         question: str,
         cycle_type: CycleType,
-        timeout: int
+        timeout: int,
+        anchor_ctx: str = "",  # ADR-018: flywheel injection
     ) -> Dict[str, str]:
         """
         Interroge les modeles avec le system prompt approprie.
@@ -668,11 +672,15 @@ class ExplorationCycleManager:
             question: Question a poser
             cycle_type: Type de cycle (pour le system prompt)
             timeout: Timeout en secondes
+            anchor_ctx: Contexte déterministe à injecter (ADR-018 flywheel)
 
         Returns:
             Dict model -> reponse
         """
         system_prompt = get_system_prompt(cycle_type)
+        # ADR-018: Flywheel injection dans le system prompt
+        if anchor_ctx:
+            system_prompt = system_prompt + "\n\n" + anchor_ctx
         responses = {}
 
         try:
@@ -709,6 +717,7 @@ class ExplorationCycleManager:
         model_questions: Dict[str, str],
         cycle_type: CycleType,
         timeout: int,
+        anchor_ctx: str = "",  # ADR-018: flywheel injection
     ) -> Dict[str, str]:
         """Query each model with its own question (epistemic isolation).
 
@@ -716,6 +725,9 @@ class ExplorationCycleManager:
         Calls batch_sequential_providers with single-element provider lists.
         """
         system_prompt = get_system_prompt(cycle_type)
+        # ADR-018: Flywheel injection dans le system prompt
+        if anchor_ctx:
+            system_prompt = system_prompt + "\n\n" + anchor_ctx
         responses: Dict[str, str] = {}
 
         for model_name, question in model_questions.items():

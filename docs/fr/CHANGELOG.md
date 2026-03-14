@@ -4,6 +4,34 @@
 
 ---
 
+## [2026-03-13] ADR-018 — Flywheel Épistémique
+
+- **Fix B4 (bloquant)** : `_run_deterministic_pipeline()` (pipeline.py:172) appelait `crystallize()` sans `question=question` → colonne `question` NULL en DB → `get_attestations_by_question()` ne retournait jamais d'ancres déterministes. Ajout de `question=question` dans l'appel `crystallize()`.
+- **`_lookup_existing_anchors(question, db)`** : nouvelle fonction pipeline.py — lookup par `question` via ADR-013 `get_attestations_by_question()`, filtre `consensus_method == "deterministic_source_v1"`, lit `diagnostics.result` (PAS `source_anchor_meta.normalized`). Retourne liste de dicts `{source_id, score, status, fetched_at, source_version}`.
+- **`_format_anchor_context(anchors)`** : formate les ancres en bloc `[VERIFIED DATA — from deterministic sources...]...[END VERIFIED DATA...]` injecté dans le system prompt. Retourne `""` si aucune ancre.
+- **Bloc flywheel dans `run_pipeline()`** : guard `is_verify = (esmm_config.input_mode == "verify")` (ADR-018 §4 — VERIFY-only). Variable `flywheel_enabled` initialisée à `False` hors du `try` (correction Opus P2 — évite NameError dans la traçabilité). Lookup encapsulé dans `try/except` non-bloquant.
+- **Threading `anchor_context` sur 4 frontières** : `run_pipeline()` → `_extract_triplets_from_question(anchor_context=)` → `esmm_config.anchor_context` → `execute_cycles()` cycle_context `["anchor_context"]` → `execute_cycle()` → `_query_models(anchor_ctx=)` + `_query_models_isolated(anchor_ctx=)` → concaténation system_prompt.
+- **`ESMMRunConfig`** : champ `anchor_context: str = ""` ajouté (`orchestrator.py`).
+- **Traçabilité `consensus_meta`** : `consensus_meta.setdefault("methodology", {})["flywheel"] = {enabled, anchors_found, sources_injected}`.
+- **`config.yaml`** : section `flywheel: { enabled: true }` ajoutée.
+- **`tests/test_adr018_flywheel.py`** : 8 tests RED-GREEN-FIX — `test_lookup_no_anchors`, `test_lookup_with_deterministic_anchor`, `test_lookup_filters_out_epistemic_attestations`, `test_format_anchor_context_empty`, `test_format_anchor_context_with_data`, `test_consensus_meta_flywheel_traceability`, `test_flywheel_disabled`, `test_flywheel_skipped_in_explore_mode` (correction Opus P3). Baseline : 809 passed, 14 skipped, 0 failed.
+
+---
+
+## [2026-03-13] Fix ACLED 403 — header Content-Type OAuth2
+
+- `services/sources/adapters/acled.py` : ajout `headers={"Content-Type": "application/x-www-form-urlencoded"}` au POST `/oauth/token`. Sans ce header, l'API ACLED retourne 403 même avec des credentials valides.
+- Ajout `import logging` + `logger.info("[ACLED] Token request (cached=...)")` avant le check cache du token.
+
+---
+
+## [2026-03-13] Fix Wikidata User-Agent + SPARQL QID
+
+- `services/sources/adapters/wikidata.py` : ajout `User-Agent: EPP_Verdict/1.0 (...)` dans les headers HTTP — cause racine des erreurs `not_found` sur les requêtes SPARQL Wikidata (API bloque les crawlers sans User-Agent).
+- `demos/scenario_jiang.py` : JIANG-RESOLVED-01 `wikidata_query` corrigé — `wd:Q116827690 wdt:P1346` → `wd:Q101110072 wdt:P991` (Q101110072 = élection présidentielle US 2024, P991 = successful candidate, plus précis que P1346 winner). JIANG-RESOLVED-02 : `wikidata_query: None` (opérations militaires non interrogeables dans Wikidata). Logs debug `[WIKI]` conservés. `CLAIMS` complet restauré (filtre single-claim retiré).
+
+---
+
 ## [2026-03-10] ADR-016 Lot 6 — scenario_jiang.py
 
 - `demos/scenario_jiang.py` : script de démonstration géopolitique — 8 claims issues des prédictions Jiang Xueqin (Yale, "Predictive History") sur la stratégie iranienne et la dynamique du Moyen-Orient 2024-2026.

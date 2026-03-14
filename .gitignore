@@ -124,6 +124,11 @@ docs/EPP_Pitch_Document*.docx
 # Debug temporaire
 tests/debug_acled_auth.py
 
+# === Scripts locaux (non versionnés) ===
+*.bat
+all.pdf
+rapport.txt
+
 # === Plans et docs de session Opus (working docs, pas du code) ===
 # NOTE : les ADR-*.md et PLAN_*.md dans docs/ sont versionnés.
 # Seuls les fichiers temporaires de session sont exclus.

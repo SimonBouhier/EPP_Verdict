@@ -180,6 +180,7 @@ async def _run_deterministic_pipeline(
             source_anchor=anchor_result.source_anchor,
             metrological_frame=frame_id,
             consensus_meta=consensus_meta,
+            question=question,  # ADR-018 B4 fix: peuple la colonne pour get_attestations_by_question()
         )
     except Exception as exc:
         logger.error(f"[Pipeline] Deterministic crystallize failed: {exc}")
@@ -233,6 +234,88 @@ async def _run_deterministic_pipeline(
         duration_ms=(time.time() - start_time) * 1000,
         errors=errors,
     )
+
+
+async def _lookup_existing_anchors(
+    question: str,
+    db: "ISpaceDB",
+) -> list[dict]:
+    """
+    ADR-018 §2.2 : Cherche les attestations déterministes existantes pour une question.
+
+    Lookup par `question` (PAS par claim_hash — cf. bug B1 : les deux chemins
+    produisent des hashes distincts). Filtre post-query sur consensus_method.
+
+    Returns:
+        Liste de dicts {source_id, score, status, fetched_at, source_version}
+    """
+    import json as _json
+
+    rows = await db.get_attestations_by_question(
+        question=question,
+        min_consensus=0.0,
+    )
+
+    anchors = []
+    for row in rows:
+        # Filtre : epistemic_type est dans le SELECT — consensus_meta ne l'est pas (B5)
+        if row.get("epistemic_type") != "deterministic":
+            continue
+
+        # Récupérer consensus_meta depuis portable_json (absent du SELECT de get_attestations_by_question)
+        meta = {}
+        portable = row.get("portable_json")
+        if portable:
+            try:
+                parsed = _json.loads(portable) if isinstance(portable, str) else portable
+                raw_meta = parsed.get("consensus_meta")
+                if isinstance(raw_meta, str):
+                    meta = _json.loads(raw_meta)
+                elif isinstance(raw_meta, dict):
+                    meta = raw_meta
+            except Exception:
+                pass
+
+        source_meta = meta.get("source_anchor_meta", {})
+        diagnostics = meta.get("diagnostics", {})
+        anchors.append({
+            "source_id": source_meta.get("source_id", row.get("metrological_frame", "unknown")),
+            "score": row.get("consensus_score", 0.0),
+            "status": diagnostics.get("result", row.get("object", "unknown")),
+            "fetched_at": source_meta.get("fetched_at", row.get("timestamp", 0)),
+            "source_version": source_meta.get("source_version", "unknown"),
+            "subject": row.get("subject", ""),
+            "predicate": row.get("predicate", ""),
+            "object": row.get("object", ""),
+        })
+
+    return anchors
+
+
+def _format_anchor_context(anchors: list[dict]) -> str:
+    """
+    ADR-018 §2.3 : Formate les ancres déterministes pour injection dans le prompt LLM.
+
+    Returns:
+        Chaîne vide si pas d'ancres, sinon bloc [VERIFIED DATA ...].
+    """
+    if not anchors:
+        return ""
+
+    lines = ["[VERIFIED DATA — from deterministic sources, for context]"]
+    for a in anchors:
+        fact = ""
+        if a.get("subject") and a.get("predicate") and a.get("object"):
+            fact = f" verified that '{a['subject']}' {a['predicate']} = '{a['object']}'"
+        lines.append(
+            f"- Source: {a['source_id']}{fact}"
+            f" (score: {a['score']}, status: {a['status']},"
+            f" fetched: {a['fetched_at']}, version: {a['source_version']})"
+        )
+    lines.append(
+        "[END VERIFIED DATA — you may contest these findings if your analysis disagrees]"
+    )
+    return "\n".join(lines)
 
 
 async def _check_cache(
@@ -410,10 +493,37 @@ async def run_pipeline(
                 start_time=start_time,
             )
 
+        # ADR-018 Flywheel — VERIFY mode only (ADR-018 §4)
+        is_verify = (
+            esmm_config is not None
+            and getattr(esmm_config, "input_mode", None) == "verify"
+        )
+
+        flywheel_injection = ""
+        anchors: list[dict] = []
+        flywheel_enabled = False  # initialisé hors try — évite NameError dans §3.6
+
+        if is_verify:
+            try:
+                from services.config_loader import get_section
+                flywheel_cfg = get_section("flywheel", {})
+                flywheel_enabled = flywheel_cfg.get("enabled", True)
+                if flywheel_enabled:
+                    anchors = await _lookup_existing_anchors(question, db)
+                    flywheel_injection = _format_anchor_context(anchors)
+                    if flywheel_injection:
+                        logger.info(
+                            "[Pipeline] Flywheel: %d deterministic anchor(s) found",
+                            len(anchors),
+                        )
+            except Exception as exc:
+                logger.warning("[Pipeline] Flywheel lookup failed (continuing): %s", exc)
+
         # Extract triplets via real orchestrator (D1, D2, D3)
         extract_result = await _extract_triplets_from_question(
             question, db, models, run_logger, config.metrological_frame, providers,
             model_weights=model_weights, esmm_config=esmm_config,
+            anchor_context=flywheel_injection,
         )
 
         # Backward compat: mocks may return 2-tuple, real code returns 4-tuple
@@ -429,6 +539,14 @@ async def run_pipeline(
         consensus_meta = await _build_consensus_meta(
             esmm_config, esmm_result, model_weights, providers=providers
         )
+
+        # ADR-018: Flywheel traceability — variables flywheel_enabled/anchors toujours en scope
+        if consensus_meta:
+            consensus_meta.setdefault("methodology", {})["flywheel"] = {
+                "enabled": flywheel_enabled,
+                "anchors_found": len(anchors),
+                "sources_injected": [a["source_id"] for a in anchors],
+            }
 
         # Update run_logger with real run_id
         run_logger = RunLogger(run_id=run_id, question=question)
@@ -457,6 +575,56 @@ async def run_pipeline(
             # Fix 5 corrigé : propager dans consensus_meta (construit avant cet override)
             if consensus_meta and "verify" in consensus_meta:
                 consensus_meta["verify"]["claim_type"] = "security_audit"
+
+        # ADR-018: Synthesize verdict from raw model triplets when
+        # flywheel-induced split prevents consensus verdict formation
+        if (esmm_config
+                and getattr(esmm_config, "input_mode", None) == "verify"
+                and not any(t.get("predicate") == "verdict" for t in extracted_triplets)
+                and esmm_result is not None
+                and flywheel_injection):
+
+            raw = getattr(esmm_result, "raw_model_triplets", {})
+            verdict_votes = []
+            for model_id, triplets in raw.items():
+                for t in triplets:
+                    td = t if isinstance(t, dict) else vars(t)
+                    rel = td.get("predicate") or td.get("relation", "")
+                    if rel == "verdict":
+                        verdict_votes.append({
+                            "model_id": model_id,
+                            "verdict": td.get("object", "CONTESTED"),
+                            "confidence": float(td.get("confidence", 0.5)),
+                        })
+                        break  # un verdict par modèle
+
+            if verdict_votes:
+                # Score pondéré par confidence
+                total_conf = sum(v["confidence"] for v in verdict_votes) or 1.0
+                weighted = {}
+                for v in verdict_votes:
+                    weighted[v["verdict"]] = weighted.get(v["verdict"], 0.0) + v["confidence"]
+
+                best_verdict = max(weighted, key=weighted.get)
+                best_score = round(weighted[best_verdict] / total_conf, 4)
+
+                extracted_triplets.append({
+                    "subject": question[:64],
+                    "predicate": "verdict",
+                    "object": best_verdict,
+                    "consensus_score": best_score,
+                    "votes": [
+                        {"model_id": v["model_id"], "provider_id": v["model_id"],
+                         "agreed": v["verdict"] == best_verdict,
+                         "confidence": v["confidence"]}
+                        for v in verdict_votes
+                    ],
+                    "contributing_models": [v["model_id"] for v in verdict_votes],
+                })
+                logger.info(
+                    "[Pipeline] Flywheel verdict synthesis: %s (%.2f) from %d models",
+                    best_verdict, best_score, len(verdict_votes),
+                )
 
         # F5: dedup within a single run. Cross-run dedup requires DB lookup
         # on attestations.claim_hash — deferred to Phase 2 cleanup.
@@ -735,6 +903,7 @@ async def _extract_triplets_from_question(
     providers: Optional[Dict] = None,
     model_weights: Optional[Dict[str, float]] = None,
     esmm_config: Optional["ESMMRunConfig"] = None,
+    anchor_context: str = "",  # ADR-018: flywheel injection
 ) -> Tuple[List[Dict[str, Any]], int, Any]:
     """
     Extrait les triplets via l'orchestrateur ESMM complet.
@@ -770,6 +939,10 @@ async def _extract_triplets_from_question(
             esmm_config.input_mode = "verify"
             esmm_config.original_claim = question
             logger.info(f"Auto-detected VERIFY mode for claim: {question[:80]}")
+
+    # ADR-018: Frontière 1 — passer anchor_context à l'orchestrateur via ESMMRunConfig
+    if anchor_context:
+        esmm_config.anchor_context = anchor_context
 
     orchestrator = ESMMOrchestrator(db=db, config=esmm_config, providers=providers)
 

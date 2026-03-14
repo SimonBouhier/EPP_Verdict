@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-02-25
+**Dernière mise à jour** : 2026-03-13
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -14,8 +14,8 @@
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `orchestrator.py` | Pilote les runs ESMM dual-mode (EXPLORE/VERIFY). `ClaimNature` enum (EPISTEMIC/DETERMINISTIC). `ESMMRunConfig` : +`claim_nature` + `source_anchor_spec` + `__post_init__` guard. `execute_cycles()` : short-circuit immédiat si `claim_nature=DETERMINISTIC`. | ✅ Fonctionnel |
-| `cycle_manager.py` | Exécution des 6 types de cycles. `_query_models_isolated()` (isolation CHALLENGE). `_extract_verdicts_from_responses()` : majority vote `claim_type` sur réponses modèles + injection triplet `claim_type` dans `raw_model_triplets` (propagation via triplet-as-channel). | ✅ Fonctionnel |
+| `orchestrator.py` | Pilote les runs ESMM dual-mode (EXPLORE/VERIFY). `ClaimNature` enum (EPISTEMIC/DETERMINISTIC). `ESMMRunConfig` : +`claim_nature` + `source_anchor_spec` + `__post_init__` guard + `anchor_context: str = ""` (ADR-018). `execute_cycles()` : short-circuit immédiat si `claim_nature=DETERMINISTIC` ; injecte `cycle_context["anchor_context"]` si non vide (VERIFY mode). | ✅ Fonctionnel |
+| `cycle_manager.py` | Exécution des 6 types de cycles. `_query_models_isolated()` (isolation CHALLENGE). `_extract_verdicts_from_responses()` : majority vote `claim_type` sur réponses modèles + injection triplet `claim_type` dans `raw_model_triplets` (propagation via triplet-as-channel). **ADR-018** : `_query_models(anchor_ctx: str = "")` et `_query_models_isolated(anchor_ctx: str = "")` — concatènent `anchor_ctx` au system prompt si non vide. `execute_cycle()` extrait `anchor_ctx` depuis `context["anchor_context"]`. | ✅ Fonctionnel |
 | `cycle_prompts.py` | Prompts dual-mode : DIVERGENT/DEBATE/META (EXPLORE) + ASSESS/CHALLENGE/ADJUDICATE (VERIFY), anglais. ASSESS : STEP 1 classifie `claim_type` (empirical/definitional/normative/speculative) avant STEP 2 verdict. | ✅ Fonctionnel |
 | `triplet_extractor.py` | Pipeline complet extraction → validation → consensus. `_parse_verdict_response()` : extrait `verdict`, `confidence`, `evidence`, `claim_type` (normalisation + fallback `"empirical"`). | ✅ Fonctionnel |
 | `verdict_encoder.py` | Encodage verdict → triplets (claim→verdict→SUPPORTED/REFUTED, +evidence, +reasoning). Réutilise la pipeline de cristallisation. | ✅ Fonctionnel |
@@ -81,7 +81,7 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. `_run_deterministic_pipeline()` : chemin court-circuit ADR-012 (fetch source → hash → crystallize → store snapshot + attestation). Constantes `VERDICT_PENALTIES` + `CLAIM_TYPE_PENALTIES` — pénalité décidabilité VERIFY. | ✅ Fonctionnel |
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. `_run_deterministic_pipeline()` : chemin court-circuit ADR-012 (fetch source → hash → `crystallize(question=question)` → store snapshot + attestation). Constantes `VERDICT_PENALTIES` + `CLAIM_TYPE_PENALTIES` — pénalité décidabilité VERIFY. **ADR-018** : `_lookup_existing_anchors(question, db)` — lookup ancres déterministes par question (filtre `deterministic_source_v1`, lit `diagnostics.result`). `_format_anchor_context(anchors)` — formate bloc `[VERIFIED DATA...]`. Bloc flywheel dans `run_pipeline()` : guard `is_verify`, `flywheel_enabled` initialisé hors `try`, injection `anchor_context` dans `_extract_triplets_from_question()`, traçabilité `consensus_meta.methodology.flywheel`. | ✅ Fonctionnel |
 | `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
 | `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
 | `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7). `InputType` enum + `classify_input()` auto-détection EXPLORE/VERIFY. | ✅ Fonctionnel |
@@ -212,7 +212,7 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 
 ### Architecture Decision Records (Phase 3.3+)
 
-10 ADR actifs dans `docs/adr/` :
+18 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -227,6 +227,43 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | ADR-009 | Language Neutrality in ESMM Protocol | Actif |
 | ADR-010 | Traçabilité méthodologique du consensus (consensus_meta) | Actif |
 | ADR-011 | Réconciliation lexicale par empreinte sémantique (Semantic Fingerprinting) | Actif (v2) |
+| ADR-012 | Intégration sources RWA — bifurcation déterministe/épistémique | Actif |
+| ADR-013 | Cache-hit épistémique avant ESMM | Actif |
+| ADR-014 | Migration services/rwa/ → services/sources/ + moteur audit smart contracts | Actif |
+| ADR-015 | *(réservé)* | — |
+| ADR-016 | Oracle géopolitique ACLED — ancrage données de conflit | Actif |
+| ADR-017 | Wikidata comme source déterministe épistémique | Actif |
+| ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
+
+### ADR-018 — Flywheel Épistémique (2026-03-13)
+
+Les attestations déterministes existantes (Wikidata, ACLED) sont injectées comme contexte vérifié dans le system prompt des LLMs lors des passes VERIFY, fermant la boucle entre les deux chemins.
+
+**Fix B4 (bloquant)** : `_run_deterministic_pipeline()` appelait `crystallize()` sans `question=question` → colonne NULL → flywheel mort. Corrigé : `crystallize(..., question=question)`.
+
+**Flux flywheel** (VERIFY mode uniquement, ADR-018 §4) :
+
+```text
+run_pipeline() [is_verify=True]
+  └─ _lookup_existing_anchors(question, db)   # filtre deterministic_source_v1
+       └─ get_attestations_by_question()       # ADR-013
+  └─ _format_anchor_context(anchors)          # bloc [VERIFIED DATA...]
+  └─ _extract_triplets_from_question(anchor_context=...)
+       └─ esmm_config.anchor_context = ...
+            └─ execute_cycles() → cycle_context["anchor_context"]
+                 └─ _query_models(anchor_ctx=...)
+                      └─ system_prompt += "\n\n" + anchor_ctx
+```
+
+**Traçabilité** : `consensus_meta.methodology.flywheel = {enabled, anchors_found, sources_injected}`.
+
+**Config** : `flywheel.enabled` (config.yaml, défaut `true`). Si `false`, lookup skippé, `anchors_found=0`.
+
+**Méthodes ISpaceDB utilisées** : `get_attestations_by_question()` (ADR-013, lookup par `question` exacte).
+
+**Tests** (`tests/test_adr018_flywheel.py`) : 8 tests — lookup no/with anchors, filtre épistémique, format vide/données, traçabilité meta, flywheel disabled, garde VERIFY-only.
+
+---
 
 ### Phase 4 — Corrections systématiques (2026-02-15)
 

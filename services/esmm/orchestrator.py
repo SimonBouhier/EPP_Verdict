@@ -134,6 +134,7 @@ class ESMMRunConfig:
     claim_nature: ClaimNature = ClaimNature.EPISTEMIC
     source_anchor_spec: Optional[Any] = None  # SourceAnchorSpec — Any évite import circulaire
     subject_override: Optional[str] = None    # Fix 1 (Lot A) : override subject pour les audits
+    anchor_context: str = ""                  # ADR-018: flywheel injection (VERIFY mode only)
 
     def __post_init__(self) -> None:
         if (
@@ -205,6 +206,8 @@ class ESMMRunResult:
     triplets_after_consensus: int = 0
     # ADR-011-v2: reconciliation metadata
     reconciliation_meta: Optional[Dict] = None
+    # ADR-018: raw per-model triplets for flywheel verdict synthesis
+    raw_model_triplets: Dict = field(default_factory=dict)
 
 
 # ============================================================================
@@ -473,6 +476,9 @@ class ESMMOrchestrator:
                     cycle_context: Dict[str, Any] = {"domain": "general"}
                     if self.config.input_mode == "verify" and self.config.original_claim:
                         cycle_context["original_claim"] = self.config.original_claim
+                        # ADR-018: Frontière 3 — flywheel anchor_context
+                        if self.config.anchor_context:
+                            cycle_context["anchor_context"] = self.config.anchor_context
 
                         # CHALLENGE: circular rotation — pass per-model verdicts
                         if cycle_type_str == "challenge" and _verify_model_verdicts:
@@ -802,6 +808,7 @@ class ESMMOrchestrator:
             triplets_before_consensus=self._stats.get("triplets_before_consensus", 0),
             triplets_after_consensus=self._stats.get("triplets_after_consensus", 0),
             reconciliation_meta=self._reconciliation_meta,
+            raw_model_triplets=dict(self._raw_model_triplets),
         )
 
         logger.info(
