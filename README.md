@@ -96,7 +96,7 @@ Three orders of magnitude in cost reduction for a more reliable answer. The grap
 
 ## On-Chain
 
-Solana program deployed on devnet: `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
+Solana program deployed on devnet: `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`
 
 Each attestation occupies **462 bytes** as a PDA. It carries: claim hash, epistemic signature (5 dimensions × u16), confidence tier, metrological frame hash, source anchor, protocol version.
 
