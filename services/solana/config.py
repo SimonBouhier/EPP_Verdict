@@ -23,7 +23,7 @@ class SolanaCluster(Enum):
 
 
 # === PROGRAM ID ===
-DEFAULT_PROGRAM_ID = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
+DEFAULT_PROGRAM_ID = "9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD"
 
 
 # === DEVNET GUARD ===

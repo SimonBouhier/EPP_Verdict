@@ -12,7 +12,7 @@ use state::*;
 // Every instruction, PDA derivation, and validation must be reviewed
 // by a qualified Solana developer before mainnet deployment.
 
-declare_id!("98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C");
+declare_id!("9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD");
 
 #[program]
 pub mod epp {

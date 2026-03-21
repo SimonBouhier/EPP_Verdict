@@ -6,7 +6,7 @@ skip-lint = false
 epp = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
 
 [programs.devnet]
-epp = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
+epp = "9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD"
 
 [registry]
 url = "https://api.apr.dev"
