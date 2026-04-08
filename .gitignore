@@ -98,6 +98,9 @@ node_modules/
 # === Claude Code ===
 .claude/
 
+# === Skills (Colosseum Copilot, etc.) ===
+.agents/
+
 # === Saves / Sessions locales ===
 saves/
 

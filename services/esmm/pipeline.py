@@ -422,6 +422,7 @@ async def run_pipeline(
     providers: Optional[Dict] = None,
     model_weights: Optional[Dict[str, float]] = None,
     esmm_config: Optional["ESMMRunConfig"] = None,
+    extra_system_context: Optional[str] = None,
 ) -> PipelineResult:
     """
     Execute le pipeline complet : question -> ESMM -> attestations -> graphe.
@@ -435,6 +436,7 @@ async def run_pipeline(
         config: Configuration du pipeline
         metrological_frame: Frame metrologique applicable
         providers: Dict {provider_id: ModelProvider} pre-configured (optional)
+        extra_system_context: Contexte système injecté en tête de question (ex. condition β)
 
     Returns:
         PipelineResult avec les attestations produites
@@ -447,6 +449,8 @@ async def run_pipeline(
         raise ValueError(f"question exceeds {MAX_QUESTION_LENGTH} characters")
     # Strip control characters (keep newlines and tabs)
     question = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", question)
+    if extra_system_context:
+        question = f"{extra_system_context}\n\n{question}"
     if metrological_frame and len(metrological_frame) > MAX_FRAME_LENGTH:
         raise ValueError(f"metrological_frame exceeds {MAX_FRAME_LENGTH} characters")
 

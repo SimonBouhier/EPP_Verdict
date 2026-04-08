@@ -253,7 +253,7 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 | `EPP_OLLAMA_URL` | `http://localhost:11434` | Ollama server |
 | `EPP_MODEL` | `mistral:latest` | Default Ollama model |
 | `EPP_NUM_CTX` | `8192` | Context window (tokens) |
-| `EPP_EMBEDDING_MODEL` | `nomic-embed-text` | Embedding model |
+| `EPP_EMBEDDING_MODEL` | `mxbai-embed-large` | Embedding model |
 | `OPENSANCTIONS_ENDPOINT` | `http://localhost:8080` | yente server |
 | `OFAC_API_KEY` | — | OFAC SDN API key (never in config.yaml) |
 | `ACLED_EMAIL` | — | ACLED API credentials |
