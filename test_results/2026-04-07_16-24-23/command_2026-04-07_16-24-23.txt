@@ -1,0 +1,11 @@
+{
+  "run_id": "2026-04-07_16-24-23",
+  "timestamp": "2026-04-07T14:24:23Z",
+  "equivalent_command": "pytest tests/ -k phase1 -v",
+  "pytest_args": [
+    "tests/",
+    "-k",
+    "phase1",
+    "-v"
+  ]
+}

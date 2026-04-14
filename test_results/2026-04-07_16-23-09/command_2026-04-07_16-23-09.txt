@@ -1,0 +1,9 @@
+{
+  "run_id": "2026-04-07_16-23-09",
+  "timestamp": "2026-04-07T14:23:09Z",
+  "equivalent_command": "pytest tests/test_adr010_consensus_meta.py -v",
+  "pytest_args": [
+    "tests/test_adr010_consensus_meta.py",
+    "-v"
+  ]
+}

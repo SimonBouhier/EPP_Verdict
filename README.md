@@ -36,7 +36,7 @@ LLMs are structurally blind to events after their training cutoff. EPP exploits 
 **Claim:** "Donald Trump won the 2024 US presidential election"
 **Delta: +0.46.** Same models. Same claim. No retraining. The graph learned by itself.
 
-Three orders of magnitude in cost reduction for a more reliable answer. The graph becomes more intelligent with each cycle without retraining any model.
+The Flywheel connects AI deliberation to authoritative data sources (Wikidata, ACLED, NIST, OFAC). When a verified fact exists for a claim, it is automatically injected into the LLM reasoning context during VERIFY — not as a directive, but as evidence the models are free to contest. The corrected attestation feeds back into model evaluation (Brier scoring), so the protocol learns not just *what* is true, but *which models* are most reliable on *which domains*.
 
 ---
 
@@ -47,6 +47,70 @@ Three orders of magnitude in cost reduction for a more reliable answer. The grap
 **VERIFY** (ASSESS → CHALLENGE → ADJUDICATE) — Structured factual verification with epistemic isolation. Each model evaluates independently, challenges its neighbor in circular rotation (model[i] sees only model[(i+1)%N]), then collective weighted adjudication. The output is a signed 5-dimensional epistemic signature.
 
 **DETERMINISTIC** (ADR-012) — For facts that don't need debate. Sanctions screening, carbon credit validation, physical constants. EPP queries authoritative sources, hashes the raw response (SHA-256), and produces a traceable attestation without invoking LLMs — because adding uncertainty to a binary fact is not epistemology, it's noise.
+
+---
+
+## How It Works
+
+### Claim Classification & Decidability
+
+Before any evaluation, the protocol auto-classifies every claim into one of four types: **empirical** (verifiable against data), **definitional** (depends on term definitions), **normative** (value judgment — no objective answer), or **speculative** (unfalsifiable). This classification drives a double penalty system that adjusts scores before crystallization:
+
+| Verdict | Penalty | | Claim Type | Penalty |
+|:--------|:--------|---|:-----------|:--------|
+| SUPPORTED | ×1.0 | | empirical | ×1.0 |
+| CONTESTED | ×0.65 | | definitional | ×0.90 |
+| INSUFFICIENT_EVIDENCE | ×0.45 | | normative | ×0.70 |
+| | | | speculative | ×0.75 |
+| | | | security_audit | ×1.0 |
+
+This is how "Pineapple on pizza is delicious" scores 0.29 (normative × insufficient evidence), while "Earth orbits the Sun in 365.25 days" scores 0.99 (empirical × supported). The protocol knows what it cannot adjudicate.
+
+### Consensus Engine — Three Layers
+
+The consensus is computed in three complementary passes, each catching what the previous one missed:
+
+**Layer 0 — Normalize** (`normalize_triplet()`) — Static dictionary of known synonyms (11 canonical relation groups, abbreviation expansion, whitespace normalization). Cost: O(1).
+
+**Layer 1 — Semantic Fingerprinting** (ADR-011) — Each model generates a micro-graph of neighbors for each term (EXPAND phase). Terms whose neighborhood structures overlap above a threshold are identified as synonyms and merged via an alignment table (MATCH + APPLY phases). Uses Jaro-Winkler similarity + embedding cosine as a waterfall cascade. Cost: O(n² × k).
+
+**Layer 2 — Semantic Merge** (`_semantic_merge()`) — Residual clustering by embedding cosine similarity for cases that fingerprinting misses. Cost: O(n² × d).
+
+Order is strict: L0 → L1 → hash (SHA-256) → L2. If Layer 1 is disabled or times out, Layers 0 and 2 ensure baseline coverage.
+
+### Epistemic Cache (ADR-013)
+
+Before launching a costly multi-model run, the pipeline checks the persistent graph for an existing attestation matching the claim hash with a valid TTL (default 7 days). If found, the cached result is returned at zero compute cost. This is what produces the `<1ms` response time on subsequent queries in the Flywheel table above.
+
+### Weighted Consensus by Brier Score (R-2.1.1)
+
+Model weights in the consensus computation are not equal — they are dynamically adjusted based on each model's historical track record. After each crystallization, the `post_crystallization_hook` records each model's prediction. When predictions are resolved against ground truth, Brier scores are computed per model. Models with better calibration carry more weight in future deliberations. The feedback loop is: predict → record → resolve → reweight → predict better.
+
+### Commit-Reveal (R-2.2.3)
+
+Initial model responses during the ASSESS phase are SHA-256 committed before the CHALLENGE phase begins. After adjudication, commits are verified against reveals. This makes post-hoc rationalization detectable — a model cannot retroactively adjust its initial assessment to match the consensus. The `commit_reveal` table stores hashes per model/phase, and the `commit_reveal_verified` column in attestations records integrity status.
+
+### Response Deduplication (R-2.2.2)
+
+Before consensus computation, a `ResponseDeduplicator` filters near-duplicate responses by embedding cosine similarity. This prevents a model that produces multiple paraphrases of the same answer from inflating its vote count.
+
+### Metrological Frames
+
+Every attestation is produced under a versioned metrological frame — a structured specification of the measurement methodology. The frame hash is included in the claim hash (ADR-006), making attestations produced under different frames explicitly non-comparable.
+
+Seven predefined frames:
+
+| Frame ID | Domain |
+|:---------|:-------|
+| `general_knowledge_v1.0` | Default epistemic evaluation |
+| `blockchain_tps_v1.0` | Blockchain performance claims |
+| `compliance_sanctions_v1.0` | AML/KYC sanctions screening |
+| `carbon_credits_vcs_v1.0` | Verra VCS carbon credit validation |
+| `rwa_identity_v1.0` | RWA identity verification |
+| `smartcontract_audit_v1.0` | Smart contract security (SWC + Trail of Bits) |
+| `geopolitical_forecast_v1.0` | ACLED-based conflict assessment |
+
+Each frame specifies: domain, metric, parameters, required sources, governance authority, and a deterministic hash. Custom frames can be created for any domain.
 
 ---
 
@@ -78,7 +142,7 @@ Three orders of magnitude in cost reduction for a more reliable answer. The grap
 |:------|:-------------|:------|:-------|
 | Pineapple on pizza is delicious | Normative | 0.29 | Refuses to adjudicate |
 | Moon is made of cheese | — | 0 attestations | Graceful refusal |
-| Bitcoin replaces fiat in 10 years | Speculative | 0.40 | Penalty 0.75 applied |
+| Bitcoin replaces fiat in 10 years | Speculative | 0.40 | Penalty ×0.75 applied |
 | Earth orbits Sun in 365.25 days | Empirical | 0.99 | Baseline anchor |
 | Napoleon was shorter than average | Empirical | 0.96 SUPPORTED ✗ | Shared training bias exposed |
 
@@ -109,6 +173,20 @@ Four confidence tiers (ADR-005):
 | Validated | ≥ 0.70 | + ≥ 3 models + ≥ 2 architecture families |
 | Verified | ≥ 0.85 | + source anchor OR validation count ≥ 3 |
 
+The 5-dimensional epistemic signature captures: **agreement** (how strongly the models converge), **consistency** (how stable positions are across phases), **centrality** (how close each model is to the aggregate), **stability** (how much positions shifted between ASSESS and ADJUDICATE), and **diversity** (how architecturally heterogeneous the panel is).
+
+---
+
+## Security & Integrity
+
+**Anti-Sybil** — `infer_architecture_family()` enforces minimum 2 distinct architecture families per deliberation panel. Three instances of the same model architecture do not count as diverse consensus.
+
+**Prompt Injection Defense** — XML boundary delimiters (`<system_instruction>`, `<user_query>`) isolate trusted prompts from user input. `_sanitize_concept()` strips control characters and enforces `MAX_QUESTION_LENGTH=5000`.
+
+**Devnet-Only Guard** — The `SolanaCluster` enum intentionally has no `MAINNET` value. `validate_cluster()` blocks any attempt to submit to mainnet.
+
+**Keypair Security** — Private keys are never logged (ADR-008). Only the public key appears in logs and attestations.
+
 ---
 
 ## Architecture
@@ -122,8 +200,10 @@ EPP_Verdict/
 │   │   ├── attestation.py       # EpistemicAttestation, Signature5D, crystallize()
 │   │   ├── consensus_engine.py  # Brier scores, diversity bonus, semantic merge
 │   │   ├── fingerprint_*.py     # ADR-011: semantic reconciliation (4 modules)
-│   │   ├── cycle_prompts.py     # Dual-mode prompt templates (EXPLORE + VERIFY)
+│   │   ├── cycle_prompts.py     # Dual-mode prompt templates (EXPLORE + VERIFY + AUDIT)
 │   │   ├── cycle_manager.py     # Cycle execution, model queries, retry logic
+│   │   ├── relation_vocabulary.py # 11 canonical relation groups, synonym mapping
+│   │   ├── post_crystallization.py # Brier track record + tier transitions + diversity bonus
 │   │   └── source_anchor_builder.py  # ADR-012: deterministic path
 │   ├── sources/adapters/        # OFAC, OpenSanctions, EU CFSP, Verra VCS, ACLED, Wikidata
 │   ├── providers/               # Ollama, OpenAI-compat, Anthropic (base.py interface)
@@ -132,9 +212,9 @@ EPP_Verdict/
 ├── programs/epp/                # Anchor/Rust — lib.rs, state.rs, errors.rs, constants.rs
 ├── database/
 │   ├── engine.py                # ISpaceDB — async, ~100 methods
-│   ├── schema.sql               # 25+ tables
+│   ├── schema.sql               # 25+ tables, 7 views
 │   └── pool.py                  # Connection pool, LRU cache
-├── cli/epp_cli.py               # ask, submit, query, frame, verify-rwa, audit
+├── cli/epp_cli.py               # ask, submit, query, frame, verify-rwa, audit, models stats
 ├── demos/                       # Scenario scripts + benchmark_runs/ (timestamped JSON)
 ├── docs/
 │   ├── adr/                     # ADR-001 through ADR-018
@@ -143,23 +223,50 @@ EPP_Verdict/
 └── tests/                       # 809 tests — RED-GREEN-FIX strict protocol
 ```
 
+### Database Schema (key tables)
+
+| Table | Purpose |
+|:------|:--------|
+| `concepts` | Knowledge graph nodes (embeddings, rho_static, degree) |
+| `concept_aliases` | Canonical resolution ("IA" → "ia", "AI" → "ia") |
+| `relations` | Graph edges (weight, kappa curvature, relation type) |
+| `attestations` | Crystallized verdicts (signature 5D, consensus_meta, Solana tx) |
+| `model_track_record` | Per-model Brier scoring (predicted vs actual) |
+| `tier_transitions` | Audit log of confidence tier promotions/demotions |
+| `metrological_frames` | Versioned measurement frameworks (auto-seeded) |
+| `commit_reveal` | SHA-256 commit hashes per model/phase |
+| `knowledge_gaps` | Detected gaps for guided exploration |
+| `canonical_relations` | 18 relation types across 6 categories |
+| `graph_deltas` | Append-only mutation history (ADR-007) |
+| `esmm_runs` | Run metadata and lifecycle |
+
 ---
 
 ## Deterministic Sources
 
 Seven authoritative data sources integrated:
 
-| Source | Domain | Status |
-|:-------|:-------|:-------|
-| OFAC SDN | US Treasury sanctions | Integrated |
-| OpenSanctions | Open-source sanctions/PEP | Integrated |
-| EU CFSP | European Union sanctions | Integrated |
-| Verra VCS | Carbon credit registry | Integrated |
-| ACLED | Armed conflict events | Integrated (pending data API access) |
-| Wikidata | Structured knowledge base | Integrated (Flywheel demonstrated) |
-| NIST | Physical constants | In development |
+| Source | Domain | Adapter | Status |
+|:-------|:-------|:--------|:-------|
+| OFAC SDN | US Treasury sanctions | `ofac.py` | Integrated |
+| OpenSanctions | Open-source sanctions/PEP | `opensanctions.py` | Integrated |
+| EU CFSP | European Union sanctions | `eu_cfsp.py` | Integrated |
+| Verra VCS | Carbon credit registry | `verra_vcs.py` | Integrated |
+| ACLED | Armed conflict events | `acled.py` | Integrated (pending API access) |
+| Wikidata | Structured knowledge base (CC-0) | `wikidata.py` | Integrated (Flywheel demonstrated) |
+| NIST | Physical constants | `nist_codata.py` | In development |
 
-Each adapter implements `fetch()`, `normalize()`, `get_source_version()`. A new source can be integrated in a single day.
+Each adapter implements the `SourceAdapter` interface: `fetch()`, `normalize()`, `get_source_version()`. A new source can be integrated in a single day.
+
+Wikidata scores are capped at 0.85 (never 1.0) because it is publicly editable. NIST constants receive 1.0 as a primary authoritative source. This confidence ceiling is a design choice, not a limitation.
+
+---
+
+## Smart Contract Audit (ADR-014)
+
+The ESMM kernel treats code analysis claims identically to any other domain. The `services/audit/` module decomposes Solidity contracts into per-function units (`contract_slicer.py`), classifies vulnerabilities against dual taxonomies (33 SWC categories + 8 Trail of Bits classes via `swc_taxonomy.py`), and runs each unit through the full ASSESS → CHALLENGE → ADJUDICATE pipeline (`audit_runner.py`).
+
+Optional Slither integration provides a deterministic pre-analysis via the `SlitherAdapter` (ADR-012 pattern). When both paths run, a concordance check compares static analysis results against epistemic consensus.
 
 ---
 
@@ -172,11 +279,12 @@ Each adapter implements `fetch()`, `normalize()`, `get_source_version()`. A new 
 | AI models tested | 6: Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + **FLYWHEEL** |
 | Deterministic sources | 7 integrated |
-| Operational domains | 3: epistemic exploration, smart contract audit, geopolitical assessment |
+| Operational domains | 5: epistemic exploration, smart contract audit, geopolitical assessment, compliance/AML, physical sciences |
 | Benchmark datasets | 7, with 37+ claims evaluated |
 | Flywheel effect | **+0.46 demonstrated** (0.43 → 0.89) |
 | Solana program | Anchor/Rust, deployed on devnet, PDA-based |
-| Security | Commit-reveal, response deduplication, devnet-only guards |
+| Security | Commit-reveal, response deduplication, anti-Sybil, prompt injection guards, devnet-only |
+| Governance markers | `COMMUNITY_DECISION_REQUIRED` in codebase for open design choices |
 
 ---
 
@@ -226,13 +334,22 @@ python -m cli.epp_cli verify-rwa --source opensanctions --entity "Acme Corp" \
   --frame compliance_sanctions_v1.0
 
 # Smart contract audit
-python -m cli.epp_cli audit contracts/vulnerable.sol --frame smart_contract_audit_v1.0
+python -m cli.epp_cli audit contracts/vulnerable.sol --frame smartcontract_audit_v1.0
 
 # On-chain submission (devnet)
-python -m cli.epp_cli submit <claim_hash> --devnet
+python -m cli.epp_cli submit --devnet
+
+# Query existing attestations
+python -m cli.epp_cli query "solana" --min-confidence 0.8
+
+# Model performance dashboard
+python -m cli.epp_cli models stats
 
 # Available metrological frames
 python -m cli.epp_cli frame list
+
+# Knowledge graph statistics
+python -m cli.epp_cli graph stats
 ```
 
 ### Tests
@@ -257,6 +374,7 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 | `OPENSANCTIONS_ENDPOINT` | `http://localhost:8080` | yente server |
 | `OFAC_API_KEY` | — | OFAC SDN API key (never in config.yaml) |
 | `ACLED_EMAIL` | — | ACLED API credentials |
+| `ACLED_PASSWORD` | — | ACLED API credentials |
 
 ---
 
@@ -267,13 +385,20 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 | ADR | Decision |
 |:----|:---------|
 | ADR-001 | Float → u16 [0, 10000] encoding for Solana |
+| ADR-002 | INSERT strategy (OR IGNORE vs OR REPLACE) |
+| ADR-003 | Singleton management (get_pool, get_db) |
+| ADR-004 | session_storage INSERT OR IGNORE |
 | ADR-005 | Multi-criteria confidence tiers (sandbox → verified) |
 | ADR-006 | Claim hash = SHA-256(subject \| predicate \| object \| frame) — immutable |
+| ADR-007 | Append-only for events and graph_deltas |
+| ADR-008 | Solana submitter authentication (keypair, devnet guard) |
+| ADR-009 | Language neutrality in ESMM protocol |
 | ADR-010 | Methodology traceability — consensus_meta mandatory at crystallization |
-| ADR-011 | Semantic reconciliation via structural fingerprinting |
+| ADR-011 | Semantic reconciliation via structural fingerprinting (EXPAND → MATCH → APPLY) |
 | ADR-012 | Deterministic/epistemic bifurcation — authoritative source integration |
-| ADR-013 | Persistent graph + epistemic cache-hit |
-| ADR-014 | Smart contract security audit pipeline |
+| ADR-013 | Persistent graph + epistemic cache-hit (TTL-based) |
+| ADR-014 | Smart contract security audit pipeline (SWC + Trail of Bits) |
+| ADR-015 | Grand Decoupling — tripartite architecture (deferred post-hackathon) |
 | ADR-016 | Geopolitical oracle — ACLED + Wikidata dual-path |
 | ADR-017 | Epistemic Cluster network architecture (proposed) |
 | ADR-018 | **Epistemic Flywheel — self-improving knowledge graph** |
@@ -285,6 +410,12 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 EPP was designed as a network protocol of which only one node exists today. The unit of decentralization is the **Epistemic Cluster** — an autonomous instance with its own models, sources, and metrological frames. Trust emerges from cumulative Brier track records, calculable by anyone directly from the blockchain.
 
 Each cluster publishes its configuration. Verification happens through results, not promises. When two clusters attest the same claim differently, the divergence captures methodology differences — it is measurement, not redundancy.
+
+---
+
+## Open Governance
+
+Several design decisions are intentionally left open for the community. The codebase contains `COMMUNITY_DECISION_REQUIRED` markers at decision points including: treatment of CONTESTED consensus (cap tier? reduce diversity bonus? require additional debate cycles?), and the scope of ADR-009 (language neutrality). These decisions should be made by the open-source community, not by the founding team.
 
 ---
 
@@ -305,28 +436,5 @@ This is what one person built in sixteen months. The question is what becomes po
 3. Duley et al. (2023). The oracle problem and the future of DeFi. BIS Bulletin No. 76.
 4. Caldarelli, G. (2025). Can AI solve the blockchain oracle problem? arXiv:2507.02125.
 5. Xian et al. (2024). Connecting LLMs with Blockchain. arXiv:2412.02263.
-6. Zintus-Art et al. (2025). Empirical Evidence in AI Oracle Development. Chainlink Research.
-7. Wu et al. (2025). Vulnerabilities in Solana Smart Contracts. arXiv:2504.07419.
-8. Zhang & Zhao (2026). Formalized scientific methodology for AI research. bioRxiv:2026.03.02.709102.
-
----
-
-## Built With
-
-Python · Rust/Anchor · Solana · Ollama · SQLite · Claude Code + Claude Opus (adversarial audit)
-
-**Hardware:** Intel i5-14600K · NVIDIA RTX 4090 24GB · 64GB DDR5 — everything runs on one machine.
-
----
-
-## Author
-
-**Simon Bouhier** — Solo builder · Paris
-
-[Website](https://epp-verdict.carrd.co) · [X](https://x.com/SimonOrdos) · [Email](mailto:simon.bouhier@proton.me)
-
----
-
-## License
-
-[MIT](LICENSE)
+6. Zintus-Art et al. (2025). Multi-Agent Argumentation for Trustworthy AI.
+7. Lin, Li et al. (2026). Does Socialization Emerge in AI Agent Society? arXiv:2602.14299.

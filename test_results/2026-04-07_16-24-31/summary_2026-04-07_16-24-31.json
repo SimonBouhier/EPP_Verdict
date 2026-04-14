@@ -1,0 +1,31 @@
+{
+  "run_id": "2026-04-07_16-24-31",
+  "started_at": "2026-04-07T14:24:31Z",
+  "finished_at": "2026-04-07T14:25:00Z",
+  "pytest_args": [
+    "tests/",
+    "--ignore=tests/test_phase4_solana.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "collected_total": 0,
+  "selected_total": 808,
+  "deselected_total": 0,
+  "test_outcomes": {
+    "passed": 798,
+    "skipped": 10
+  },
+  "collection_errors_count": 0,
+  "internal_errors_count": 0,
+  "proof_usable": true,
+  "proof_notes": [],
+  "environment": {
+    "python": "3.10.11 (tags/v3.10.11:7d4cc5a, Apr  5 2023, 00:38:17) [MSC v.1929 64 bit (AMD64)]",
+    "python_executable": "C:\\Users\\simon\\PROJECTS\\EPP_Verdict\\.venv\\Scripts\\python.exe",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "cwd": "C:\\Users\\simon\\PROJECTS\\EPP_Verdict",
+    "pytest_version": "9.0.2"
+  },
+  "wrapper_error": null,
+  "wrapper_exit_code": 0
+}
