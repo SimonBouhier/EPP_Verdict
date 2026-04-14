@@ -134,32 +134,30 @@ class TestConvergenceComparison:
         assert att1.confidence_tier == "validated"
         assert att2.confidence_tier == "sandbox"
 
-    def test_revalidation_input_stores_in_db(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_revalidation_input_stores_in_db(self, tmp_path):
         """RevalidationInput est stockable dans esmm_runs."""
-        async def run():
-            from database.engine import ISpaceDB
-            from database.pool import close_pool
+        from database.engine import ISpaceDB
+        from database.pool import close_pool
 
-            db = ISpaceDB(str(tmp_path / "test.db"))
-            await db.initialize()
-            try:
-                ri = RevalidationInput(
-                    question="Test?",
-                    original_run_id=1,
-                    original_claim_hashes=["hash1"],
-                )
+        db = ISpaceDB(str(tmp_path / "test.db"))
+        await db.initialize()
+        try:
+            ri = RevalidationInput(
+                question="Test?",
+                original_run_id=1,
+                original_claim_hashes=["hash1"],
+            )
 
-                # Créer un run avec revalidation_input
-                run_id = await db.create_esmm_run(
-                    config={"revalidation_input": ri.model_dump()},
-                    models=["m1"],
-                    seed_type="revalidation",
-                )
-                assert run_id > 0
-            finally:
-                await close_pool()
-
-        asyncio.run(run())
+            # Créer un run avec revalidation_input
+            run_id = await db.create_esmm_run(
+                config={"revalidation_input": ri.model_dump()},
+                models=["m1"],
+                seed_type="revalidation",
+            )
+            assert run_id > 0
+        finally:
+            await close_pool()
 
 
 class TestConvergenceReport:

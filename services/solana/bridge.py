@@ -29,14 +29,24 @@ SCORE_SCALE = 10000
 
 # === ENUM MAPPINGS (must match programs/epp/src/state.rs) ===
 # AUDIT[A10-016,A10-022] 🟢 ACCEPTED: mappings enum Python↔Rust cohérents — testés.
+# S1-001 / S1-002 fix (HYBRIDE V2) : projection des 8 types métier Python vers
+# 3 catégories on-chain formellement vérifiables (préparation invariants Lean 4).
+#   0 = empirical      (consensus multi-LLM : foundational, bridge, specialized,
+#                       generalist, hybrid, verdict)
+#   1 = deterministic  (source autoritaire externe, ADR-012)
+#   2 = assessed       (audit dirigé, ADR-014)
 EPISTEMIC_TYPE_MAP = {
+    # Catégorie 0 — empirical
     "foundational": 0,
-    "bridge": 1,
-    "specialized": 2,
-    "generalist": 3,
-    "hybrid": 4,
-    "security_audit": 5,  # ADR-014 Lot A — attestations d'audit (off-chain uniquement pour l'instant)
-    # Note: "verdict" et "deterministic" (ADR-012) absents — limitation pré-existante
+    "bridge": 0,
+    "specialized": 0,
+    "generalist": 0,
+    "hybrid": 0,
+    "verdict": 0,
+    # Catégorie 1 — deterministic (ADR-012)
+    "deterministic": 1,
+    # Catégorie 2 — assessed (ADR-014)
+    "security_audit": 2,
 }
 
 CONFIDENCE_TIER_MAP = {
@@ -46,8 +56,15 @@ CONFIDENCE_TIER_MAP = {
     "verified": 3,
 }
 
-# Reverse maps for deserialization
-EPISTEMIC_TYPE_REVERSE = {v: k for k, v in EPISTEMIC_TYPE_MAP.items()}
+# Reverse maps for deserialization.
+# V2 : la projection provoque des collisions côté "empirical" (plusieurs clés
+# Python → 0), donc le reverse doit être défini explicitement sur les 3
+# catégories on-chain — pas un simple dict comprehension.
+EPISTEMIC_TYPE_REVERSE = {
+    0: "empirical",
+    1: "deterministic",
+    2: "assessed",
+}
 CONFIDENCE_TIER_REVERSE = {
     0: "sandbox",
     1: "proposition",
@@ -91,7 +108,10 @@ class AnchorAttestationArgs:
 
 # === ENCODING FUNCTIONS ===
 
-# AUDIT[A10-007] 🟡 FRAGILE: valeur > 1.0 (ex: 1.000049) arrondie à 10000 — acceptée sans erreur.
+# AUDIT[A10-007] 🟡→✅ RESOLVED S1-005: la guard `0.0 <= value <= 1.0` rejette
+# toute valeur > 1.0 (ex. 1.000049) avec ValueError. Le commentaire antérieur
+# décrivait un comportement qui n'existe pas — marker reclassé par cohérence
+# avec les conventions du repo (cf. AUDIT[A8-001] 🔴→✅ FIXED, etc.).
 def float_to_u16(value: float) -> int:
     """
     Encode float [0.0, 1.0] -> u16 [0, 10000].
@@ -110,15 +130,21 @@ def u16_to_float(value: int) -> float:
     return value / SCORE_SCALE
 
 
-# AUDIT[A10-006] 🟡 FRAGILE: tronque silencieusement — UTF-8 multi-byte peut être coupé.
+# AUDIT[A10-006] 🟡→✅ RESOLVED S1-003: troncature alignée sur frontière de codepoint UTF-8.
 def string_to_fixed_bytes(s: str, max_len: int) -> bytes:
     """
     Encode string -> fixed-size bytes (UTF-8, zero-padded, truncated if needed).
 
     # AUDIT_REQUIRED: Truncation silently loses data. Log a warning?
     """
-    encoded = s.encode("utf-8")[:max_len]
-    return encoded.ljust(max_len, b'\x00')
+    encoded = s.encode("utf-8")
+    if len(encoded) <= max_len:
+        return encoded.ljust(max_len, b"\x00")
+    # Tronquer codepoint par codepoint jusqu'à passer sous max_len
+    truncated = s
+    while len(truncated.encode("utf-8")) > max_len:
+        truncated = truncated[:-1]
+    return truncated.encode("utf-8").ljust(max_len, b"\x00")
 
 
 def fixed_bytes_to_string(b: bytes) -> str:

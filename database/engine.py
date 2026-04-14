@@ -17,6 +17,7 @@ from __future__ import annotations
 import aiosqlite
 import json
 import logging
+import sqlite3
 import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
@@ -46,12 +47,12 @@ class ISpaceDB:
     - WAL mode: concurrent reads + single writer
     """
 
-    def __init__(self, db_path: str = "data/ispace.db"):
+    def __init__(self, db_path: str):
         """
         Initialize database engine.
 
         Args:
-            db_path: Path to SQLite database file
+            db_path: Path to SQLite database file (required — S6-002)
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -166,9 +167,21 @@ class ISpaceDB:
                             )
                         )
                     await db.commit()
-            # AUDIT[A2-005] 🟡 FRAGILE: except:pass masque potentiellement des erreurs de seeding frames.
+            # AUDIT[A2-005] 🟡→✅ RESOLVED S3-001: granulation des exceptions de seeding frames.
+            except (sqlite3.OperationalError, aiosqlite.OperationalError) as exc:
+                # Cas légitime historique: metrological_frames absente du schéma ancien.
+                logger.warning(
+                    "metrological_frames seeding skipped (legacy schema): %s", exc
+                )
+            except ImportError as exc:
+                # Module optionnel peut être absent dans certaines configs de test.
+                logger.warning(
+                    "metrological_frame module missing — seeding skipped: %s", exc
+                )
             except Exception:
-                pass  # Table may not exist yet in older schemas
+                logger.error(
+                    "metrological_frames seeding failed unexpectedly", exc_info=True
+                )
 
         # Initialize connection pool
         self._pool = await get_pool(str(self.db_path), pool_size=10)
@@ -2895,7 +2908,7 @@ class ISpaceDB:
                     timestamp, protocol_version,
                     validation_count, previous_hash, portable_json,
                     adjusted_consensus_score, diversity_bonus_factor,
-                    commit_reveal_verified
+                    commit_reveal_verified, consensus_meta
                 FROM attestations
                 WHERE claim_hash = ?
                 ORDER BY timestamp DESC
@@ -2937,7 +2950,9 @@ class ISpaceDB:
                     epistemic_type, confidence_tier,
                     metrological_frame, source_anchor, run_id, question,
                     timestamp, protocol_version,
-                    validation_count, previous_hash, portable_json
+                    validation_count, previous_hash, portable_json,
+                    adjusted_consensus_score, diversity_bonus_factor,
+                    commit_reveal_verified, consensus_meta
                 FROM attestations
                 WHERE subject = ? AND consensus_score >= ?
                 ORDER BY consensus_score DESC
@@ -2977,7 +2992,9 @@ class ISpaceDB:
                     epistemic_type, confidence_tier,
                     metrological_frame, source_anchor, run_id, question,
                     timestamp, protocol_version,
-                    validation_count, previous_hash, portable_json
+                    validation_count, previous_hash, portable_json,
+                    adjusted_consensus_score, diversity_bonus_factor,
+                    commit_reveal_verified, consensus_meta
                 FROM attestations
                 WHERE question = ? AND consensus_score >= ?
                 ORDER BY timestamp DESC
@@ -3012,7 +3029,9 @@ class ISpaceDB:
                     epistemic_type, confidence_tier,
                     metrological_frame, source_anchor, run_id, question,
                     timestamp, protocol_version,
-                    validation_count, previous_hash, portable_json
+                    validation_count, previous_hash, portable_json,
+                    adjusted_consensus_score, diversity_bonus_factor,
+                    commit_reveal_verified, consensus_meta
                 FROM attestations
                 WHERE claim_hash = ?
                 ORDER BY timestamp ASC
@@ -3029,6 +3048,14 @@ class ISpaceDB:
         model_votes = row[8]
         if isinstance(model_votes, str):
             model_votes = json.loads(model_votes)
+
+        # Deserialize consensus_meta from JSON TEXT → dict
+        consensus_meta_raw = row[28] if len(row) > 28 else None
+        if isinstance(consensus_meta_raw, str):
+            try:
+                consensus_meta_raw = json.loads(consensus_meta_raw)
+            except (json.JSONDecodeError, TypeError):
+                consensus_meta_raw = None
 
         return {
             "attestation_id": row[0],
@@ -3059,6 +3086,7 @@ class ISpaceDB:
             "adjusted_consensus_score": row[25] if len(row) > 25 else None,
             "diversity_bonus_factor": row[26] if len(row) > 26 else 1.0,
             "commit_reveal_verified": row[27] if len(row) > 27 else None,
+            "consensus_meta": consensus_meta_raw,
         }
 
     # ========================================================================
@@ -3369,7 +3397,7 @@ class ISpaceDB:
             cursor = await conn.execute(
                 """
                 SELECT * FROM attestations
-                ORDER BY created_at DESC
+                ORDER BY timestamp DESC
                 LIMIT 1
                 """
             )
@@ -3379,7 +3407,7 @@ class ISpaceDB:
             col_names = [d[0] for d in cursor.description]
             result = dict(zip(col_names, row))
             # Deserialize JSON fields
-            for json_field in ("model_votes", "signature_5d"):
+            for json_field in ("model_votes", "signature_5d", "consensus_meta"):
                 if json_field in result and isinstance(result[json_field], str):
                     try:
                         result[json_field] = json.loads(result[json_field])

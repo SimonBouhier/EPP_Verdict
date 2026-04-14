@@ -92,6 +92,59 @@ async def test_store_attestation_writes_consensus_meta(db):
 
 
 @pytest.mark.asyncio
+async def test_get_latest_attestation_returns_stored_row(db):
+    """SP-1 RED: get_latest_attestation() must return the last stored attestation."""
+    attestation = _make_attestation(subject="latest_test")
+    await db.store_attestation(attestation)
+
+    latest = await db.get_latest_attestation()
+    assert latest is not None, "get_latest_attestation() returned None after store"
+    assert latest["subject"] == "latest_test"
+
+
+@pytest.mark.asyncio
+async def test_consensus_meta_deserialized_as_dict_from_db(db):
+    """SP-1 RED: consensus_meta read back from DB must be a dict, not a JSON string.
+
+    Regression test for the 'str' object has no attribute 'get' bug:
+    store_attestation serializes consensus_meta to JSON TEXT, but the read
+    methods (get_latest_attestation, get_attestation_by_hash, get_attestations_by_question)
+    must deserialize it back to a dict.
+    """
+    meta = {
+        "methodology": {
+            "consensus_method": "hash_exact_v2",
+            "esmm_invoked": True,
+        },
+        "diagnostics": {
+            "vote_entropy": 0.42,
+        },
+    }
+    attestation = _make_attestation(consensus_meta=meta, question="flywheel test Q")
+    await db.store_attestation(attestation)
+
+    # --- Path 1: get_attestation_by_hash (positional SELECT) ---
+    by_hash = await db.get_attestation_by_hash(attestation["claim_hash"])
+    assert by_hash is not None
+    cm1 = by_hash.get("consensus_meta")
+    assert cm1 is not None, "consensus_meta should be present in get_attestation_by_hash result"
+    assert isinstance(cm1, dict), (
+        f"consensus_meta from get_attestation_by_hash should be dict, got {type(cm1).__name__}"
+    )
+    assert cm1["diagnostics"]["vote_entropy"] == 0.42
+
+    # --- Path 2: get_attestations_by_question (ADR-013 cache path) ---
+    by_q = await db.get_attestations_by_question("flywheel test Q")
+    assert len(by_q) >= 1
+    cm2 = by_q[0].get("consensus_meta")
+    assert cm2 is not None, "consensus_meta should be present in get_attestations_by_question result"
+    assert isinstance(cm2, dict), (
+        f"consensus_meta from get_attestations_by_question should be dict, got {type(cm2).__name__}"
+    )
+    assert cm2["methodology"]["esmm_invoked"] is True
+
+
+@pytest.mark.asyncio
 async def test_store_attestation_without_consensus_meta_stores_null(db):
     """SP-1 RED: Sans consensus_meta, la colonne est NULL (backward compat)."""
     attestation = _make_attestation(consensus_meta=None)
@@ -688,6 +741,7 @@ def _make_attestation(
     subject="test_subject",
     predicate="relates_to",
     object_val="test_object",
+    question=None,
 ):
     """Build a minimal attestation dict for testing."""
     import hashlib
@@ -727,4 +781,6 @@ def _make_attestation(
     }
     if consensus_meta is not None:
         att["consensus_meta"] = consensus_meta
+    if question is not None:
+        att["question"] = question
     return att

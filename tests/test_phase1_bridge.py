@@ -223,7 +223,8 @@ class TestAttestationToAnchorArgs:
         assert summary["predicate"] == "has_tps"
         assert summary["object"] == "exceeds 3000"
         assert abs(summary["consensus_score"] - 0.85) < 0.001
-        assert summary["epistemic_type"] == "foundational"
+        # V2 projection: foundational (sub-type empirical) round-trips as "empirical".
+        assert summary["epistemic_type"] == "empirical"
         assert summary["confidence_tier"] == "validated"
         assert summary["signature_5d"]["agreement"] == 0.85
 

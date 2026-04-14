@@ -34,7 +34,7 @@ class TestConfigLoader:
     def test_get_config_is_singleton(self, tmp_path):
         """get_config() returns the same object on repeated calls."""
         cfg_file = tmp_path / "test_config.yaml"
-        cfg_file.write_text(yaml.dump({"key": "value"}))
+        cfg_file.write_text(yaml.dump({"database": {"path": "data/test.db"}}))
         load_config(str(cfg_file))
         c1 = get_config()
         c2 = get_config()
@@ -64,14 +64,14 @@ class TestConfigLoader:
     def test_reset_config_clears_singleton(self, tmp_path):
         """reset allows to reload."""
         cfg_file = tmp_path / "test_config.yaml"
-        cfg_file.write_text(yaml.dump({"v": 1}))
+        cfg_file.write_text(yaml.dump({"audit": {"enabled": True}}))
         load_config(str(cfg_file))
-        assert get_config()["v"] == 1
+        assert get_config()["audit"]["enabled"] is True
 
         reset_config()
-        cfg_file.write_text(yaml.dump({"v": 2}))
+        cfg_file.write_text(yaml.dump({"audit": {"enabled": False}}))
         load_config(str(cfg_file))
-        assert get_config()["v"] == 2
+        assert get_config()["audit"]["enabled"] is False
 
     def test_missing_config_returns_empty(self, tmp_path, monkeypatch):
         """No crash if config file absent."""
@@ -89,19 +89,20 @@ class TestConfigLoader:
     def test_env_variable_override(self, tmp_path, monkeypatch):
         """EPP_CONFIG_PATH environment variable is honored."""
         cfg_file = tmp_path / "env_config.yaml"
-        cfg_file.write_text(yaml.dump({"source": "env"}))
+        cfg_file.write_text(yaml.dump({"database": {"path": "data/env.db"}}))
         monkeypatch.setenv("EPP_CONFIG_PATH", str(cfg_file))
         config = load_config()
-        assert config["source"] == "env"
+        assert config["database"]["path"] == "data/env.db"
 
     def test_get_value(self, tmp_path):
         """get_value() retrieves a specific key from a section."""
         cfg_file = tmp_path / "test_config.yaml"
         cfg_file.write_text(yaml.dump({
-            "database": {"path": "data/epp.db", "pool_size": 5},
+            "database": {"path": "data/epp.db"},
+            "esmm": {"default_models": 5},
         }))
         load_config(str(cfg_file))
         assert get_value("database", "path") == "data/epp.db"
-        assert get_value("database", "pool_size") == 5
+        assert get_value("esmm", "default_models") == 5
         assert get_value("database", "missing", "default") == "default"
         assert get_value("nonexistent", "key", "fallback") == "fallback"

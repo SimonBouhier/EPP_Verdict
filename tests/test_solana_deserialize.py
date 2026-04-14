@@ -104,7 +104,8 @@ class TestSolanaDeserialize:
         assert result["validation_count"] == 1
         assert result["protocol_version"] == 100
         assert result["is_challenge"] is False
-        assert result["epistemic_type"] == "foundational"
+        # V2 projection: u8=0 decodes to the on-chain category "empirical".
+        assert result["epistemic_type"] == "empirical"
         assert result["confidence_tier"] == "validated"
 
     def test_deserialize_invalid_size(self):

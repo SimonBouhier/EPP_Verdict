@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 from contextlib import asynccontextmanager
@@ -168,10 +169,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware (allow web clients)
+# CORS Middleware — S7-001 fix: restrict origins (spec requires explicit list
+# when allow_credentials=True; "*" with credentials is unsafe and violates the
+# CORS spec). Production origins come from EPP_ALLOWED_ORIGINS (CSV).
+_default_dev_origins = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+]
+_env_origins = os.getenv("EPP_ALLOWED_ORIGINS", "")
+_allowed_origins = (
+    [o.strip() for o in _env_origins.split(",") if o.strip()]
+    if _env_origins
+    else _default_dev_origins
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Restrict in production
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

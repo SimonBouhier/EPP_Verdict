@@ -58,7 +58,15 @@ pub mod epp {
         require!(sig_stability <= SCORE_SCALE, EppError::InvalidSignatureValue);
         require!(sig_relation_diversity <= SCORE_SCALE, EppError::InvalidSignatureValue);
         require!(models_agreeing <= models_consulted, EppError::InvalidModelCount);
-        require!(epistemic_type <= 4, EppError::InvalidEpistemicType);
+        // Epistemic type V2 — 3 catégories formellement vérifiables (préparation Lean 4).
+        //   0 = empirical      (consensus multi-LLM)
+        //   1 = deterministic  (source autoritaire, ADR-012)
+        //   2 = assessed       (audit dirigé, ADR-014)
+        // Invariants Lean 4 cibles (à implémenter ultérieurement, non bloquants ici) :
+        //   - empirical       : tier verified ⇒ consensus_score ≥ 0.85 ∧ models_consulted ≥ 3
+        //   - deterministic   : source_anchor ≠ [0u8; 32]
+        //   - assessed        : domaine-spécifique (spec à définir par ADR dédié)
+        require!(epistemic_type <= 2, EppError::InvalidEpistemicType);
         require!(confidence_tier <= 3, EppError::InvalidConfidenceTier);
 
         // === POPULATE ACCOUNT ===

@@ -234,7 +234,8 @@ class TestPDAValidation:
         assert result["models_consulted"] == 3
         assert result["models_agreeing"] == 2
         assert abs(result["signature_5d"]["agreement"] - 0.9) < 0.001
-        assert result["epistemic_type"] == "foundational"
+        # V2 projection: u8=0 decodes to the on-chain category "empirical".
+        assert result["epistemic_type"] == "empirical"
         assert result["confidence_tier"] == "validated"
         assert result["timestamp"] == 1700000000
         assert result["last_revalidated"] == 1700000000

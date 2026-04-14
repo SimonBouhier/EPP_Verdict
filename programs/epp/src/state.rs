@@ -52,7 +52,16 @@ pub struct EpistemicAttestation {
     pub sig_relation_diversity: u16,             // 2 bytes
 
     // === CLASSIFICATION ===
-    /// 0=Foundational, 1=Bridge, 2=Specialized, 3=Generalist, 4=Hybrid
+    /// Epistemic type V2 — 3 catégories formellement vérifiables :
+    ///   0 = empirical      (consensus multi-LLM : foundational, bridge,
+    ///                       specialized, generalist, hybrid, verdict)
+    ///   1 = deterministic  (source autoritaire externe, ADR-012)
+    ///   2 = assessed       (audit dirigé, ADR-014)
+    ///
+    /// Invariants Lean 4 cibles (préparation, non encore enforcés on-chain) :
+    ///   - empirical     : tier verified ⇒ consensus_score ≥ 0.85 ∧ models_consulted ≥ 3
+    ///   - deterministic : source_anchor ≠ [0u8; 32]
+    ///   - assessed      : domaine-spécifique (spec ADR dédié à venir)
     pub epistemic_type: u8,                      // 1 byte
     /// 0=sandbox, 1=proposition, 2=validated, 3=verified
     pub confidence_tier: u8,                     // 1 byte
@@ -115,14 +124,18 @@ impl EpistemicAttestation {
 // === HELPER: Enum mappings ===
 // NOTE: Helper not called by instructions — client sends u8 directly. Kept for documentation.
 
-/// Maps epistemic_type string to u8.
+/// Maps epistemic_type string to u8 (V2 projection — must mirror
+/// services/solana/bridge.py::EPISTEMIC_TYPE_MAP).
+///
+/// 8 Python business types collapse into 3 on-chain categories:
+///   - empirical     (0) : foundational, bridge, specialized, generalist, hybrid, verdict
+///   - deterministic (1) : deterministic (ADR-012)
+///   - assessed      (2) : security_audit (ADR-014)
 pub fn epistemic_type_to_u8(t: &str) -> Result<u8> {
     match t {
-        "foundational" => Ok(0),
-        "bridge" => Ok(1),
-        "specialized" => Ok(2),
-        "generalist" => Ok(3),
-        "hybrid" => Ok(4),
+        "foundational" | "bridge" | "specialized" | "generalist" | "hybrid" | "verdict" => Ok(0),
+        "deterministic" => Ok(1),
+        "security_audit" => Ok(2),
         _ => err!(crate::errors::EppError::InvalidEpistemicType),
     }
 }

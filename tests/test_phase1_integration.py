@@ -133,7 +133,11 @@ class TestIntegrationMock:
         assert summary["predicate"] == att.predicate
         assert summary["object"] == att.object
         assert abs(summary["consensus_score"] - att.consensus_score) < 0.001
-        assert summary["epistemic_type"] == att.epistemic_type
+        # V2 projection: Python sub-types collapse into on-chain categories
+        # (empirical/deterministic/assessed), so round-trip is lossy by design.
+        from services.solana.bridge import EPISTEMIC_TYPE_MAP, EPISTEMIC_TYPE_REVERSE
+        expected_category = EPISTEMIC_TYPE_REVERSE[EPISTEMIC_TYPE_MAP[att.epistemic_type]]
+        assert summary["epistemic_type"] == expected_category
         assert summary["confidence_tier"] == att.confidence_tier
 
     def test_frame_hash_matches(self):

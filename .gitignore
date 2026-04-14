@@ -135,3 +135,62 @@ rapport.txt
 # === Plans et docs de session Opus (working docs, pas du code) ===
 # NOTE : les ADR-*.md et PLAN_*.md dans docs/ sont versionnés.
 # Seuls les fichiers temporaires de session sont exclus.
+
+# === Docs locaux (working docs, pas dans le repo) ===
+# Archives de sessions, to-do lists, brouillons de travail
+docs/archives/
+docs/To_do_list/
+docs/working/
+docs/drafts/
+
+# === Sauvegardes de conversations LLM (parasites récurrents) ===
+# gptoss20b, ollama, ou tout dump de session modèle
+**/gptoss20b*/
+**/gpt-oss*/
+**/ollama_saves/
+**/chat_saves/
+**/conversation_*/
+*_conversation.json
+*_conversation.md
+*_chat_history*
+
+# === Fichiers de session Claude Code ===
+# La config .claude/ est déjà ignorée, mais les branches
+# créées par Claude Code peuvent laisser des artefacts
+.claude_output/
+*.claude_session
+CLAUDE_PLAN_*.md
+CLAUDE_TASK_*.md
+
+# === Rapports d'audit éphémères (générés, pas versionnés) ===
+# Les rapports définitifs vont dans docs/adr/ ou tests/audits/
+AUDIT_GATEKEEPER_*.md
+AUDIT_REPORT_*.md
+EPP_AUDIT_REPORT_*.md
+**/audit_scratch/
+
+# === Directive de correction (consommée, pas du code) ===
+DIRECTIVE_CORRECTION_*.md
+
+# === Fichiers de résultats de scénarios (données locales) ===
+# Les scripts sont versionnés, les outputs non
+demos/*_results/
+demos/*.json
+!demos/README.md
+
+# === Pitch documents élargis ===
+docs/SECTION_PITCH_*.md
+docs/EPP_Pitch_*.md
+docs/*.docx
+docs/*.pdf
+!docs/adr/*.md
+
+# === Windows / WSL artefacts ===
+*.lnk
+$RECYCLE.BIN/
+*.stackdump
+
+# === Fichiers temporaires Python courants ===
+*.pickle
+*.pkl
+*.parquet

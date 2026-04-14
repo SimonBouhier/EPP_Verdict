@@ -15,8 +15,11 @@ L'orchestrateur ne connait PAS le module attestation.
 from __future__ import annotations
 
 import logging
+import sqlite3
 import time
 from typing import List, Optional, Dict, Any, Tuple, TYPE_CHECKING
+
+import aiosqlite
 from dataclasses import dataclass
 
 from .attestation import (
@@ -273,8 +276,14 @@ async def _lookup_existing_anchors(
                     meta = _json.loads(raw_meta)
                 elif isinstance(raw_meta, dict):
                     meta = raw_meta
-            except Exception:
-                pass
+            except (_json.JSONDecodeError, AttributeError, TypeError) as exc:
+                # S3-002: portable_json / consensus_meta malformé — on continue sans meta
+                # mais l'erreur est désormais visible dans les logs.
+                logger.warning(
+                    "portable_json consensus_meta parse failed for attestation "
+                    "(claim_hash=%s): %s",
+                    row.get("claim_hash", "?"), exc,
+                )
 
         source_meta = meta.get("source_anchor_meta", {})
         diagnostics = meta.get("diagnostics", {})
@@ -407,9 +416,20 @@ async def _check_cache(
             cache_hit_hash=best["claim_hash"],
         )
 
-    except Exception as e:
-        # Cache miss en cas d'erreur — ne pas bloquer le pipeline
-        logger.warning("[Pipeline] Cache lookup failed (continuing): %s", e)
+    except (sqlite3.OperationalError, aiosqlite.OperationalError) as exc:
+        # S3-003: cas attendu — DB occupée / migration / table manquante.
+        # On log avec le type explicite, pipeline continue avec cache miss.
+        logger.warning(
+            "[Pipeline] Cache lookup DB error (%s, continuing): %s",
+            type(exc).__name__, exc,
+        )
+        return None
+    except Exception:
+        # S3-003: cas inattendu — on émet le traceback complet pour diagnostic,
+        # sans bloquer le pipeline (cache est non-critique).
+        logger.error(
+            "[Pipeline] Cache lookup unexpected error (continuing)", exc_info=True
+        )
         return None
 
 
@@ -422,7 +442,6 @@ async def run_pipeline(
     providers: Optional[Dict] = None,
     model_weights: Optional[Dict[str, float]] = None,
     esmm_config: Optional["ESMMRunConfig"] = None,
-    extra_system_context: Optional[str] = None,
 ) -> PipelineResult:
     """
     Execute le pipeline complet : question -> ESMM -> attestations -> graphe.
@@ -436,7 +455,6 @@ async def run_pipeline(
         config: Configuration du pipeline
         metrological_frame: Frame metrologique applicable
         providers: Dict {provider_id: ModelProvider} pre-configured (optional)
-        extra_system_context: Contexte système injecté en tête de question (ex. condition β)
 
     Returns:
         PipelineResult avec les attestations produites
@@ -449,8 +467,6 @@ async def run_pipeline(
         raise ValueError(f"question exceeds {MAX_QUESTION_LENGTH} characters")
     # Strip control characters (keep newlines and tabs)
     question = _re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", question)
-    if extra_system_context:
-        question = f"{extra_system_context}\n\n{question}"
     if metrological_frame and len(metrological_frame) > MAX_FRAME_LENGTH:
         raise ValueError(f"metrological_frame exceeds {MAX_FRAME_LENGTH} characters")
 

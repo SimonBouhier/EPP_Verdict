@@ -4,6 +4,69 @@
 
 ---
 
+## [2026-04-14] Sprint de correction post-audit Gatekeeper — 9 blocs RED-GREEN-FIX
+
+Sprint d'exécution stricte de `docs/To_do_list/DIRECTIVE_CORRECTION_AUDIT.md`.
+Neuf blocs validés un par un par l'humain. Protocole RED→GREEN→FIX respecté à chaque étape.
+
+- **BLOC A — S7-001 CORS dangereux** : `app/main.py` — `allow_origins=["*"]` + `allow_credentials=True` remplacé par liste explicite d'origines dev (localhost) avec override via variable d'environnement `EPP_ALLOWED_ORIGINS` (CSV).
+- **BLOC B+C — S1-001 + S1-002 Enum épistémique V2 (ADR-019)** : projection HYBRIDE des 8 types Python (`foundational`, `bridge`, `specialized`, `generalist`, `hybrid`, `verdict`, `deterministic`, `security_audit`) vers 3 catégories on-chain formellement vérifiables (`empirical=0`, `deterministic=1`, `assessed=2`). `bridge.py::EPISTEMIC_TYPE_MAP` et `EPISTEMIC_TYPE_REVERSE` réécrits. Rust `lib.rs::require!(epistemic_type <= 2, ...)` + `state.rs::epistemic_type_to_u8()` match multi-alternatives. Documentation invariants Lean 4 en commentaires Rust.
+- **BLOC D — S3-001 à S3-004 Exceptions silencieuses granulées** : 4 `except Exception` remplacés par exceptions typées + `logger.warning/error` avec contexte. `engine.py` (seed frames), `pipeline.py` (parse consensus_meta + cache lookup), `client.py` (load keypair — re-raise fail-fast sur erreurs inattendues).
+- **BLOC E — S6-001 Schéma Pydantic config_loader** : `ConfigSchema` Pydantic strict (`extra="forbid"` à chaque niveau) ajouté dans `services/config_loader.py`. Validation fail-fast à `load_config()` — rejette clés inconnues et types invalides. Chaque champ documente sa source de lecture.
+- **BLOC G — S1-003 Troncature UTF-8 codepoint-safe** : `bridge.py::string_to_fixed_bytes` aligné sur frontière de codepoint (boucle `while truncated.encode("utf-8") > max_len`). Corrige les corruptions silencieuses pour `é` (2 bytes), `中` (3 bytes), `😀` (4 bytes).
+- **BLOC H — S1-005 Marker AUDIT[A10-007] reclassé** : `bridge.py:111` — `🟡 FRAGILE` → `🟡→✅ RESOLVED`. Le commentaire antérieur décrivait un bug qui n'existe pas (la guard `0.0 <= value <= 1.0` rejette déjà les valeurs hors borne). Annotation conservée pour traçabilité.
+- **BLOC I — S6-002 db_path obligatoire** : `database/engine.py:50` — default `"data/ispace.db"` supprimé. `ISpaceDB(db_path)` désormais obligatoire. Zéro appelant sans arg confirmé par grep exhaustif avant modification.
+- **BLOC J — S9-001 Migration asyncio.run → pytest-asyncio** : 20 fonctions de test réécrites en `async def` + `@pytest.mark.asyncio` dans `test_phase02_decoupling.py`, `test_phase02_migration.py`, `test_phase03_integration.py`, `test_phase03_revalidation.py`. Nested event-loop pattern éliminé.
+
+### Hors scope
+
+- **BLOC F — S7-002 Rate limiting** : différé (décision humaine). `app/main.py` n'est pas touché pour le rate limiting dans ce sprint.
+
+### Baseline
+
+866 passed, 11 skipped, 0 failed (delta net : **+55 passed** vs. baseline 811). 10 nouveaux fichiers de test (un par bloc + un pour le test d'inspection AST S9-001). 4 tests existants (`test_phase1_bridge.py`, `test_phase1_integration.py`, `test_phase4_solana.py`, `test_solana_deserialize.py`) mis à jour pour refléter la sémantique V2 du round-trip enum. 4 tests `test_phase3_config_loader.py` mis à jour pour utiliser des configs conformes au schéma Pydantic.
+
+### Déploiement Rust
+
+Les modifications `programs/epp/src/lib.rs` et `state.rs` sont préparées et syntaxiquement valides (relecture visuelle). `cargo check` indisponible sur Windows natif — validation Anchor à exécuter en WSL par l'humain.
+
+---
+
+## [2026-04-11] ADR-018 — Flywheel v2 : scénarios post-cutoff expandus
+
+- `demos/scenario_flywheel_v2.py` : nouveau scénario flywheel étendu — 5 claims post-training-cutoff vérifiables via Wikidata SPARQL. Pré-validation SPARQL automatique au lancement (requêtes invalides retirées du run). Claims : Trump 2024, Starmer PM UK, Sheinbaum présidente Mexique, Nobel Physique 2024 Hopfield/Hinton, contrôle Biden.
+- `demos/scenario_flywheel_v2_baseline.py` : script baseline VERIFY-only (sans pass déterministe, sans flywheel) pour mesurer les scores LLM bruts et calculer les deltas.
+- Résultats flywheel v2 (3 modèles : mistral, llama3.1:8b, gemma3) :
+  - Trump : 0.39 CONTESTED → 0.89 SUPPORTED (delta +0.46, verdict flip)
+  - Starmer : 0.49 CONTESTED → 0.76 SUPPORTED (delta +0.28, verdict flip)
+  - Sheinbaum : 0.78 SUPPORTED → 0.96 SUPPORTED (delta +0.18)
+  - Nobel 2024 : 0.79 SUPPORTED → 0.95 SUPPORTED (delta +0.18)
+  - Biden contrôle : 0.90 → 0.96 (delta +0.06, marginal — modèles savent déjà)
+- FW2-04 (Prabowo/Indonésie) et FW2-06 (loi martiale Corée du Sud) retirés : Wikidata SPARQL retourne 0 résultats pour ces QIDs.
+- FW2-CTRL-02 (UE 30+ membres) retiré : faux positif non corrigeable — le format d'injection flywheel transmet le status/score mais pas la valeur brute du count.
+
+### Fix — consensus_meta string→dict désérialisation (DB layer)
+
+- Cause racine : `consensus_meta` est TEXT en SQLite, sérialisé via `json.dumps` à l'écriture, mais jamais `json.loads` à la lecture. Crash `'str' object has no attribute 'get'` sur tout chemin lisant `consensus_meta` depuis la DB.
+- `database/engine.py` : 4 SELECTs alignés sur la même liste de colonnes (ajout `adjusted_consensus_score`, `diversity_bonus_factor`, `commit_reveal_verified`, `consensus_meta` aux 3 requêtes courtes). `_row_to_attestation_dict()` : désérialisation `consensus_meta` via `json.loads` à l'index 28. `get_latest_attestation()` : ajout `consensus_meta` dans la boucle de désérialisation JSON.
+- `services/esmm/attestation.py` : guard `isinstance(consensus_meta, str)` dans `crystallize()` — défense en profondeur.
+- Protocole RED→GREEN→FIX respecté. Test ajouté : `test_consensus_meta_deserialized_as_dict_from_db`.
+
+### Fix — get_latest_attestation() colonne inexistante
+
+- `database/engine.py` : `ORDER BY created_at` → `ORDER BY timestamp`. La table `attestations` n'a pas de colonne `created_at`.
+- Protocole RED→GREEN→FIX respecté. Test ajouté : `test_get_latest_attestation_returns_stored_row`.
+
+### Fix — Retrait extra_system_context (ajout hors scope)
+
+- `services/esmm/pipeline.py` : paramètre `extra_system_context` retiré de `run_pipeline()`. Ajouté hors scope pendant le fix consensus_meta, zéro appelant dans le codebase. Causait une chute du score Trump flywheel de 0.89 à 0.58.
+
+### Baseline
+
+811 passed, 14 skipped, 0 failed (net +2 tests : `test_consensus_meta_deserialized_as_dict_from_db`, `test_get_latest_attestation_returns_stored_row`).
+
+---
+
 ## [2026-03-13] ADR-018 — Flywheel Épistémique
 
 - **Fix B4 (bloquant)** : `_run_deterministic_pipeline()` (pipeline.py:172) appelait `crystallize()` sans `question=question` → colonne `question` NULL en DB → `get_attestations_by_question()` ne retournait jamais d'ancres déterministes. Ajout de `question=question` dans l'appel `crystallize()`.

@@ -331,6 +331,11 @@ def crystallize(
     """
     claim_hash = compute_claim_hash(subject, predicate, object_, metrological_frame)
 
+    # Defense-in-depth: consensus_meta may arrive as JSON string from DB
+    if isinstance(consensus_meta, str):
+        import json as _json
+        consensus_meta = _json.loads(consensus_meta)
+
     # ADR-012 : attestation déterministe requiert source_anchor_meta dans consensus_meta
     if (
         consensus_meta is not None

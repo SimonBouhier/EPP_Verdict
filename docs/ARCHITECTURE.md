@@ -81,7 +81,7 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. `_run_deterministic_pipeline()` : chemin court-circuit ADR-012 (fetch source → hash → `crystallize(question=question)` → store snapshot + attestation). Constantes `VERDICT_PENALTIES` + `CLAIM_TYPE_PENALTIES` — pénalité décidabilité VERIFY. **ADR-018** : `_lookup_existing_anchors(question, db)` — lookup ancres déterministes par question (filtre `deterministic_source_v1`, lit `diagnostics.result`). `_format_anchor_context(anchors)` — formate bloc `[VERIFIED DATA...]`. Bloc flywheel dans `run_pipeline()` : guard `is_verify`, `flywheel_enabled` initialisé hors `try`, injection `anchor_context` dans `_extract_triplets_from_question()`, traçabilité `consensus_meta.methodology.flywheel`. | ✅ Fonctionnel |
+| `services/esmm/pipeline.py` | Pipeline complet : orchestrator -> adapt -> crystallize -> DB -> graph. `_run_deterministic_pipeline()` : chemin court-circuit ADR-012 (fetch source → hash → `crystallize(question=question)` → store snapshot + attestation). Constantes `VERDICT_PENALTIES` + `CLAIM_TYPE_PENALTIES` — pénalité décidabilité VERIFY. **ADR-018** : `_lookup_existing_anchors(question, db)` — lookup ancres déterministes par question (filtre `deterministic_source_v1`, lit `diagnostics.result`). `_format_anchor_context(anchors)` — formate bloc `[VERIFIED DATA...]`. Bloc flywheel dans `run_pipeline()` : guard `is_verify`, `flywheel_enabled` initialisé hors `try`, injection `anchor_context` dans `_extract_triplets_from_question()`, traçabilité `consensus_meta.methodology.flywheel`. `run_pipeline()` signature : pas de paramètre `extra_system_context` (retiré 2026-04-11, hors scope). | ✅ Fonctionnel |
 | `services/config_loader.py` | Chargement centralisé config.yaml (singleton) | ✅ Fonctionnel |
 | `services/esmm/triplet_adapter.py` | Conversion ConsensusTriplet -> dict pipeline (D4) | ✅ Fonctionnel |
 | `services/esmm/question_seeder.py` | Seed graph vide depuis question (D7). `InputType` enum + `classify_input()` auto-détection EXPLORE/VERIFY. | ✅ Fonctionnel |
@@ -91,7 +91,7 @@ Le pipeline est le SEUL pont entre l'orchestrateur et la cristallisation.
 
 **Méthodes ISpaceDB ajoutées (Phase 3)** :
 
-- `get_latest_attestation()` — Dernière attestation (par timestamp)
+- `get_latest_attestation()` — Dernière attestation (par `ORDER BY timestamp DESC`). Désérialise `consensus_meta` JSON→dict.
 - `get_attestation_count()` — Compteur total attestations
 - `update_attestation_submission_status()` — Mise à jour status submission
 
@@ -262,6 +262,16 @@ run_pipeline() [is_verify=True]
 **Méthodes ISpaceDB utilisées** : `get_attestations_by_question()` (ADR-013, lookup par `question` exacte).
 
 **Tests** (`tests/test_adr018_flywheel.py`) : 8 tests — lookup no/with anchors, filtre épistémique, format vide/données, traçabilité meta, flywheel disabled, garde VERIFY-only.
+
+**Attestation SELECT alignment (2026-04-11)** : les 4 méthodes de lecture (`get_attestation_by_hash`, `get_attestations_by_subject`, `get_attestations_by_question`, `get_attestation_history`) sont alignées sur 29 colonnes avec `consensus_meta` en dernière position (index 28). `_row_to_attestation_dict()` désérialise `consensus_meta` via `json.loads`. `get_latest_attestation()` utilise `ORDER BY timestamp` (corrigé depuis `created_at`).
+
+### Demos / Benchmarks
+
+| Fichier | Role | Etat |
+|---------|------|------|
+| `demos/scenario_flywheel.py` | Flywheel ADR-018 : Trump + Yemen + Suisse (3 claims) | ✅ Fonctionnel |
+| `demos/scenario_flywheel_v2.py` | Flywheel v2 : 5 claims post-cutoff (Trump, Starmer, Sheinbaum, Nobel, Biden) + pre-validation SPARQL | ✅ Fonctionnel |
+| `demos/scenario_flywheel_v2_baseline.py` | Baseline VERIFY-only pour flywheel v2 (4 claims, sans pass deterministe) | ✅ Fonctionnel |
 
 ---
 

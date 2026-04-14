@@ -103,7 +103,8 @@ def create_synthetic_signature_5d(consensus: float) -> Signature5D:
 class TestCrystallizationPipeline:
     """Integration tests for the complete crystallization flow."""
 
-    def test_end_to_end_crystallization(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_end_to_end_crystallization(self, tmp_path):
         """
         Complete end-to-end test:
         1. Create synthetic consensus outputs
@@ -112,75 +113,72 @@ class TestCrystallizationPipeline:
         4. Retrieve and verify
         5. Serialize to portable JSON
         """
-        async def run():
-            db = await create_fresh_db(str(tmp_path / "integration.db"))
-            try:
-                # Step 1: Synthetic consensus outputs (simulating pipeline results)
-                triplets = [
-                    ("Solana", "is_a", "blockchain", 0.85),
-                    ("Solana", "has_property", "high_throughput", 0.9),
-                    ("Ethereum", "is_a", "blockchain", 0.95),
-                ]
-                consensus_outputs = create_synthetic_consensus_output(triplets)
+        db = await create_fresh_db(str(tmp_path / "integration.db"))
+        try:
+            # Step 1: Synthetic consensus outputs (simulating pipeline results)
+            triplets = [
+                ("Solana", "is_a", "blockchain", 0.85),
+                ("Solana", "has_property", "high_throughput", 0.9),
+                ("Ethereum", "is_a", "blockchain", 0.95),
+            ]
+            consensus_outputs = create_synthetic_consensus_output(triplets)
 
-                # Step 2: Crystallize each triplet
-                run_id = await db.create_esmm_run(
-                    config={"test": True},
-                    models=["model_a", "model_b", "model_c"],
-                    seed_type="integration_test",
+            # Step 2: Crystallize each triplet
+            run_id = await db.create_esmm_run(
+                config={"test": True},
+                models=["model_a", "model_b", "model_c"],
+                seed_type="integration_test",
+            )
+
+            attestations = []
+            for output in consensus_outputs:
+                sig = create_synthetic_signature_5d(output["consensus_score"])
+                att = crystallize(
+                    subject=output["subject"],
+                    predicate=output["predicate"],
+                    object_=output["object"],
+                    consensus_score=output["consensus_score"],
+                    model_votes=output["model_votes"],
+                    signature_5d=sig,
+                    epistemic_type="foundational",
+                    run_id=run_id,
+                    question="What is Solana?",
                 )
+                attestations.append(att)
 
-                attestations = []
-                for output in consensus_outputs:
-                    sig = create_synthetic_signature_5d(output["consensus_score"])
-                    att = crystallize(
-                        subject=output["subject"],
-                        predicate=output["predicate"],
-                        object_=output["object"],
-                        consensus_score=output["consensus_score"],
-                        model_votes=output["model_votes"],
-                        signature_5d=sig,
-                        epistemic_type="foundational",
-                        run_id=run_id,
-                        question="What is Solana?",
-                    )
-                    attestations.append(att)
+            assert len(attestations) == 3
 
-                assert len(attestations) == 3
+            # Step 3: Verify each attestation has valid SHA-256 hash
+            for att in attestations:
+                assert len(att.claim_hash) == 64
+                assert all(c in "0123456789abcdef" for c in att.claim_hash)
 
-                # Step 3: Verify each attestation has valid SHA-256 hash
-                for att in attestations:
-                    assert len(att.claim_hash) == 64
-                    assert all(c in "0123456789abcdef" for c in att.claim_hash)
+            # Step 4: Store in database
+            stored_ids = []
+            for att in attestations:
+                att_id = await db.store_attestation(att.model_dump())
+                stored_ids.append(att_id)
+                assert att_id > 0
 
-                # Step 4: Store in database
-                stored_ids = []
-                for att in attestations:
-                    att_id = await db.store_attestation(att.model_dump())
-                    stored_ids.append(att_id)
-                    assert att_id > 0
+            # Step 5: Retrieve and verify
+            for att in attestations:
+                retrieved = await db.get_attestation_by_hash(att.claim_hash)
+                assert retrieved is not None
+                assert retrieved["subject"] == att.subject
+                assert retrieved["consensus_score"] == att.consensus_score
 
-                # Step 5: Retrieve and verify
-                for att in attestations:
-                    retrieved = await db.get_attestation_by_hash(att.claim_hash)
-                    assert retrieved is not None
-                    assert retrieved["subject"] == att.subject
-                    assert retrieved["consensus_score"] == att.consensus_score
+            # Step 6: Verify portable JSON serialization
+            for att in attestations:
+                json_str = att.to_portable_json()
+                parsed = json.loads(json_str)
+                assert parsed["claim_hash"] == att.claim_hash
+                assert parsed["subject"] == att.subject
+                # Keys should be sorted
+                keys = list(parsed.keys())
+                assert keys == sorted(keys)
 
-                # Step 6: Verify portable JSON serialization
-                for att in attestations:
-                    json_str = att.to_portable_json()
-                    parsed = json.loads(json_str)
-                    assert parsed["claim_hash"] == att.claim_hash
-                    assert parsed["subject"] == att.subject
-                    # Keys should be sorted
-                    keys = list(parsed.keys())
-                    assert keys == sorted(keys)
-
-            finally:
-                await cleanup_db(db)
-
-        asyncio.run(run())
+        finally:
+            await cleanup_db(db)
 
     def test_run_logger_captures_phases(self):
         """RunLogger captures all phases of a simulated run."""
@@ -218,64 +216,62 @@ class TestCrystallizationPipeline:
         assert "m1" in summary["model_stats"]
         assert summary["model_stats"]["m1"]["calls"] == 2  # divergent + debate
 
-    def test_revalidation_input_from_stored_attestations(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_revalidation_input_from_stored_attestations(self, tmp_path):
         """RevalidationInput can be prepared from stored attestations."""
-        async def run():
-            db = await create_fresh_db(str(tmp_path / "revalidation.db"))
-            try:
-                # Create and store initial attestations
-                run_id = await db.create_esmm_run(
-                    config={"initial": True},
-                    models=["m1", "m2"],
-                    seed_type="test",
-                )
+        db = await create_fresh_db(str(tmp_path / "revalidation.db"))
+        try:
+            # Create and store initial attestations
+            run_id = await db.create_esmm_run(
+                config={"initial": True},
+                models=["m1", "m2"],
+                seed_type="test",
+            )
 
-                # Crystallize some attestations
-                attestations = []
-                for subj in ["A", "B", "C"]:
-                    att = crystallize(
-                        subject=subj,
-                        predicate="is_a",
-                        object_="thing",
-                        consensus_score=0.8,
-                        model_votes=[
-                            ModelVote(model_id="m1", provider_id="mock", agreed=True, confidence=0.8),
-                            ModelVote(model_id="m2", provider_id="mock", agreed=True, confidence=0.8),
-                        ],
-                        signature_5d=Signature5D(
-                            agreement=0.8, semantic_consistency=0.7,
-                            centrality=0.6, stability=0.5, relation_diversity=0.5,
-                        ),
-                        epistemic_type="foundational",
-                        run_id=run_id,
-                        question="Test question?",
-                    )
-                    attestations.append(att)
-                    await db.store_attestation(att.model_dump())
-
-                # Prepare revalidation input
-                claim_hashes = [att.claim_hash for att in attestations]
-                revalidation_input = RevalidationInput(
+            # Crystallize some attestations
+            attestations = []
+            for subj in ["A", "B", "C"]:
+                att = crystallize(
+                    subject=subj,
+                    predicate="is_a",
+                    object_="thing",
+                    consensus_score=0.8,
+                    model_votes=[
+                        ModelVote(model_id="m1", provider_id="mock", agreed=True, confidence=0.8),
+                        ModelVote(model_id="m2", provider_id="mock", agreed=True, confidence=0.8),
+                    ],
+                    signature_5d=Signature5D(
+                        agreement=0.8, semantic_consistency=0.7,
+                        centrality=0.6, stability=0.5, relation_diversity=0.5,
+                    ),
+                    epistemic_type="foundational",
+                    run_id=run_id,
                     question="Test question?",
-                    original_run_id=run_id,
-                    original_claim_hashes=claim_hashes,
                 )
+                attestations.append(att)
+                await db.store_attestation(att.model_dump())
 
-                # Verify
-                assert revalidation_input.question == "Test question?"
-                assert revalidation_input.original_run_id == run_id
-                assert len(revalidation_input.original_claim_hashes) == 3
+            # Prepare revalidation input
+            claim_hashes = [att.claim_hash for att in attestations]
+            revalidation_input = RevalidationInput(
+                question="Test question?",
+                original_run_id=run_id,
+                original_claim_hashes=claim_hashes,
+            )
 
-                # Verify serialization round-trip
-                json_str = revalidation_input.model_dump_json()
-                restored = RevalidationInput.model_validate_json(json_str)
-                assert restored.question == revalidation_input.question
-                assert restored.original_claim_hashes == revalidation_input.original_claim_hashes
+            # Verify
+            assert revalidation_input.question == "Test question?"
+            assert revalidation_input.original_run_id == run_id
+            assert len(revalidation_input.original_claim_hashes) == 3
 
-            finally:
-                await cleanup_db(db)
+            # Verify serialization round-trip
+            json_str = revalidation_input.model_dump_json()
+            restored = RevalidationInput.model_validate_json(json_str)
+            assert restored.question == revalidation_input.question
+            assert restored.original_claim_hashes == revalidation_input.original_claim_hashes
 
-        asyncio.run(run())
+        finally:
+            await cleanup_db(db)
 
     def test_deterministic_hash_across_runs(self):
         """Same triplet produces same hash regardless of when crystallized."""
@@ -374,7 +370,8 @@ class TestCrystallizationPipeline:
 class TestPhase03Complete:
     """Final verification that all Phase 0.3 components work together."""
 
-    def test_complete_workflow(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_complete_workflow(self, tmp_path):
         """
         Complete Phase 0.3 workflow:
         1. Create mock pipeline outputs
@@ -383,82 +380,79 @@ class TestPhase03Complete:
         4. Prepare revalidation
         5. Verify all components integrated
         """
-        async def run():
-            db = await create_fresh_db(str(tmp_path / "complete.db"))
-            try:
-                # Initialize run
-                run_id = await db.create_esmm_run(
-                    config={"phase": "0.3", "test": True},
-                    models=["model_a", "model_b", "model_c"],
-                    seed_type="complete_test",
-                )
+        db = await create_fresh_db(str(tmp_path / "complete.db"))
+        try:
+            # Initialize run
+            run_id = await db.create_esmm_run(
+                config={"phase": "0.3", "test": True},
+                models=["model_a", "model_b", "model_c"],
+                seed_type="complete_test",
+            )
 
-                # Create logger
-                logger = RunLogger(run_id=run_id, question="What is blockchain consensus?")
+            # Create logger
+            logger = RunLogger(run_id=run_id, question="What is blockchain consensus?")
 
-                # Simulate pipeline with logging
-                logger.phase_start("divergent", models=["model_a", "model_b", "model_c"])
-                for mid in ["model_a", "model_b", "model_c"]:
-                    logger.model_response(mid, latency_ms=500, success=True)
-                logger.phase_end("divergent")
+            # Simulate pipeline with logging
+            logger.phase_start("divergent", models=["model_a", "model_b", "model_c"])
+            for mid in ["model_a", "model_b", "model_c"]:
+                logger.model_response(mid, latency_ms=500, success=True)
+            logger.phase_end("divergent")
 
-                # Crystallize attestations
-                attestations = []
-                triplets = [
-                    ("consensus", "is_a", "agreement_mechanism", 0.9),
-                    ("blockchain", "uses", "consensus", 0.85),
-                ]
+            # Crystallize attestations
+            attestations = []
+            triplets = [
+                ("consensus", "is_a", "agreement_mechanism", 0.9),
+                ("blockchain", "uses", "consensus", 0.85),
+            ]
 
-                for subj, pred, obj, consensus in triplets:
-                    logger.triplet_extracted(subj, pred, obj, consensus)
+            for subj, pred, obj, consensus in triplets:
+                logger.triplet_extracted(subj, pred, obj, consensus)
 
-                    att = crystallize(
-                        subject=subj,
-                        predicate=pred,
-                        object_=obj,
-                        consensus_score=consensus,
-                        model_votes=[
-                            ModelVote(model_id="model_a", provider_id="mock", agreed=True, confidence=consensus),
-                            ModelVote(model_id="model_b", provider_id="mock", agreed=True, confidence=consensus),
-                            ModelVote(model_id="model_c", provider_id="mock", agreed=consensus > 0.5, confidence=consensus),
-                        ],
-                        signature_5d=Signature5D(
-                            agreement=consensus, semantic_consistency=0.8,
-                            centrality=0.6, stability=0.7, relation_diversity=0.5,
-                        ),
-                        epistemic_type="foundational",
-                        run_id=run_id,
-                        question="What is blockchain consensus?",
-                    )
-
-                    # Store attestation
-                    await db.store_attestation(att.model_dump())
-                    logger.crystallization(att.claim_hash, att.consensus_score, att.confidence_tier)
-                    attestations.append(att)
-
-                # Get summary
-                summary = logger.get_summary()
-                assert summary["triplets_extracted"] == 2
-                assert summary["attestations_produced"] == 2
-
-                # Prepare revalidation input
-                reval = RevalidationInput(
+                att = crystallize(
+                    subject=subj,
+                    predicate=pred,
+                    object_=obj,
+                    consensus_score=consensus,
+                    model_votes=[
+                        ModelVote(model_id="model_a", provider_id="mock", agreed=True, confidence=consensus),
+                        ModelVote(model_id="model_b", provider_id="mock", agreed=True, confidence=consensus),
+                        ModelVote(model_id="model_c", provider_id="mock", agreed=consensus > 0.5, confidence=consensus),
+                    ],
+                    signature_5d=Signature5D(
+                        agreement=consensus, semantic_consistency=0.8,
+                        centrality=0.6, stability=0.7, relation_diversity=0.5,
+                    ),
+                    epistemic_type="foundational",
+                    run_id=run_id,
                     question="What is blockchain consensus?",
-                    original_run_id=run_id,
-                    original_claim_hashes=[att.claim_hash for att in attestations],
                 )
 
-                # Verify we can retrieve all attestations
-                for att in attestations:
-                    retrieved = await db.get_attestation_by_hash(att.claim_hash)
-                    assert retrieved is not None
+                # Store attestation
+                await db.store_attestation(att.model_dump())
+                logger.crystallization(att.claim_hash, att.consensus_score, att.confidence_tier)
+                attestations.append(att)
 
-                # Final assertions
-                assert len(attestations) == 2
-                assert len(reval.original_claim_hashes) == 2
-                assert all(len(h) == 64 for h in reval.original_claim_hashes)
+            # Get summary
+            summary = logger.get_summary()
+            assert summary["triplets_extracted"] == 2
+            assert summary["attestations_produced"] == 2
 
-            finally:
-                await cleanup_db(db)
+            # Prepare revalidation input
+            reval = RevalidationInput(
+                question="What is blockchain consensus?",
+                original_run_id=run_id,
+                original_claim_hashes=[att.claim_hash for att in attestations],
+            )
 
-        asyncio.run(run())
+            # Verify we can retrieve all attestations
+            for att in attestations:
+                retrieved = await db.get_attestation_by_hash(att.claim_hash)
+                assert retrieved is not None
+
+            # Final assertions
+            assert len(attestations) == 2
+            assert len(reval.original_claim_hashes) == 2
+            assert all(len(h) == 64 for h in reval.original_claim_hashes)
+
+        finally:
+            await cleanup_db(db)

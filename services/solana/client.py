@@ -151,8 +151,14 @@ class EppSolanaClient:
             self._keypair = Keypair.from_bytes(bytes(secret_key))
             # AUDIT[A10-021] 🟢 ACCEPTED: seule la pubkey est loguée — clé privée jamais exposée.
             logger.info(f"Loaded keypair: {self._keypair.pubkey()}")
-        except Exception as e:
-            logger.error(f"Failed to load keypair: {e}")
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError, ValueError, TypeError) as exc:
+            # S3-004: cas attendus (fichier absent/inaccessible, JSON corrompu, bytes invalides).
+            # On dégrade vers self._keypair=None, comportement historique préservé.
+            logger.error(
+                "Failed to load keypair (%s): %s", type(exc).__name__, exc
+            )
+        # S3-004: tout autre Exception (ex. crash interne de solders) propage — pas de
+        # client Solana en état invalide silencieux.
 
     def _load_idl(self, idl_path: Optional[str] = None) -> None:
         """Load Anchor IDL for instruction building."""

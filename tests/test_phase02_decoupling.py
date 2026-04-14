@@ -174,119 +174,111 @@ class TestCosineSimlarity:
 class TestAddConceptEmbeddingModel:
     """Tests for add_concept embedding_model requirement."""
 
-    def test_add_concept_requires_model_with_embedding(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_add_concept_requires_model_with_embedding(self, tmp_path):
         """add_concept() avec embedding mais sans embedding_model lève ValueError."""
-        async def run_test():
-            db_path = str(tmp_path / "test_db.db")
-            db = await create_fresh_db(db_path)
-            try:
-                embedding = struct.pack(f'{768}f', *([0.1] * 768))
+        db_path = str(tmp_path / "test_db.db")
+        db = await create_fresh_db(db_path)
+        try:
+            embedding = struct.pack(f'{768}f', *([0.1] * 768))
 
-                with pytest.raises(ValueError) as exc_info:
-                    await db.add_concept(
-                        concept_id="test_concept",
-                        embedding=embedding,
-                        # embedding_model missing!
-                    )
-
-                assert "embedding_model is required" in str(exc_info.value)
-            finally:
-                await cleanup_db(db)
-
-        asyncio.run(run_test())
-
-    def test_add_concept_without_embedding_no_model_ok(self, tmp_path):
-        """add_concept() sans embedding n'a pas besoin de embedding_model."""
-        async def run_test():
-            db_path = str(tmp_path / "test_db.db")
-            db = await create_fresh_db(db_path)
-            try:
-                # Should not raise
+            with pytest.raises(ValueError) as exc_info:
                 await db.add_concept(
-                    concept_id="test_concept_no_emb",
-                    rho_static=0.5,
-                    source="test"
-                )
-
-                # Verify it was added
-                concept = await db.get_concept("test_concept_no_emb")
-                assert concept is not None
-            finally:
-                await cleanup_db(db)
-
-        asyncio.run(run_test())
-
-    def test_add_concept_writes_to_both_tables(self, tmp_path):
-        """add_concept() avec embedding écrit dans concepts ET concept_embeddings."""
-        async def run_test():
-            db_path = str(tmp_path / "test_db.db")
-            db = await create_fresh_db(db_path)
-            try:
-                embedding = struct.pack(f'{768}f', *([0.1] * 768))
-
-                await db.add_concept(
-                    concept_id="dual_table_concept",
+                    concept_id="test_concept",
                     embedding=embedding,
-                    embedding_model="test-model-768",
-                    source="test"
+                    # embedding_model missing!
                 )
 
-                async with db.connection() as conn:
-                    # Check concepts table
-                    cursor = await conn.execute(
-                        "SELECT id, embedding, embedding_model FROM concepts WHERE id = ?",
-                        ("dual_table_concept",)
-                    )
-                    row = await cursor.fetchone()
-                    assert row is not None, "Concept should be in concepts table"
-                    assert row[1] == embedding, "Embedding should match"
-                    assert row[2] == "test-model-768", "Model should match"
+            assert "embedding_model is required" in str(exc_info.value)
+        finally:
+            await cleanup_db(db)
 
-                    # Check concept_embeddings table
-                    cursor = await conn.execute(
-                        """
-                        SELECT concept_id, model_id, dimension, embedding
-                        FROM concept_embeddings
-                        WHERE concept_id = ? AND model_id = ?
-                        """,
-                        ("dual_table_concept", "test-model-768")
-                    )
-                    row = await cursor.fetchone()
-                    assert row is not None, "Embedding should be in concept_embeddings table"
-                    assert row[2] == 768, f"Dimension should be 768, got {row[2]}"
-                    assert row[3] == embedding, "Embedding blob should match"
-            finally:
-                await cleanup_db(db)
+    @pytest.mark.asyncio
+    async def test_add_concept_without_embedding_no_model_ok(self, tmp_path):
+        """add_concept() sans embedding n'a pas besoin de embedding_model."""
+        db_path = str(tmp_path / "test_db.db")
+        db = await create_fresh_db(db_path)
+        try:
+            # Should not raise
+            await db.add_concept(
+                concept_id="test_concept_no_emb",
+                rho_static=0.5,
+                source="test"
+            )
 
-        asyncio.run(run_test())
+            # Verify it was added
+            concept = await db.get_concept("test_concept_no_emb")
+            assert concept is not None
+        finally:
+            await cleanup_db(db)
 
-    def test_add_concept_dimension_calculated_correctly(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_add_concept_writes_to_both_tables(self, tmp_path):
+        """add_concept() avec embedding écrit dans concepts ET concept_embeddings."""
+        db_path = str(tmp_path / "test_db.db")
+        db = await create_fresh_db(db_path)
+        try:
+            embedding = struct.pack(f'{768}f', *([0.1] * 768))
+
+            await db.add_concept(
+                concept_id="dual_table_concept",
+                embedding=embedding,
+                embedding_model="test-model-768",
+                source="test"
+            )
+
+            async with db.connection() as conn:
+                # Check concepts table
+                cursor = await conn.execute(
+                    "SELECT id, embedding, embedding_model FROM concepts WHERE id = ?",
+                    ("dual_table_concept",)
+                )
+                row = await cursor.fetchone()
+                assert row is not None, "Concept should be in concepts table"
+                assert row[1] == embedding, "Embedding should match"
+                assert row[2] == "test-model-768", "Model should match"
+
+                # Check concept_embeddings table
+                cursor = await conn.execute(
+                    """
+                    SELECT concept_id, model_id, dimension, embedding
+                    FROM concept_embeddings
+                    WHERE concept_id = ? AND model_id = ?
+                    """,
+                    ("dual_table_concept", "test-model-768")
+                )
+                row = await cursor.fetchone()
+                assert row is not None, "Embedding should be in concept_embeddings table"
+                assert row[2] == 768, f"Dimension should be 768, got {row[2]}"
+                assert row[3] == embedding, "Embedding blob should match"
+        finally:
+            await cleanup_db(db)
+
+    @pytest.mark.asyncio
+    async def test_add_concept_dimension_calculated_correctly(self, tmp_path):
         """add_concept() calcule correctement la dimension depuis le blob."""
-        async def run_test():
-            db_path = str(tmp_path / "test_db.db")
-            db = await create_fresh_db(db_path)
-            try:
-                # 1024D embedding
-                embedding_1024 = struct.pack(f'{1024}f', *([0.2] * 1024))
+        db_path = str(tmp_path / "test_db.db")
+        db = await create_fresh_db(db_path)
+        try:
+            # 1024D embedding
+            embedding_1024 = struct.pack(f'{1024}f', *([0.2] * 1024))
 
-                await db.add_concept(
-                    concept_id="concept_1024",
-                    embedding=embedding_1024,
-                    embedding_model="mxbai-embed-large",
+            await db.add_concept(
+                concept_id="concept_1024",
+                embedding=embedding_1024,
+                embedding_model="mxbai-embed-large",
+            )
+
+            async with db.connection() as conn:
+                cursor = await conn.execute(
+                    "SELECT dimension FROM concept_embeddings WHERE concept_id = ?",
+                    ("concept_1024",)
                 )
-
-                async with db.connection() as conn:
-                    cursor = await conn.execute(
-                        "SELECT dimension FROM concept_embeddings WHERE concept_id = ?",
-                        ("concept_1024",)
-                    )
-                    row = await cursor.fetchone()
-                    assert row is not None
-                    assert row[0] == 1024, f"Dimension should be 1024, got {row[0]}"
-            finally:
-                await cleanup_db(db)
-
-        asyncio.run(run_test())
+                row = await cursor.fetchone()
+                assert row is not None
+                assert row[0] == 1024, f"Dimension should be 1024, got {row[0]}"
+        finally:
+            await cleanup_db(db)
 
 
 # ============================================================================
