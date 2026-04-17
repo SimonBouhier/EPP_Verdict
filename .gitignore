@@ -194,3 +194,29 @@ $RECYCLE.BIN/
 *.pickle
 *.pkl
 *.parquet
+/.lake
+
+# === Lean 4 build artifacts ===
+.lake/
+
+# === Lean 4 ===
+.lake/
+Formal/RedTests.lean
+Formal/Eval.lean
+
+# === Données locales (pas du code) ===
+reports/
+test_results/
+data/embeddings_cache.json
+data/weaver.log
+data/benchmark_*.json
+
+# === CSV/analyses kappa (artefacts locaux) ===
+edges_kappa_*.csv
+nodes_kappa_*.csv
+kappa_*.csv
+kappa_*_report.md
+kappa_*_metrics.csv
+
+# === Archives docs (working docs locaux) ===
+docs/archives/

@@ -20,38 +20,56 @@ class VerraVcsAdapter(SourceAdapter):
     """
 
     async def fetch(self, query: Dict[str, Any]) -> Dict[str, Any]:
-        serial = query.get("serial")
-        project_id = query.get("project_id")
+        identifier = query.get("project_id") or query.get("serial")
+        if not identifier:
+            raise ValueError("VerraVcsAdapter.fetch: 'serial' or 'project_id' required")
 
         async with httpx.AsyncClient(timeout=20.0) as client:
-            if serial:
-                # Credits endpoint par numéro de série
-                resp = await client.get(
-                    f"{_VERRA_BASE}/credits/{serial}",
-                    params={"$format": "json"},
-                )
-            elif project_id:
-                # Projects endpoint par ID
-                resp = await client.get(
-                    f"{_VERRA_BASE}/projects/{project_id}",
-                    params={"$format": "json"},
-                )
-            else:
-                raise ValueError("VerraVcsAdapter.fetch: 'serial' or 'project_id' required in query")
-
+            resp = await client.get(
+                f"{_VERRA_BASE}/{identifier}",
+                headers={"Accept": "application/json"},
+            )
             resp.raise_for_status()
             return resp.json()
 
     def normalize(self, raw: Dict[str, Any]) -> Dict[str, Any]:
-        # Verra retourne un objet avec "status" ("active", "retired", etc.)
-        status_raw = raw.get("status", raw.get("resourceStatus", "unknown")).lower()
-        if status_raw == "active":
-            return {"status": "active", "score": 1.0}
-        elif status_raw in ("retired", "cancelled"):
-            return {"status": "retired", "score": 1.0}
+        status_raw = "unknown"
+        for ps in raw.get("participationSummaries", []):
+            for attr in ps.get("attributes", []):
+                if attr.get("code") == "PROJECT_STATUS":
+                    values = attr.get("values", [])
+                    if values:
+                        status_raw = values[0].get("value", "unknown").lower()
+                    break
+
+        if status_raw in ("registered", "active"):
+            return {"status": "registered", "score": 1.0}
+        elif status_raw in ("crediting period ended", "inactive"):
+            return {"status": "inactive", "score": 0.5}
         else:
             return {"status": status_raw, "score": 0.5}
 
     def get_source_version(self, raw: Dict[str, Any]) -> str:
-        # Verra inclut parfois "lastUpdated" ou "issuanceDate"
-        return raw.get("lastUpdated", raw.get("issuanceDate", "verra-vcs-unknown"))
+        date_raw = None
+        for ps in raw.get("participationSummaries", []):
+            for attr in ps.get("attributes", []):
+                if attr.get("code") == "PROJECT_REGISTRATION_DATE":
+                    values = attr.get("values", [])
+                    if values:
+                        date_raw = values[0].get("value")
+                    break
+            if date_raw:
+                break
+
+        if not date_raw:
+            for doc in raw.get("documents", []):
+                upload = doc.get("uploadDate")
+                if upload:
+                    date_raw = upload
+                    break
+
+        if not date_raw:
+            return "verra-vcs-unknown"
+
+        date_part = str(date_raw)[:10]
+        return f"verra-vcs-{date_part}"

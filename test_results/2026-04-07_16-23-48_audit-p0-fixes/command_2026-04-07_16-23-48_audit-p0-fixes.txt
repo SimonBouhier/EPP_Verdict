@@ -1,9 +1,0 @@
-{
-  "run_id": "2026-04-07_16-23-48_audit-p0-fixes",
-  "timestamp": "2026-04-07T14:23:48Z",
-  "equivalent_command": "pytest tests/ -v",
-  "pytest_args": [
-    "tests/",
-    "-v"
-  ]
-}
