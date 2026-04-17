@@ -1,5 +1,6 @@
 import Formal.Basic
 import Formal.TierBoundary
+import Formal.ClaimHash
 
 /-
   RED TESTS — Preuves de non-tautologie des invariants.
@@ -43,3 +44,57 @@ theorem green_tier_2_high_score_with_anchor_verified :
     assignTier (⟨8500, by omega⟩ : Score) 1 true = ConfidenceTier.verified := by
   unfold assignTier
   simp
+
+-- ═══════════════════════════════════════════════════════════════
+-- RED TESTS — INV-2 (Claim Hash Purity)
+-- ═══════════════════════════════════════════════════════════════
+
+/-- RED-HASH-1 : deux attestations identiques sur (s, p, o, f) mais
+    avec timestamps DIFFÉRENTS produisent le MÊME hash.
+    Si la propriété d'indépendance temporelle était cassée
+    (par ex. si claimHash lisait timestamp), cette preuve tomberait. -/
+theorem red_hash_1_timestamp_independence
+    (s p o f submitter : String)
+    (t₁ t₂ : Nat)
+    (et : EpistemicType) (ct : ConfidenceTier)
+    (cs : Score) (mc : Nat) (san : Bool)
+    (ht_differ : t₁ ≠ t₂) :
+    claimHash
+      { subject := s, predicate := p, object := o, frame := f
+      , timestamp := t₁, submitter := submitter
+      , epistemic_type := et, confidence_tier := ct
+      , consensus_score := cs, models_consulted := mc
+      , source_anchor_nonzero := san }
+    = claimHash
+      { subject := s, predicate := p, object := o, frame := f
+      , timestamp := t₂, submitter := submitter
+      , epistemic_type := et, confidence_tier := ct
+      , consensus_score := cs, models_consulted := mc
+      , source_anchor_nonzero := san } := by
+  rfl
+
+/-- RED-HASH-2 : deux attestations identiques sur (s, p, o, f) mais
+    avec submitters DIFFÉRENTS produisent le MÊME hash.
+    Condition de possibilité du cross-cluster (ADR-017) :
+    deux clusters distincts produisent le même claim_hash pour le
+    même claim. -/
+theorem red_hash_2_submitter_independence
+    (s p o f : String)
+    (sub₁ sub₂ : String)
+    (t : Nat)
+    (et : EpistemicType) (ct : ConfidenceTier)
+    (cs : Score) (mc : Nat) (san : Bool)
+    (hs_differ : sub₁ ≠ sub₂) :
+    claimHash
+      { subject := s, predicate := p, object := o, frame := f
+      , timestamp := t, submitter := sub₁
+      , epistemic_type := et, confidence_tier := ct
+      , consensus_score := cs, models_consulted := mc
+      , source_anchor_nonzero := san }
+    = claimHash
+      { subject := s, predicate := p, object := o, frame := f
+      , timestamp := t, submitter := sub₂
+      , epistemic_type := et, confidence_tier := ct
+      , consensus_score := cs, models_consulted := mc
+      , source_anchor_nonzero := san } := by
+  rfl

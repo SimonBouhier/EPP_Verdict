@@ -23,9 +23,22 @@ structure Score where
   val : Nat
   h_bound : val ≤ 10000
 
-/-- Modèle simplifié d'une attestation on-chain -/
+/-- Modèle simplifié d'une attestation on-chain.
+    Les 4 premiers champs (subject, predicate, object, frame) forment
+    le noyau canonique d'identité : claim_hash en dépend exclusivement
+    (cf. INV-2 dans ClaimHash.lean). Les champs suivants caractérisent
+    le contexte d'émission mais n'entrent PAS dans l'identité. -/
 structure Attestation where
-  epistemic_type : EpistemicType
+  -- Noyau canonique d'identité (INV-2)
+  subject         : String
+  predicate       : String
+  object          : String
+  frame           : String
+  -- Contexte d'émission (ne doit PAS entrer dans claim_hash)
+  timestamp       : Nat
+  submitter       : String
+  -- Décision épistémique (cf. TierBoundary.lean, SourceAnchor.lean)
+  epistemic_type  : EpistemicType
   confidence_tier : ConfidenceTier
   consensus_score : Score
   models_consulted : Nat
