@@ -3,7 +3,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-epp = "98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C"
+epp = "9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD"
 
 [programs.devnet]
 epp = "9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD"
