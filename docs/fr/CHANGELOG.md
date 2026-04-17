@@ -4,6 +4,37 @@
 
 ---
 
+## [2026-04-17] Lean 4, sources déterministes, et garde on-chain ADR-019
+
+Trois axes post-sprint Gatekeeper : installation Lean 4 avec trois premiers invariants prouvés, scénario sources déterministes exécuté en live, et garde on-chain de l'Enum V2 testée avec protocole RED→GREEN. Commits `1d703fd` (major update) et `86539e7` (test on-chain).
+
+### Lean 4 — vérification formelle (2026-04-15)
+
+- `Formal/` : arborescence Lake créée — `lean-toolchain`, `lakefile.toml`, `lake-manifest.json`, `Main.lean`, `Formal.lean`, `README.md`.
+- Trois invariants prouvés : `Formal/Formal/TierBoundary.lean`, `Formal/Formal/Encoding.lean`, `Formal/Formal/SourceAnchor.lean`.
+- `Formal/Formal/RedTests.lean` : vérification explicite de non-tautologie des preuves.
+- `Formal/Formal/Basic.lean` + `Formal/Formal/Eval.lean` : primitives et évaluation.
+- `.github/workflows/lean_action_ci.yml` : CI Lean ajoutée.
+- `lake build` passe.
+
+### Sources déterministes — scénario live (2026-04-15)
+
+- `demos/scenario_deterministic_sources.py` (nouveau fichier) : scénario dédié aux sources déterministes — 4 sources sur 8 testées en live.
+- Wikidata SPARQL : 5/5 checks validés.
+- Verra VCS (Voluntary Carbon Standard) : 5/5 checks validés ; adapter Verra corrigé à cette occasion.
+
+### ADR-019 on-chain — test de la garde Enum V2 (2026-04-17)
+
+- `tests/epp_enum_v2_guard.ts` : test Anchor unique exerçant `require!(epistemic_type <= 2)` en ligne 69 de `programs/epp/src/lib.rs`. Construit une `submit_attestation` complète avec `epistemic_type = 3`, attrape l'erreur via `anchor.AnchorError.parse(err.logs)`, vérifie `errorCode.code === "InvalidEpistemicType"` et `errorCode.number === 6006`.
+- Protocole C6 Gatekeeper : double run GREEN/RED archivé. RED produit en commentant temporairement la ligne 69 — le test échoue alors sur `expect.fail()` car la transaction passe. Preuve de non-tautologie acquise.
+- `Anchor.toml` : `[programs.localnet]` aligné sur `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (valeur de `declare_id!` et du keypair de déploiement). Corrige le `DeclaredProgramIdMismatch` qui bloquait `anchor test`, y compris sur le test `ping` pré-existant.
+
+### Nettoyage repo (2026-04-15)
+
+- `.gitignore` étendu : `reports/`, `test_results/`, `docs/archives/`, CSVs kappa, fichiers de benchmark passent en local-only. Ces artefacts ne sont plus versionnés.
+
+---
+
 ## [2026-04-14] Sprint de correction post-audit Gatekeeper — 9 blocs RED-GREEN-FIX
 
 Sprint d'exécution stricte de `docs/To_do_list/DIRECTIVE_CORRECTION_AUDIT.md`.

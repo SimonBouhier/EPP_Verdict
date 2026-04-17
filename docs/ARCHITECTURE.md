@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-03-13
+**Dernière mise à jour** : 2026-04-17
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -63,7 +63,7 @@ Système de cristallisation des attestations épistémiques, produisant des obje
 
 | Fichier | Rôle | État |
 |---------|------|------|
-| `services/esmm/attestation.py` | Modèle EpistemicAttestation (+ consensus_meta ADR-010), crystallize(), compute_claim_hash(), RevalidationInput. `models_consulted ge=0` (attestations déterministes). `epistemic_type` : +`"deterministic"`. Guard `crystallize()` : `consensus_method=deterministic_source_v1` requiert `source_anchor_meta`. | ✅ Fonctionnel |
+| `services/esmm/attestation.py` | Modèle EpistemicAttestation (+ consensus_meta ADR-010), crystallize(), compute_claim_hash(), RevalidationInput. `models_consulted ge=0` (attestations déterministes). `epistemic_type` : +`"deterministic"`. Guard `crystallize()` : `consensus_method=deterministic_source_v1` requiert `source_anchor_meta`. Projection on-chain V2 (8 strings Python → 3 catégories u8 : `empirical=0`, `deterministic=1`, `assessed=2`) effectuée dans `services/solana/bridge.py::EPISTEMIC_TYPE_MAP` — ADR-019. | ✅ Fonctionnel |
 | `services/esmm/run_logger.py` | Logs structurés du pipeline (PhaseEvent, RunLogger) | ✅ Fonctionnel |
 | Table `attestations` | Stockage attestations cristallisées (table 20), consensus_meta TEXT (ADR-010) | ✅ Fonctionnel |
 
@@ -156,7 +156,7 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 | `pool.py` | Pool 10 connexions, 30s busy_timeout, cache LRU | ✅ Fonctionnel |
 | `graph.py` | Opérations graphe sémantique (PPMI, voisinage) | ✅ Fonctionnel |
 | `graph_delta.py` | GraphDelta + KappaCalculator (Ollivier + Jaccard) | ✅ Fonctionnel |
-| `schema.sql` | 24 tables, 8 vues SQLite | ✅ Fonctionnel |
+| `schema.sql` | 25 tables, 8 vues SQLite | ✅ Fonctionnel |
 | `entity_resolver.py` | Résolution d'entités | ✅ Fonctionnel |
 | `relation_normalizer.py` | 20 relations canoniques | ✅ Fonctionnel |
 | `relation_generator.py` | Génération de relations | ✅ Fonctionnel |
@@ -176,7 +176,7 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 |---------|------|------|
 | `main.py` | FastAPI entry point, lifecycle, CORS | ✅ Fonctionnel |
 | `models.py` | Modèles Pydantic (requêtes/réponses) | ✅ Fonctionnel |
-| `config.yaml` | Configuration centralisée (purgé Phase 4.4 : 12 clés effectives) | ✅ Fonctionnel |
+| `config.yaml` | Configuration centralisée. Purge Phase 4.4 suivie d'ajouts (`sources`, `flywheel`, `audit`, `geopolitical`) — 11 sections top-level actuelles. | ✅ Fonctionnel |
 | `injector.py` | Injection contexte sémantique (TF-IDF + PPMI) | ✅ Fonctionnel |
 | `sessions.py` | Gestion sessions | ✅ Fonctionnel |
 | `session_storage.py` | Export/import sessions JSON | ✅ Fonctionnel |
@@ -187,12 +187,12 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 
 ### Couche Solana (Phase 1 — MVP)
 
-Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
+Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_id!`, keypair `target/deploy/epp-keypair.json`, et `Anchor.toml` localnet + devnet après fix `86539e7`)
 
 | Fichier | Rôle | État |
 |---------|------|------|
 | `services/solana/config.py` | Config cluster, devnet guard, DEFAULT_PROGRAM_ID, keypair path | ✅ Fonctionnel |
-| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256. 5 frames : `blockchain_tps_v1.0`, `general_knowledge_v1.0`, `compliance_sanctions_v1.0`, `carbon_credits_vcs_v1.0`, `rwa_identity_v1.0`. | ✅ Fonctionnel |
+| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256. 7 frames : `blockchain_tps_v1.0`, `general_knowledge_v1.0`, `compliance_sanctions_v1.0`, `carbon_credits_vcs_v1.0`, `rwa_identity_v1.0`, `smartcontract_audit_v1.0` (ADR-014), `geopolitical_forecast_v1.0` (ADR-016). | ✅ Fonctionnel |
 | `services/solana/bridge.py` | Sérialisation Python <-> Anchor (float↔u16, string↔bytes). `CONFIDENCE_TIER_MAP` : bijection stricte 4 clés ↔ 4 arms Rust (sandbox/proposition/validated/verified). | ✅ Fonctionnel |
 | `services/solana/client.py` | Transaction builder, PDA derivation, mock mode, account deser (Phase 4.6). CLAIM_HASH_OFFSET=41, SUBJECT_OFFSET=73 vérifiés vs state.rs layout. | ✅ Fonctionnel |
 | `programs/epp/src/lib.rs` | Instructions Anchor : submit_attestation, ping | ✅ Build OK (221 KB .so) |
@@ -210,9 +210,11 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 
 **Prérequis** : Solana CLI 3.0+ / Anchor 0.32+ / Rust 1.70+ (WSL sur Windows).
 
+**Test on-chain ADR-019** : `tests/epp_enum_v2_guard.ts` exerce `require!(epistemic_type <= 2)` (lib.rs:69). Protocole C6 Gatekeeper (double run GREEN/RED) — commit `86539e7`. Fix `Anchor.toml [programs.localnet]` aligné sur l'ID canonique (même commit) — corrige `DeclaredProgramIdMismatch` qui bloquait `anchor test`.
+
 ### Architecture Decision Records (Phase 3.3+)
 
-18 ADR actifs dans `docs/adr/` :
+19 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -229,11 +231,12 @@ Programme ID : `98Fc2oL2cKsTDGYi3GifggzkQkEQSRn2oTgg8HsaVa3C`
 | ADR-011 | Réconciliation lexicale par empreinte sémantique (Semantic Fingerprinting) | Actif (v2) |
 | ADR-012 | Intégration sources RWA — bifurcation déterministe/épistémique | Actif |
 | ADR-013 | Cache-hit épistémique avant ESMM | Actif |
-| ADR-014 | Migration services/rwa/ → services/sources/ + moteur audit smart contracts | Actif |
-| ADR-015 | *(réservé)* | — |
+| ADR-014 | Moteur d'audit épistémique de smart contracts (§2.1 : migration services/rwa/ → services/sources/) | Actif |
+| ADR-015 | Le Grand Découplage — architecture tripartite Kernel/Adapters/Domains | Différé (post-hackathon) |
 | ADR-016 | Oracle géopolitique ACLED — ancrage données de conflit | Actif |
-| ADR-017 | Wikidata comme source déterministe épistémique | Actif |
+| ADR-017 | Réseau de Clusters Épistémiques — architecture multi-opérateurs | Proposé |
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
+| ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 
@@ -265,6 +268,21 @@ run_pipeline() [is_verify=True]
 
 **Attestation SELECT alignment (2026-04-11)** : les 4 méthodes de lecture (`get_attestation_by_hash`, `get_attestations_by_subject`, `get_attestations_by_question`, `get_attestation_history`) sont alignées sur 29 colonnes avec `consensus_meta` en dernière position (index 28). `_row_to_attestation_dict()` désérialise `consensus_meta` via `json.loads`. `get_latest_attestation()` utilise `ORDER BY timestamp` (corrigé depuis `created_at`).
 
+### Vérification formelle (Lean 4 — ADR-019, 2026-04-15)
+
+Premiers invariants on-chain formellement prouvés. Projet Lake dédié sous `Formal/` (`lean-toolchain`, `lakefile.toml`, `lake-manifest.json`).
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `Formal/Formal/TierBoundary.lean` | Invariant ordre/bornes des confidence tiers | ✅ Prouvé |
+| `Formal/Formal/Encoding.lean` | Invariant round-trip float ↔ u16 (ADR-001) | ✅ Prouvé |
+| `Formal/Formal/SourceAnchor.lean` | Invariant source_anchor déterministe non-vide (ADR-012) | ✅ Prouvé |
+| `Formal/Formal/RedTests.lean` | Vérification explicite de non-tautologie des preuves | ✅ Actif |
+| `Formal/Formal/Basic.lean` + `Eval.lean` | Primitives et évaluation | ✅ Actif |
+| `.github/workflows/lean_action_ci.yml` | CI `lake build` à chaque push | ✅ Actif |
+
+Description d'usage dans `README.md` (section *Formal Verification (Lean 4)*). Commit `1d703fd`.
+
 ### Demos / Benchmarks
 
 | Fichier | Role | Etat |
@@ -272,8 +290,13 @@ run_pipeline() [is_verify=True]
 | `demos/scenario_flywheel.py` | Flywheel ADR-018 : Trump + Yemen + Suisse (3 claims) | ✅ Fonctionnel |
 | `demos/scenario_flywheel_v2.py` | Flywheel v2 : 5 claims post-cutoff (Trump, Starmer, Sheinbaum, Nobel, Biden) + pre-validation SPARQL | ✅ Fonctionnel |
 | `demos/scenario_flywheel_v2_baseline.py` | Baseline VERIFY-only pour flywheel v2 (4 claims, sans pass deterministe) | ✅ Fonctionnel |
+| `demos/scenario_deterministic_sources.py` | Scénario dédié aux sources déterministes. 4 sources sur 8 testées en live : Wikidata 5/5 checks, Verra VCS 5/5 checks. Commit `1d703fd`. | ✅ Fonctionnel |
 
 ---
+
+### Sprint post-audit Gatekeeper (2026-04-14)
+
+Exécution de `docs/To_do_list/DIRECTIVE_CORRECTION_AUDIT.md` en 9 blocs RED-GREEN-FIX validés par l'humain : S7-001 (CORS explicite), S1-001/S1-002 (Enum V2 — ADR-019), S3-001-004 (exceptions typées), S6-001 (schéma Pydantic config_loader), S1-003 (troncature UTF-8 codepoint-safe), S1-005 (marker AUDIT reclassé), S6-002 (`db_path` obligatoire), S9-001 (migration `asyncio.run` → `pytest-asyncio`). Bloc F (rate limiting S7-002) différé. Baseline tests : 811 → 866 (+55). Détails par bloc dans `docs/fr/CHANGELOG.md` entrée 2026-04-14.
 
 ### Phase 4 — Corrections systématiques (2026-02-15)
 
@@ -315,7 +338,7 @@ Renforcement du consensus multi-modèles : pondération par Brier score, normali
 - `get_commit()` — Récupère un commit par run_id + model_id + phase
 - `verify_and_update_commit()` — Vérifie hash et met à jour `verified`
 
-### Sources RWA / Bifurcation déterministe (ADR-012 — 2026-02-25)
+### Sources déterministes / Bifurcation (ADR-012 — 2026-02-25 ; renommage ADR-014 §2.1)
 
 Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `claim_nature=DETERMINISTIC` (Axiome 3 — pas d'inférence automatique). Le pipeline court-circuite les cycles LLM, interroge la source autoritaire, hash la réponse brute en SHA-256 (`source_anchor` on-chain), stocke le snapshot complet en SQLite, cristallise une attestation `epistemic_type="deterministic"`.
 
@@ -329,6 +352,8 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 | `services/sources/adapters/verra_vcs.py` | GET Verra Registry L1 (serial/project_id — public) | ✅ Fonctionnel |
 | `services/sources/adapters/__init__.py` | Registre `_REGISTRY` + `get_adapter()` + `register_adapter()` | ✅ Fonctionnel |
 | `services/sources/adapters/acled.py` | OAuth2 POST `acleddata.com/oauth/token` (token 24h caché). Dual-mode : events (`/api/acled/read`) + forecast CAST (`/api/cast/read`). `normalize()` → score=min(1, count/baseline), status=stable/escalation/de-escalation. ADR-016. | ✅ Fonctionnel |
+| `services/sources/adapters/wikidata.py` | SPARQL endpoint public (CC-0). Source structurée du Flywheel ADR-018 ; scores plafonnés à 0.85 (éditabilité publique). | ✅ Fonctionnel |
+| `services/sources/adapters/nist_codata.py` | Constantes physiques NIST/CODATA 2022. Source autoritaire primaire (scores 1.0). | ✅ En développement |
 
 **Frames** (dans `metrological_frame.py`) :
 
@@ -337,6 +362,7 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 | `compliance_sanctions_v1.0` | regulatory_compliance / sanctions_status | `True` |
 | `carbon_credits_vcs_v1.0` | environmental_assets / carbon_credit_validity | `True` (L2 désactivé — ADR-012 Q3) |
 | `rwa_identity_v1.0` | identity_compliance / entity_sanctions_composite | `True` (ESMM on ambiguity désactivé par défaut) |
+| `smartcontract_audit_v1.0` | smart_contract_security / vulnerability_classification | `False` (ESMM obligatoire — ADR-014) |
 | `geopolitical_forecast_v1.0` | geopolitical_analysis / conflict_forecast_assessment | `False` (deux chemins coexistent — ADR-016) |
 
 ### Oracle Géopolitique ACLED (ADR-016 — 2026-03-10)
@@ -430,6 +456,7 @@ cli/epp_cli.py
 - **tenacity** pour retry
 - **Ollama** comme provider LLM local (à abstraire)
 - **Solana CLI** 3.0+ / **Anchor** 0.32+ / **Rust** 1.70+ (couche on-chain)
+- **Lean 4** + **Lake** (vérification formelle, ADR-019 — cf. `Formal/lean-toolchain`)
 - **Click** pour CLI EPP
 
 ---

@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-866%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-852%20passed-brightgreen)](tests/)
 [![ADRs](https://img.shields.io/badge/ADRs-19-blue)](docs/adr/)
 [![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://solana.com)
 
@@ -177,6 +177,12 @@ The 5-dimensional epistemic signature captures: **agreement** (how strongly the 
 
 ---
 
+## Formal Verification (Lean 4)
+
+Three invariants of the on-chain attestation layer are mechanically proven in Lean 4 under `Formal/`: `TierBoundary` (confidence tier ordering), `Encoding` (float ↔ u16 round-trip), and `SourceAnchor` (deterministic source binding). `Formal/Formal/RedTests.lean` verifies non-tautology of the proofs. CI (`.github/workflows/lean_action_ci.yml`) enforces `lake build` on every push. See ADR-019.
+
+---
+
 ## Security & Integrity
 
 **Anti-Sybil** — `infer_architecture_family()` enforces minimum 2 distinct architecture families per deliberation panel. Three instances of the same model architecture do not count as diverse consensus.
@@ -217,10 +223,10 @@ EPP_Verdict/
 ├── cli/epp_cli.py               # ask, submit, query, frame, verify-rwa, audit, models stats
 ├── demos/                       # Scenario scripts + benchmark_runs/ (timestamped JSON)
 ├── docs/
-│   ├── adr/                     # ADR-001 through ADR-018
+│   ├── adr/                     # ADR-001 through ADR-019
 │   ├── ARCHITECTURE.md          # Living document, updated with each structural change
 │   └── CHANGELOG.md             # Authoritative chronological journal
-└── tests/                       # 866 tests — RED-GREEN-FIX strict protocol
+└── tests/                       # 852 tests — RED-GREEN-FIX strict protocol
 ```
 
 ### Database Schema (key tables)
@@ -274,7 +280,7 @@ Optional Slither integration provides a deterministic pre-analysis via the `Slit
 
 | Metric | Value |
 |:-------|:------|
-| Test suite | **866 passed**, 11 skipped, 0 failed |
+| Test suite | **852 passed**, 10 skipped, 0 failed |
 | Architecture decisions | **19 ADRs** |
 | AI models tested | 6: Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + **FLYWHEEL** |
@@ -355,7 +361,7 @@ python -m cli.epp_cli graph stats
 ### Tests
 
 ```bash
-pytest tests/ -v                              # Full suite (866 tests)
+pytest tests/ -v                              # Full suite (852 tests)
 pytest tests/test_adr018_flywheel.py -v       # Flywheel tests
 pytest tests/test_adr014_audit_runner.py -v   # Smart contract audit
 pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
@@ -425,7 +431,7 @@ Several design decisions are intentionally left open for the community. The code
 
 Before a single line of Python was written, EPP existed as handwritten mappings between attention mechanisms and what its creator called "vibratory weights." Concepts like divergence as signal, multi-agent deliberation, and bidirectional knowledge transfer were sketched in metaphor before becoming Architecture Decision Records and pytest assertions.
 
-The path from there to here — 866 tests, 19 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
+The path from there to here — 852 tests, 19 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
 
 This is what one person built in sixteen months. The question is what becomes possible when a team carries it forward.
 
