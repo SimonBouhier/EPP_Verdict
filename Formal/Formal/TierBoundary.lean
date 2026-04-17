@@ -31,5 +31,9 @@ theorem tier_verified_implies_conditions
   unfold assignTier at h
   split at h
   · assumption
-  · contradiction
+  · split at h
+    · cases h
+    · split at h
+      · cases h
+      · cases h
 
