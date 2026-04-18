@@ -214,7 +214,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 
 ### Architecture Decision Records (Phase 3.3+)
 
-19 ADR actifs dans `docs/adr/` :
+20 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -237,6 +237,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 | ADR-017 | Réseau de Clusters Épistémiques — architecture multi-opérateurs | Proposé |
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
 | ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
+| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4 (11 théorèmes, 6 red tests, gap modèle↔code documenté) | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 
@@ -268,20 +269,27 @@ run_pipeline() [is_verify=True]
 
 **Attestation SELECT alignment (2026-04-11)** : les 4 méthodes de lecture (`get_attestation_by_hash`, `get_attestations_by_subject`, `get_attestations_by_question`, `get_attestation_history`) sont alignées sur 29 colonnes avec `consensus_meta` en dernière position (index 28). `_row_to_attestation_dict()` désérialise `consensus_meta` via `json.loads`. `get_latest_attestation()` utilise `ORDER BY timestamp` (corrigé depuis `created_at`).
 
-### Vérification formelle (Lean 4 — ADR-019, 2026-04-15)
+### Vérification formelle (Lean 4 — ADR-019, ADR-020)
 
-Premiers invariants on-chain formellement prouvés. Projet Lake dédié sous `Formal/` (`lean-toolchain`, `lakefile.toml`, `lake-manifest.json`).
+Onze théorèmes formellement prouvés sur le protocole abstrait, quatre modules, six red tests de non-tautologie exercés par la CI. Projet Lake dédié sous `Formal/` (`lean-toolchain`, `lakefile.toml`, `lake-manifest.json`).
 
-| Fichier | Rôle | État |
-|---------|------|------|
-| `Formal/Formal/TierBoundary.lean` | Invariant ordre/bornes des confidence tiers | ✅ Prouvé |
-| `Formal/Formal/Encoding.lean` | Invariant round-trip float ↔ u16 (ADR-001) | ✅ Prouvé |
-| `Formal/Formal/SourceAnchor.lean` | Invariant source_anchor déterministe non-vide (ADR-012) | ✅ Prouvé |
-| `Formal/Formal/RedTests.lean` | Vérification explicite de non-tautologie des preuves | ✅ Actif |
-| `Formal/Formal/Basic.lean` + `Eval.lean` | Primitives et évaluation | ✅ Actif |
-| `.github/workflows/lean_action_ci.yml` | CI `lake build` à chaque push | ✅ Actif |
+| Fichier | Rôle | Théorèmes | État |
+|---------|------|-----------|------|
+| `Formal/Formal/Basic.lean` | Types de base : `EpistemicType`, `ConfidenceTier`, `Score`, `Attestation` (11 champs dont noyau canonique 4-uple) | — | ✅ Actif |
+| `Formal/Formal/Encoding.lean` | INV-1 : round-trip float ↔ u16 (ADR-001) | 4 | ✅ Prouvés |
+| `Formal/Formal/TierBoundary.lean` | INV-4 : `verified` implique score ≥ 8500 ∧ (models ≥ 3 ∨ anchor) (ADR-005) | 1 | ✅ Prouvé |
+| `Formal/Formal/SourceAnchor.lean` | INV-6 : attestation `deterministic` ⇒ `source_anchor` non-nul (ADR-012) | 2 | ✅ Prouvés |
+| `Formal/Formal/ClaimHash.lean` | INV-2 : identité du claim dépend uniquement de `(subject, predicate, object, frame)` ; timestamp/submitter indépendance — condition de possibilité ADR-017 | 3 | ✅ Prouvés |
+| `Formal/Formal/RedTests.lean` | 6 red tests (4 TierBoundary : 2 RED-TIER + 2 GREEN-TIER ; 2 ClaimHash : timestamp/submitter independence) | — | ✅ Exercés |
+| `Formal/Formal/Eval.lean` | Tests `#eval` interactifs | — | ✅ Actif |
+| `Formal/Main.lean` | Point d'entrée exécutable ; `import Formal` pour que `lake build` par défaut charge toute la lib (fix commit `20ab6f7`) | — | ✅ Actif |
+| `.github/workflows/lean_action_ci.yml` | CI `lake build` à chaque push — compile désormais les 18 jobs (avant fix : 4 jobs, lib invisible) | — | ✅ Actif |
 
-Description d'usage dans `README.md` (section *Formal Verification (Lean 4)*). Commit `1d703fd`.
+Protocole C6 double falsification appliqué à chaque invariant (TierBoundary, SourceAnchor, ClaimHash) : falsification temporaire → build échoue → restauration → build vert. Non-tautologie des garde-fous confirmée.
+
+Limites explicites documentées dans ADR-020 : les preuves portent sur le modèle Lean abstrait ; le lien modèle ↔ code Python/Rust est humain, vérifié par observation, pas mécaniquement garanti. Conformité vérifiée à la rédaction pour INV-1 et INV-2 (grep + lecture intégrale `compute_claim_hash`). Gap Rust (programme Anchor) non comblé — levée future possible via Aeneas/hax/Certora.
+
+Commits : `1d703fd` (init) ; `20ab6f7` (fix TierBoundary + câblage Main) ; `0fea8b3` (INV-2 ClaimHash + extension Attestation).
 
 ### Demos / Benchmarks
 

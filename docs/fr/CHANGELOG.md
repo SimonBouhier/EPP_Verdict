@@ -4,6 +4,40 @@
 
 ---
 
+## [2026-04-17] Lean 4 session 2 — INV-4 complété, INV-2 prouvé, ADR-020 dual-trust
+
+Session de réparation et d'extension de l'infrastructure Lean 4. Correction de trois défaillances structurelles pré-existantes, preuve d'INV-2 (Claim Hash Purity), clôture documentaire via ADR-020. Commits `20ab6f7` et `0fea8b3`.
+
+### Réparation infrastructure Lean (commit `20ab6f7`)
+
+- `Formal/Formal/TierBoundary.lean` : preuve `tier_verified_implies_conditions` complétée (nested splits + `cases h`). Précédemment incomplète — le `contradiction` terminal échouait sur la branche `isFalse` du split principal et bloquait la compilation de la lib.
+- `Formal/Formal/RedTests.lean` : réécrit. 4 théorèmes — 2 red-tier (score 5000 + 5 modèles + anchor ⇒ PAS verified ; score 8500 + 1 modèle + pas d'anchor ⇒ PAS verified) et 2 green-tier (cas passants). L'ancien théorème `red1_low_score_gets_verified` était mathématiquement faux et jamais exercé par la CI.
+- `Formal/Main.lean` : ajout `import Formal`. La cible par défaut `lake build` (exécutée par `leanprover/lean-action@v1` en CI) ne chargeait auparavant aucun module de la lib. Tous les théorèmes et red tests étaient invisibles à la CI. Build par défaut : 4 jobs → 16 jobs.
+- Protocole C6 double falsification : TierBoundary (seuil 8500 → 4000) et SourceAnchor (contrainte `deterministic` → `True`) falsifiés temporairement → build échoue → restauration → build vert. Non-tautologie des garde-fous confirmée.
+
+### INV-2 Claim Hash Purity (commit `0fea8b3`)
+
+- `Formal/Formal/ClaimHash.lean` : nouveau module.
+  - `claim_hash_purity` : deux attestations de noyau canonique identique (`subject`, `predicate`, `object`, `frame`) produisent le même hash.
+  - `claim_hash_timestamp_independent` : corollaire — timestamps différents n'affectent pas l'identité.
+  - `claim_hash_submitter_independent` : corollaire — submitters différents n'affectent pas l'identité. Condition de possibilité du cross-cluster (ADR-017).
+- `Formal/Formal/Basic.lean` : structure `Attestation` étendue — 6 nouveaux champs (`subject`, `predicate`, `object`, `frame`, `timestamp`, `submitter`). Les preuves TierBoundary/SourceAnchor/Encoding pré-existantes résistent sans modification.
+- `Formal/Formal/RedTests.lean` : 2 red tests INV-2 ajoutés (`red_hash_1_timestamp_independence`, `red_hash_2_submitter_independence`), prouvés par `rfl`.
+- `Formal/Formal.lean` : ajout `import Formal.ClaimHash`.
+- Conformité Python vérifiée : `services/esmm/attestation.py::compute_claim_hash(subject, predicate, object_, metrological_frame)` — signature à 4 paramètres strictement alignée sur le noyau canonique Lean.
+- Falsification C6 : ajout temporaire d'un champ `timestamp` dans `ClaimCore` → `claim_hash_purity` tombe (`unsolved goals`) → restauration → build vert. Build final : 18 jobs.
+
+### ADR-020 — Architecture Dual-Trust (2026-04-17)
+
+- `docs/adr/ADR-020.md` : clôt la première session structurée de vérification formelle.
+- Formalise la distinction entre **couche empirique** (consensus LLM + sources déterministes) et **couche mathématique** (preuves Lean 4 sur le protocole abstrait). Les deux couches couvrent des risques différents, ne se substituent pas.
+- Inventorie les 11 théorèmes prouvés (4 pour INV-1 Encoding, 1 pour INV-4 TierBoundary, 2 pour INV-6 SourceAnchor, 3 pour INV-2 ClaimHash) et les 6 red tests associés.
+- Documente le gap sémantique modèle ↔ code runtime : le lien est humain, pas mécaniquement garanti. Écart connu sur INV-2 : Python applique `.lower().strip()` avant hash — propriété Python plus forte que Lean, pas de divergence de sécurité.
+- Définit 5 critères d'acceptation pour tout futur invariant : preuve sans `sorry`/`admit`, red test associé qui tombe si l'invariant est cassé, red test importé dans `lake build`, conformité code vérifiée par grep ou observation, référence à un ADR.
+- Liste les invariants identifiés mais non prouvés (INV-3 PDA unicité, INV-5 regression cut isolation, INV-7 Brier proper scoring, INV-8 consensus convergence) avec leur tier de difficulté et raison d'exclusion.
+
+---
+
 ## [2026-04-17] Lean 4, sources déterministes, et garde on-chain ADR-019
 
 Trois axes post-sprint Gatekeeper : installation Lean 4 avec trois premiers invariants prouvés, scénario sources déterministes exécuté en live, et garde on-chain de l'Enum V2 testée avec protocole RED→GREEN. Commits `1d703fd` (major update) et `86539e7` (test on-chain).

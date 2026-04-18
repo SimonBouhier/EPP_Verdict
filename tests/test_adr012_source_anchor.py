@@ -258,6 +258,7 @@ def test_epistemic_type_deterministic_accepted():
         relation_diversity=0.0,
     )
     # Construire une attestation minimale avec epistemic_type="deterministic"
+    # INV-6 (ADR-020) : type deterministic ⇒ source_anchor non-nul.
     attestation = EpistemicAttestation(
         claim_hash="a" * 64,
         subject="Acme Corp",
@@ -270,6 +271,7 @@ def test_epistemic_type_deterministic_accepted():
         signature_5d=sig,
         epistemic_type="deterministic",
         confidence_tier="sandbox",
+        source_anchor="a" * 64,
         timestamp=1.0,
     )
     assert attestation.epistemic_type == "deterministic"

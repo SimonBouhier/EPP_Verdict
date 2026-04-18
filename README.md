@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-852%20passed-brightgreen)](tests/)
-[![ADRs](https://img.shields.io/badge/ADRs-19-blue)](docs/adr/)
+[![ADRs](https://img.shields.io/badge/ADRs-20-blue)](docs/adr/)
 [![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://solana.com)
 
 > *"The oracle problem is not just technical but epistemological."*
@@ -179,7 +179,14 @@ The 5-dimensional epistemic signature captures: **agreement** (how strongly the 
 
 ## Formal Verification (Lean 4)
 
-Three invariants of the on-chain attestation layer are mechanically proven in Lean 4 under `Formal/`: `TierBoundary` (confidence tier ordering), `Encoding` (float ↔ u16 round-trip), and `SourceAnchor` (deterministic source binding). `Formal/Formal/RedTests.lean` verifies non-tautology of the proofs. CI (`.github/workflows/lean_action_ci.yml`) enforces `lake build` on every push. See ADR-019.
+Eleven theorems on the abstract epistemic protocol are mechanically proven in Lean 4 under `Formal/`, across four modules:
+
+- `Encoding.lean` (INV-1) — float ↔ u16 round-trip, bound preservation (4 theorems).
+- `TierBoundary.lean` (INV-4) — `verified` tier implies score ≥ 8500 ∧ (models ≥ 3 ∨ anchor).
+- `SourceAnchor.lean` (INV-6) — `deterministic` attestations require a non-zero source anchor (2 theorems).
+- `ClaimHash.lean` (INV-2) — claim identity depends only on `(subject, predicate, object, frame)`; timestamp- and submitter-independence (3 theorems). Condition of possibility for ADR-017 cross-cluster queries.
+
+`Formal/Formal/RedTests.lean` verifies non-tautology via six red tests (falsification protocol C6: each invariant must fail compilation when its underlying property is broken). `Main.lean` imports the library so `lake build` (the command run by `leanprover/lean-action@v1` in CI) compiles all 18 jobs on every push. The gap between the Lean specification and the Python/Rust runtime is human-maintained and explicitly documented — see **ADR-020 (Architecture Dual-Trust)** for the full inventory, conformity checks, and acceptance criteria for future invariants. See also ADR-019.
 
 ---
 
@@ -281,7 +288,7 @@ Optional Slither integration provides a deterministic pre-analysis via the `Slit
 | Metric | Value |
 |:-------|:------|
 | Test suite | **852 passed**, 10 skipped, 0 failed |
-| Architecture decisions | **19 ADRs** |
+| Architecture decisions | **20 ADRs** |
 | AI models tested | 6: Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + **FLYWHEEL** |
 | Deterministic sources | 7 integrated |
@@ -387,7 +394,7 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 
 ## Architecture Decision Records
 
-19 ADRs document every critical design choice:
+20 ADRs document every critical design choice:
 
 | ADR | Decision |
 |:----|:---------|
@@ -410,6 +417,7 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 | ADR-017 | Epistemic Cluster network architecture (proposed) |
 | ADR-018 | **Epistemic Flywheel — self-improving knowledge graph** |
 | ADR-019 | **Epistemic Enum V2 — 3-category on-chain projection (Lean 4-ready)** |
+| ADR-020 | **Dual-Trust Architecture — Lean 4 formal invariants: 11 theorems, 6 red tests, documented model ↔ code gap** |
 
 ---
 
@@ -431,7 +439,7 @@ Several design decisions are intentionally left open for the community. The code
 
 Before a single line of Python was written, EPP existed as handwritten mappings between attention mechanisms and what its creator called "vibratory weights." Concepts like divergence as signal, multi-agent deliberation, and bidirectional knowledge transfer were sketched in metaphor before becoming Architecture Decision Records and pytest assertions.
 
-The path from there to here — 852 tests, 19 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
+The path from there to here — 852 tests, 20 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
 
 This is what one person built in sixteen months. The question is what becomes possible when a team carries it forward.
 

@@ -12,7 +12,7 @@ import hashlib
 import json
 import time
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Signature5D(BaseModel):
@@ -139,6 +139,23 @@ class EpistemicAttestation(BaseModel):
         if v not in allowed:
             raise ValueError(f"confidence_tier must be one of {allowed}, got '{v}'")
         return v
+
+    @model_validator(mode="after")
+    def validate_deterministic_requires_anchor(self):
+        """INV-6 — `Formal/Formal/SourceAnchor.lean::deterministic_requires_anchor`.
+
+        Une attestation de type `deterministic` matérialise l'ancrage à une
+        source autoritaire externe (ADR-012). Un `source_anchor` nul dans ce
+        cas serait une contradiction : le type déclare une ancre qui n'existe
+        pas. On rejette à la construction pour aligner le runtime sur la
+        spécification Lean (ADR-020 §5.2).
+        """
+        if self.epistemic_type == "deterministic" and self.source_anchor is None:
+            raise ValueError(
+                "epistemic_type='deterministic' requires source_anchor to be "
+                "non-null (INV-6, ADR-012, ADR-020)"
+            )
+        return self
 
     def to_portable_json(self) -> str:
         """

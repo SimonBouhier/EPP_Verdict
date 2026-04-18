@@ -37,7 +37,12 @@ from services.esmm.attestation import (
 
 
 def _make_attestation(epistemic_type: str) -> EpistemicAttestation:
-    """Build an attestation with a custom epistemic_type."""
+    """Build an attestation with a custom epistemic_type.
+
+    INV-6 (ADR-020) : le type `deterministic` exige un `source_anchor`
+    non-nul. On en fournit un par défaut pour que le helper reste
+    utilisable avec tous les types épistémiques.
+    """
     return crystallize(
         subject="solana",
         predicate="has_tps",
@@ -58,6 +63,7 @@ def _make_attestation(epistemic_type: str) -> EpistemicAttestation:
         epistemic_type=epistemic_type,
         metrological_frame="blockchain_tps_v1.0",
         architecture_families=2,
+        source_anchor="a" * 64,
     )
 
 
