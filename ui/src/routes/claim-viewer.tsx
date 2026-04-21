@@ -43,14 +43,26 @@ function RunView({ filename }: RunViewProps) {
         ← all runs
       </Link>
 
-      <header className="mb-6 mt-2">
-        <h1 className="font-mono text-2xl font-semibold tracking-tight">
-          {data?.scenario ?? filename}
-        </h1>
-        {data ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {new Date(data.timestamp).toISOString()} · {data.models.join(', ')}
-          </p>
+      <header className="mb-6 mt-2 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-mono text-2xl font-semibold tracking-tight">
+            {data?.scenario ?? filename}
+          </h1>
+          {data ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {new Date(data.timestamp).toISOString()}
+              {data.models.length > 0 ? ` · ${data.models.join(', ')}` : ''}
+            </p>
+          ) : null}
+        </div>
+        {data?.scenario === 'scenario_flywheel_v2' ? (
+          <Link
+            to={`/flywheel?run=${encodeURIComponent(filename)}`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-cyan/40 bg-cyan/10 px-3 py-1.5 text-sm text-cyan transition-colors hover:bg-cyan/20"
+          >
+            <span aria-hidden="true">⇄</span>
+            <span>Flywheel split</span>
+          </Link>
         ) : null}
       </header>
 

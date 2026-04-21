@@ -1,0 +1,1 @@
+export { FamilyTabs } from './FamilyTabs';

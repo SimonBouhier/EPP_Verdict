@@ -14,9 +14,17 @@ export type Verdict = z.infer<typeof VerdictSchema>;
 
 /**
  * Epistemic nature of a claim — drives how the pipeline scores it.
- * `deterministic` claims bypass ESMM (ADR-012).
+ * - empirical: verifiable against evidence
+ * - normative: opinion / value judgement (system should refuse to rule)
+ * - deterministic: bypasses ESMM, resolved by an authoritative source (ADR-012)
+ * - speculative: forward-looking / not-yet-verifiable forecast
  */
-export const ClaimTypeSchema = z.enum(['empirical', 'normative', 'deterministic']);
+export const ClaimTypeSchema = z.enum([
+  'empirical',
+  'normative',
+  'deterministic',
+  'speculative',
+]);
 export type ClaimType = z.infer<typeof ClaimTypeSchema>;
 
 /**

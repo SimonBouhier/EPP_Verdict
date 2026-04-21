@@ -1,5 +1,9 @@
 import type { ScenarioRun } from '@/domain';
+import { deterministicSourcesAdapter } from './deterministic-sources';
+import { flywheelBaselineAdapter } from './flywheel-baseline';
+import { flywheelV2Adapter } from './flywheel-v2';
 import { jiangAdapter } from './jiang';
+import { scenario6Adapter } from './scenario6';
 
 export type Adapter = (raw: unknown) => ScenarioRun;
 
@@ -10,6 +14,12 @@ export type Adapter = (raw: unknown) => ScenarioRun;
  */
 const ADAPTERS: Record<string, Adapter> = {
   scenario_jiang: jiangAdapter,
+  scenario_flywheel_v2: flywheelV2Adapter,
+  flywheel_v2_baseline: flywheelBaselineAdapter,
+  scenario_6_1_edge_cases: scenario6Adapter,
+  scenario_6_2_qualifier_sensitivity: scenario6Adapter,
+  scenario_6_2b_qualifier_sensitivity_big_models: scenario6Adapter,
+  scenario_deterministic_sources: deterministicSourcesAdapter,
 };
 
 export function detectAdapter(raw: unknown): Adapter {
@@ -22,12 +32,19 @@ export function detectAdapter(raw: unknown): Adapter {
   }
   const adapter = ADAPTERS[scenario];
   if (!adapter) {
+    const known = Object.keys(ADAPTERS).sort().join(', ');
     throw new Error(
       `No adapter registered for scenario "${scenario}". ` +
-        `Known: ${Object.keys(ADAPTERS).join(', ') || '(none)'}`,
+        `Add one in src/data/adapters/. Known so far: ${known || '(none)'}.`,
     );
   }
   return adapter;
 }
 
-export { jiangAdapter };
+export {
+  deterministicSourcesAdapter,
+  flywheelBaselineAdapter,
+  flywheelV2Adapter,
+  jiangAdapter,
+  scenario6Adapter,
+};

@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { loadManifest } from '@/data/loader';
+import type { RunManifestEntry } from '@/domain';
+import { FamilyTabs } from '@/features/family-tabs';
+import {
+  ALL_FAMILY_ID,
+  familyForRun,
+  filterRunsByFamily,
+} from '@/services/families';
 import { Card, CardContent } from '@/ui/Card';
 
 function formatTimestamp(iso: string): string {
@@ -13,10 +21,18 @@ function formatTimestamp(iso: string): string {
 }
 
 export default function HomePage() {
+  const [params] = useSearchParams();
+  const familyId = params.get('family') ?? ALL_FAMILY_ID;
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['manifest'],
     queryFn: loadManifest,
   });
+
+  const filtered = useMemo(
+    () => (data ? filterRunsByFamily(data.runs, familyId) : []),
+    [data, familyId],
+  );
 
   return (
     <div>
@@ -38,33 +54,66 @@ export default function HomePage() {
       ) : null}
 
       {data ? (
-        <section>
-          <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-            {data.runs.length} run{data.runs.length === 1 ? '' : 's'} available
-          </h2>
-          <ul className="grid gap-2">
-            {data.runs.map((run) => (
-              <li key={run.filename}>
-                <Link
-                  to={`/claims?run=${encodeURIComponent(run.filename)}`}
-                  className="block rounded-md border border-border bg-card px-4 py-3 transition-colors hover:bg-accent/30"
-                >
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="font-mono text-sm">{run.scenario}</span>
-                    <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                      {formatTimestamp(run.timestamp)}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {run.claimsCount} claim{run.claimsCount === 1 ? '' : 's'}
-                    {run.adr ? ` · ${run.adr}` : ''}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <>
+          <FamilyTabs runs={data.runs} />
+
+          <div className="mb-3 flex items-baseline justify-between">
+            <p className="text-sm text-muted-foreground">
+              {filtered.length} run{filtered.length === 1 ? '' : 's'}
+            </p>
+          </div>
+
+          {filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No runs in this family.</p>
+          ) : (
+            <ul className="grid gap-2">
+              {filtered.map((run) => (
+                <li key={run.filename}>
+                  <RunCard run={run} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       ) : null}
     </div>
+  );
+}
+
+interface RunCardProps {
+  run: RunManifestEntry;
+}
+
+function RunCard({ run }: RunCardProps) {
+  const family = familyForRun(run.scenario);
+  return (
+    <Link
+      to={`/claims?run=${encodeURIComponent(run.filename)}`}
+      className="block rounded-md border border-border bg-card px-4 py-3 transition-colors hover:border-cyan/40 hover:bg-accent/30"
+    >
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="font-mono text-sm">{run.scenario}</span>
+        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+          {formatTimestamp(run.timestamp)}
+        </span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+        <span>
+          {run.claimsCount} claim{run.claimsCount === 1 ? '' : 's'}
+        </span>
+        {run.adr ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>{run.adr}</span>
+          </>
+        ) : null}
+        {family ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span className="text-cyan">{family.label}</span>
+          </>
+        ) : null}
+      </div>
+    </Link>
   );
 }
