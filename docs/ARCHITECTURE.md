@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-04-17
+**Dernière mise à jour** : 2026-04-23
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -290,6 +290,55 @@ Protocole C6 double falsification appliqué à chaque invariant (TierBoundary, S
 Limites explicites documentées dans ADR-020 : les preuves portent sur le modèle Lean abstrait ; le lien modèle ↔ code Python/Rust est humain, vérifié par observation, pas mécaniquement garanti. Conformité vérifiée à la rédaction pour INV-1 et INV-2 (grep + lecture intégrale `compute_claim_hash`). Gap Rust (programme Anchor) non comblé — levée future possible via Aeneas/hax/Certora.
 
 Commits : `1d703fd` (init) ; `20ab6f7` (fix TierBoundary + câblage Main) ; `0fea8b3` (INV-2 ClaimHash + extension Attestation).
+
+### Dashboard UI (`ui/`) — Sprint hackathon Colosseum (2026-04-23)
+
+Sous-projet TypeScript/React indépendant déployé sur `https://epp-verdict.vercel.app`. Lit les benchmark JSONs locaux + le manifest on-chain et rend une vue navigable des attestations, du flywheel split, et des liens Solana Explorer.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `ui/package.json` | Vite 6 + React 19 + TS strict + Tailwind v4 + TanStack Query + Zod + React Router v7 + Biome + Vitest. Engines `node >= 20`. | ✅ Fonctionnel |
+| `ui/vercel.json` | Framework Vite, build/install commands, output `dist`. | ✅ Fonctionnel |
+| `ui/scripts/copy-data.mjs` | Hook predev/prebuild local : refresh `ui/public/data/` depuis `demos/benchmark_runs/` + `data/devnet_pushed.json`. No-op gracieux quand sources absentes (cas Vercel monorepo) — préserve les fichiers commités au lieu de les écraser. | ✅ Fonctionnel |
+| `ui/public/data/` | **Commité** (24 runs JSONs + manifest.json + devnet_pushed.json, ~700 KB). Build input pour Vercel qui ne peut pas accéder à `../demos/`. À refactorer post-hackathon. | ✅ Fonctionnel (workaround) |
+| `ui/src/domain/` | Types + Zod schemas (frontière de validation). `claim.ts` (Verdict + ClaimType + ClaimVerdict), `run.ts` (ScenarioRun avec `raw` préservé pour features scénario-spécifiques), `manifest.json` (RunManifest), `onchain.ts` (OnChainAttestation + OnChainManifest + sentinel `EMPTY_ONCHAIN_MANIFEST`). | ✅ Fonctionnel |
+| `ui/src/data/loader.ts` | Boundary I/O unique : `loadManifest()`, `loadRun(filename)`, `loadOnChainManifest()` — fetch + Zod parse + adapter dispatch. Fallback gracieux 404 sur le manifest on-chain. | ✅ Fonctionnel |
+| `ui/src/data/adapters/` | 5 adapters scénario : `jiang`, `flywheel-v2`, `flywheel-baseline`, `scenario6` (3 variantes : `scenario_6_1_edge_cases` + `scenario_6_2_qualifier_sensitivity` + `scenario_6_2b_qualifier_sensitivity_big_models`), `deterministic-sources` (mappe `status` → `Verdict`, gère claims `skipped: true`). Pattern : raw JSON → `ScenarioRun` commun + `raw` préservé. Registre `ADAPTERS` + `detectAdapter()` raise explicite si scenario inconnu. | ✅ Fonctionnel |
+| `ui/src/config/families.ts` | Taxonomie déclarative : 5 familles (Flywheel, Sources déterministes, Géopolitique, Edge cases, Pipeline). Ajouter une famille = éditer 1 fichier, aucun autre code à toucher. | ✅ Fonctionnel |
+| `ui/src/services/families.ts` | `filterRunsByFamily()`, `listFamiliesWithCounts()`, `countUnclassified()`. Sentinels `ALL_FAMILY_ID` + `UNCLASSIFIED_FAMILY_ID`. | ✅ Fonctionnel |
+| `ui/src/services/onchain.ts` | `buildOnChainIndex()` produit `Map<question, OnChainAttestation>` indexé par texte de question (clé de matching avec les benchmark JSONs). `lookupOnChain()` accesseur null-safe. | ✅ Fonctionnel |
+| `ui/src/features/family-tabs/` | Tabs URL-driven (`?family=X`), comptes par famille, soulignement cyan sur tab actif. | ✅ Fonctionnel |
+| `ui/src/features/claim-viewer/` | `ClaimList` + `ClaimRow`. Reçoit `onChainIndex` optionnel via prop drilling depuis la route ; chaque row appelle `lookupOnChain` et passe l'attestation au `OnChainBadge`. | ✅ Fonctionnel |
+| `ui/src/features/flywheel-split/` | Vue dédiée à route `/flywheel?run=X`. `parseFlywheelClaims()` extrait `baseline_*` / `delta` / `flywheel_*` du `raw`. Layout BASELINE → FLYWHEEL avec deltas cyan, badges NEW gold pour claims sans baseline. Summary strip (total / migrated / improved ratio / avg Δ). Reçoit aussi `onChainIndex` pour badges inline. | ✅ Fonctionnel |
+| `ui/src/ui/OnChainBadge.tsx` | Chip cyan ⛓ avec lien Solana Explorer (`target="_blank"`, `stopPropagation` sur click). Tooltip exposant tx + frame + slot. | ✅ Fonctionnel |
+| `ui/src/ui/VerdictBadge.tsx` + `Card.tsx` | Primitives shadcn-style (cva + tailwind-merge). Couleurs verdicts : emerald/amber/zinc/rose. | ✅ Fonctionnel |
+| `ui/src/routes/home.tsx` | Liste des runs filtrée par famille (`?family=X`), card par run avec lien vers `/claims?run=X`. | ✅ Fonctionnel |
+| `ui/src/routes/claim-viewer.tsx` | Vue générique d'un run, charge l'index on-chain via TanStack Query, transmet à `ClaimList`. CTA "Flywheel split" si `scenario_flywheel_v2`. | ✅ Fonctionnel |
+| `ui/src/routes/flywheel.tsx` | Route dédiée flywheel split — refuse les autres scénarios via Card amber d'erreur. | ✅ Fonctionnel |
+| `ui/src/routes/onchain.tsx` | Liste des attestations on-chain devnet avec summary card (cluster, program ID, submitter, pushed/failed) + liste cliquable vers Solana Explorer. Empty state avec commande exacte si manifest absent. | ✅ Fonctionnel |
+| `ui/src/index.css` | Palette signature lighthouse (Tailwind v4 `@theme inline`) : navy nuit + cyan beam + gold lighthouse, gradient radial subtil. Dark-first. | ✅ Fonctionnel |
+| `ui/src/App.tsx` | Layout : header avec dot cyan glow + nav (Runs / On-chain), main router, footer. | ✅ Fonctionnel |
+
+**Architecture en 4 cercles concentriques** : `domain/` (intérieur, types purs) ← `data/` (loader + adapters) ← `services/` (transformations pures) ← `features/` (UI par cas d'usage) ← `routes/` (pages composées). Règle : un cercle ne peut importer **que** depuis l'intérieur. Remplacer la source de données (JSON local → Solana RPC → API) ne touche que `data/`.
+
+**Workflow ajout de scénario** : (1) Python pipeline génère JSON dans `demos/benchmark_runs/` ; (2) `npm run prebuild` (ou `npm run dev`) refresh `ui/public/data/` ; (3) `git add ui/public/data/` ; (4) commit + push ; (5) Vercel auto-déploie.
+
+**Caveat documenté** : le commit de `ui/public/data/` est une concession au workflow Vercel monorepo (Root Directory = `ui/` ne donne pas accès à `../demos/` même avec "Include source files outside of the Root Directory" activé), **pas une bonne pratique générale**. Voir CHANGELOG entrée 2026-04-23 Phase D pour les options de refactoring post-hackathon.
+
+### Push on-chain devnet (`scripts/push_to_devnet.py`)
+
+Script standalone qui complète le plumbing CLI (`cli/epp_cli.py:submit()` qui ne faisait que mettre à jour le statut DB sans appel à `client.submit_attestation()`).
+
+| Élément | Description |
+|---------|-------------|
+| Source | `data/epp_devnet.db` (57 attestations) + `data/epp_audit_devnet.db` (20 attestations). Rehydration via `EpistemicAttestation.model_validate_json(portable_json)` — aucun re-run ni synthèse de triplets. |
+| Sélection par défaut | 8 `general_knowledge_v1.0` + 4 `smartcontract_audit_v1.0`, top consensus_score, dédup intra et inter-bucket pour éviter les collisions PDA. |
+| Soumission | `EppSolanaClient.submit_attestation(att, frame_hash)` async. PDA dérivée via `derive_attestation_pda(program_id, submitter, claim_hash)`. Slot enrichment via `getSignatureStatuses` (best-effort). |
+| Idempotence | Skip si `claim_hash` déjà dans le manifest avec `tx_signature` OK. Manifest flushé atomiquement (tmp + os.replace) après chaque push pour résister à un crash mid-batch. |
+| Garde devnet | Hérite de `services/solana/config.py::validate_cluster()`. Refuse de mocker silencieusement (exit 4 si SDK ou keypair manquants). |
+| Write-back DB | Optionnel via `ISpaceDB.update_attestation_solana_tx(claim_hash, tx_signature, slot)`. Best-effort — un échec de write-back n'invalide pas le push on-chain. |
+| Sortie | `data/devnet_pushed.json` — manifest pour Phase C.2 UI. Schéma : `{ generatedAt, programId, cluster, submitter, summary, attestations[] }`. |
+| 1ère exécution | 12/12 push réussis en ~5s, 0 failed. Submitter `DRAQ7ZppvzUdASF9jR218aPutsirUFwt2ePr6f9n9rJw`, program `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`. |
 
 ### Demos / Benchmarks
 

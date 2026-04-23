@@ -13,6 +13,24 @@
 
 ---
 
+## Live Dashboard
+
+**[https://epp-verdict.vercel.app](https://epp-verdict.vercel.app)** — verifiable dashboard reading the project's benchmark JSONs and **12 attestations published to Solana devnet** under program `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`. Click any ⛓ badge or the `/onchain` page to open the corresponding transaction on Solana Explorer.
+
+> ⚠️ **HACKATHON DEPLOYMENT WORKAROUND — NOT A RECOMMENDED PATTERN**
+>
+> The directory `ui/public/data/` (24 benchmark JSONs + on-chain manifest, ~700 KB) is **committed to git** as a build input, because Vercel's "Root Directory = `ui/`" mode does not give the build context access to sibling folders such as `../demos/` — even with the dashboard option *"Include source files outside of the Root Directory"* enabled. Under this mode the `prebuild` script crashes with `ENOENT` on `/vercel/path0/demos/`, so we ship the data files inside `ui/` to make the deploy reproducible.
+>
+> **This is a hackathon shipping concession, not a clean production pattern.** It introduces a duplication between the source of truth (`demos/benchmark_runs/`, written by the Python pipeline) and the deployed copy (`ui/public/data/`, committed to git). After Colosseum, refactor along one of:
+> 1. Have the Python pipeline write **directly** into `ui/public/data/` (single source of truth).
+> 2. Split the dashboard into its own repository (no monorepo issue).
+> 3. Add a thin backend (Vercel Function, Cloudflare Worker, etc.) serving the manifests from blob storage.
+> 4. Switch deployment to a platform whose monorepo mode does include sibling folders (Cloudflare Pages, Netlify, Render).
+>
+> **Workflow today**: after a new scenario is generated under `demos/benchmark_runs/`, run `npm run prebuild` from `ui/`, then `git add ui/public/data/`, commit, push — Vercel auto-deploys.
+
+---
+
 ## What is EPP?
 
 EPP is a consensus engine for knowledge claims, anchored on Solana. Multiple AI models deliberate through structured debate cycles to reach consensus on factual assertions, producing cryptographically verifiable attestations stored on-chain.
@@ -229,8 +247,15 @@ EPP_Verdict/
 │   └── pool.py                  # Connection pool, LRU cache
 ├── cli/epp_cli.py               # ask, submit, query, frame, verify-rwa, audit, models stats
 ├── demos/                       # Scenario scripts + benchmark_runs/ (timestamped JSON)
+├── scripts/
+│   └── push_to_devnet.py        # Curated batch push of attestations to Solana devnet (Apr 2026)
+├── ui/                          # Vite + React 19 + Tailwind v4 dashboard — deployed to epp-verdict.vercel.app (Apr 2026)
+│   ├── src/{domain,data,services,features,ui,routes}/  # 4-circle architecture
+│   ├── public/data/             # Committed copy of benchmark JSONs + devnet manifest (Vercel monorepo workaround — see top of README)
+│   ├── scripts/copy-data.mjs    # Local refresh hook (predev/prebuild)
+│   └── vercel.json              # Framework: Vite, deployed via Vercel Hobby
 ├── docs/
-│   ├── adr/                     # ADR-001 through ADR-019
+│   ├── adr/                     # ADR-001 through ADR-020
 │   ├── ARCHITECTURE.md          # Living document, updated with each structural change
 │   └── CHANGELOG.md             # Authoritative chronological journal
 └── tests/                       # 852 tests — RED-GREEN-FIX strict protocol
@@ -349,8 +374,11 @@ python -m cli.epp_cli verify-rwa --source opensanctions --entity "Acme Corp" \
 # Smart contract audit
 python -m cli.epp_cli audit contracts/vulnerable.sol --frame smartcontract_audit_v1.0
 
-# On-chain submission (devnet)
-python -m cli.epp_cli submit --devnet
+# On-chain push to devnet — pushes 12 curated attestations from local DBs.
+# (Note: cli/epp_cli.py:submit only updates DB submission status; this script
+# is what actually calls EppSolanaClient.submit_attestation(). The CLI gap
+# will be closed post-hackathon.)
+python scripts/push_to_devnet.py [--dry-run | --general-count N | --audit-count N]
 
 # Query existing attestations
 python -m cli.epp_cli query "solana" --min-confidence 0.8

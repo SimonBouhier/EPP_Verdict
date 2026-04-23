@@ -4,6 +4,62 @@
 
 ---
 
+## [2026-04-23] Dashboard UI (ui/), push 12 attestations devnet, déploiement Vercel
+
+Sprint hackathon Colosseum — création d'un dashboard React lisant les `demos/benchmark_runs/*.json` et le manifest on-chain, push de 12 attestations sur Solana devnet, déploiement public sur `epp-verdict.vercel.app`. Commits `5bd13e0`, `f5e58b8`, `afeca79`, `5b11f51`, `94da9da`, `0c2e9d6`.
+
+### Phase A — Skeleton Vite+React (commit `5bd13e0`)
+
+- `ui/` : nouveau sous-projet Vite 6 + React 19 + TypeScript strict + Tailwind v4 + Biome + Vitest + TanStack Query + Zod + React Router v7. Architecture en 4 cercles concentriques : `domain/` (types + Zod), `data/` (loader + adapter registry), `features/` (UI par cas d'usage), `ui/` (primitives), `routes/` (pages composées).
+- `ui/scripts/copy-data.mjs` : hook predev/prebuild qui copie `demos/benchmark_runs/*.json` → `ui/public/data/` + génère `manifest.json` indexé par scenario/timestamp/claimsCount.
+- Premier adapter : `scenario_jiang`. Validation Zod à la frontière du loader — capture immédiate d'une incohérence réelle (`source_thesis: null` sur claims 6-7 du run jiang du 2026-03-11).
+- `ui/vercel.json` : framework Vite, build/install commands déclarés.
+
+### Phase B — Palette lighthouse, families, 4 adapters, flywheel split (commit `f5e58b8`)
+
+- Palette signature dérivée de l'avatar EPP : navy nuit (HSL 220 50% 7%) + cyan beam (HSL 184 78% 56%) + gold lighthouse (HSL 43 78% 65%), gradient radial subtil. Verdicts conservent emerald/amber/zinc/rose pour lisibilité jury (pas de réharmonisation cosmétique sur la sémantique).
+- `ui/src/config/families.ts` : taxonomie déclarative — 5 familles (Flywheel, Sources déterministes, Géopolitique, Edge cases, Pipeline). Ajouter une famille = éditer 1 fichier, aucun autre code à toucher.
+- `ui/src/features/family-tabs/` : tabs URL-driven (`?family=X`), comptes dynamiques par famille, sentinels "All" + "Unclassified".
+- 4 nouveaux adapters : `flywheel-v2`, `flywheel-baseline`, `scenario6` (3 scénarios partagent la même shape, enregistrés sur 3 clés de registre), `deterministic-sources` (mappe `status` → `Verdict`, gère claims `skipped: true` quand source endpoint unreachable).
+- Enum `ClaimType` étendu avec `speculative` (chopé par Zod sur scenario6_1 — claim_type valide en Python pas dans le schéma initial).
+- `ui/src/features/flywheel-split/` : vue dédiée à route `/flywheel?run=X`. `parseFlywheelClaims()` extrait `baseline_*` / `delta` / `flywheel_*` du `raw` préservé. Layout BASELINE → FLYWHEEL avec deltas cyan, badges NEW gold pour claims sans baseline. Vérifié end-to-end : Trump CONTESTED 0.430 → SUPPORTED 0.586 (Δ +0.156).
+
+### Phase C.1 — Push 12 attestations Solana devnet (commit `afeca79`)
+
+- `scripts/push_to_devnet.py` (~470 lignes) : script standalone qui lit les attestations existantes dans `data/epp_devnet.db` (57) + `data/epp_audit_devnet.db` (20), les rehydrate via `EpistemicAttestation.model_validate_json(portable_json)`, push via `EppSolanaClient.submit_attestation()`. Pas de re-run de scénario, pas de synthèse de triplets — réutilise les attestations historiques.
+- Mix curé : 8 `general_knowledge_v1.0` + 4 `smartcontract_audit_v1.0`, top consensus_score, dédup intra et inter-bucket pour éviter les collisions de PDA (la table DB autorise plusieurs lignes par claim_hash via revalidation, l'on-chain non).
+- Idempotent (skip si claim_hash déjà dans le manifest avec tx_signature OK), failure-tolerant (try/except per attestation, manifest flushé atomiquement après chaque push pour ne pas perdre du SOL en cas de crash mid-batch), devnet-only (hérite `validate_cluster()` de `services/solana/config.py`).
+- Slot enrichment via `getSignatureStatuses` (best-effort, falls back à `null`).
+- Write-back DB optionnel via `ISpaceDB.update_attestation_solana_tx()` — fixe `solana_tx_signature`, `solana_slot`, `anchored_at` sur les rows source.
+- 1ère exécution : 12/12 push réussis en ~5s, 0 failed. Submitter `DRAQ7ZppvzUdASF9jR218aPutsirUFwt2ePr6f9n9rJw`. Manifest généré : `data/devnet_pushed.json` (~17 KB, 12 entrées).
+- Comble le trou laissé par `cli/epp_cli.py:submit()` qui était du plumbing DB sans appel à `client.submit_attestation()`.
+
+### Phase C.2 — Badges on-chain inline + route /onchain (commit `5b11f51`)
+
+- `ui/src/domain/onchain.ts` : `OnChainAttestationSchema` + `OnChainManifestSchema` Zod miroirs de la sortie de `push_to_devnet.py`. `EMPTY_ONCHAIN_MANIFEST` sentinel pour fallback gracieux quand aucun push n'a encore eu lieu.
+- `ui/src/services/onchain.ts` : `buildOnChainIndex()` produit `Map<question, OnChainAttestation>` indexé par texte de question — clé de matching choisie parce que les benchmark JSONs ne portent pas de `claim_hash` mais portent le texte original.
+- `ui/src/ui/OnChainBadge.tsx` : chip cyan ⛓ avec lien Solana Explorer en `target="_blank"`, tooltip exposant tx + frame + slot. `stopPropagation` sur click pour cohabiter avec un parent `<Link>` sans déclencher la nav parente.
+- Wiring : `ClaimRow` (claim-viewer feature) + `FlywheelRow` (flywheel-split feature) reçoivent un `onChain?: OnChainAttestation | null` via prop drilling depuis les routes — index fetché une fois par page via TanStack Query, lookup `Map.get(claim.text)` O(1) par row.
+- Route `/onchain` dédiée : summary card (cluster, program ID, submitter, pushed/failed, generation time) + liste cliquable des attestations vers Solana Explorer.
+- Top nav : ajout NavLink "On-chain" avec état actif cyan.
+- Vérifié end-to-end : badges visibles sur AQU-01 et AQU-02 du `scenario_6_2_qualifier_sensitivity` (water boils — questions matchent les attestations poussées). Les claims des runs flywheel ne sont pas badgés car ces questions-là n'ont pas été poussées dans la sélection curée.
+
+### Phase D — Déploiement Vercel (commit `0c2e9d6`)
+
+- Déployé en production : `https://epp-verdict.vercel.app`. Build ~18s sur infra Vercel iad1. Auto-redeploy à chaque push sur `main`. Environnement Hobby gratuit.
+- **Pivot stratégique imposé par Vercel monorepo** : Vercel en mode `Root Directory = ui/` ne donne pas accès aux dossiers frères (`../demos/`, `../data/`) même avec "Include source files outside of the Root Directory" activé dans les settings. Le `prebuild` script crashait avec `ENOENT: /vercel/path0/demos/benchmark_runs`.
+- Solution : `ui/public/data/` (précédemment gitignoré et régénéré localement par `prebuild`) est désormais **commité** — 24 benchmark JSONs + `manifest.json` + `devnet_pushed.json`, ~700 KB total. Le script `copy-data.mjs` détecte les sources manquantes via `pathExists(RUNS_SRC)` et no-op proprement (préserve les fichiers commités au lieu de les écraser via `rm -rf`).
+- `ui/.gitignore` : retrait de `public/data/` + commentaire explicatif du workflow.
+- Workflow nouveau pour ajout de scénario : Python pipeline génère JSON dans `demos/benchmark_runs/` → `npm run prebuild` (ou `npm run dev`) refresh `ui/public/data/` → `git add ui/public/data/` → commit → push → Vercel auto-déploie.
+- **Caveat documenté** : le commit de `ui/public/data/` est une concession au workflow Vercel monorepo, **pas une bonne pratique générale**. Duplication entre source de vérité (`demos/benchmark_runs/`) et copie déployée (`ui/public/data/`). À refactorer en post-hackathon — options : (a) pipeline Python écrit directement dans `ui/public/data/`, (b) dashboard dans son propre repo, (c) backend séparé servant les manifests dynamiquement, (d) Vercel function lisant depuis un blob storage.
+
+### Notes opérationnelles
+
+- Préférence utilisateur : aucune attribution `Co-Authored-By: Claude` ou tag `Generated with Claude Code` dans les commits ou PR. Sauvegardée en mémoire de session.
+- Préview/dev local : `start-ui.bat` à la racine du repo pour lancer le dashboard sans connaître npm (double-clic Windows ou `start-ui.bat` en PowerShell). Pas commité (artefact dev personnel).
+
+---
+
 ## [2026-04-17] Lean 4 session 2 — INV-4 complété, INV-2 prouvé, ADR-020 dual-trust
 
 Session de réparation et d'extension de l'infrastructure Lean 4. Correction de trois défaillances structurelles pré-existantes, preuve d'INV-2 (Claim Hash Purity), clôture documentaire via ADR-020. Commits `20ab6f7` et `0fea8b3`.
