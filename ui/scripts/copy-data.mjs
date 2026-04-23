@@ -18,7 +18,24 @@ const ONCHAIN_SRC = resolve(REPO_ROOT, 'data', 'devnet_pushed.json');
 const DEST = resolve(__dirname, '..', 'public', 'data');
 
 async function copyBenchmarkRuns() {
-  const entries = await readdir(RUNS_SRC, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(RUNS_SRC, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      console.warn(
+        `[copy-data] ${RUNS_SRC} not found — emitting empty manifest. ` +
+          'On Vercel, enable "Include source files outside of the Root Directory" ' +
+          'in Build & Deployment settings to include the demos/ folder.',
+      );
+      await writeFile(
+        join(DEST, 'manifest.json'),
+        `${JSON.stringify({ generatedAt: new Date().toISOString(), sourceDir: 'demos/benchmark_runs', runs: [] }, null, 2)}\n`,
+      );
+      return;
+    }
+    throw err;
+  }
   const jsonFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.json'));
 
   const runs = [];
