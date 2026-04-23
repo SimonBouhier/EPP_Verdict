@@ -1,0 +1,186 @@
+{
+  "scenario": "scenario_flywheel_v2",
+  "adr": "ADR-018",
+  "timestamp": "2026-04-12T08:18:47.166286+00:00",
+  "models": [
+    "mistral:latest",
+    "llama3.1:8b",
+    "gemma3:latest"
+  ],
+  "flywheel_enabled": true,
+  "claims_total": 5,
+  "claims_flywheel": 5,
+  "claims_control": 0,
+  "claims": [
+    {
+      "id": "FW2-01",
+      "origin": "FLYWHEEL-01",
+      "category": "flywheel_wikidata",
+      "claim": "Donald Trump won the 2024 US presidential election",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.4,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.8947,
+      "vote_entropy": 0.996792,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 113.2,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.43,
+      "baseline_verify_verdict": "CONTESTED",
+      "delta": 0.4647,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 113.7
+    },
+    {
+      "id": "FW2-02",
+      "origin": "new",
+      "category": "flywheel_wikidata",
+      "claim": "Keir Starmer is the current Prime Minister of the United Kingdom",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.5,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.76,
+      "vote_entropy": 1.0,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 107.3,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.481,
+      "baseline_verify_verdict": "CONTESTED",
+      "delta": 0.279,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 107.8
+    },
+    {
+      "id": "FW2-03",
+      "origin": "new",
+      "category": "flywheel_wikidata",
+      "claim": "Claudia Sheinbaum is the current President of Mexico",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.5,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.9533,
+      "vote_entropy": 1.0,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 102.7,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.78,
+      "baseline_verify_verdict": "SUPPORTED",
+      "delta": 0.1733,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 103.3
+    },
+    {
+      "id": "FW2-05",
+      "origin": "new",
+      "category": "flywheel_wikidata",
+      "claim": "The 2024 Nobel Prize in Physics was awarded to John Hopfield and Geoffrey Hinton",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 1.1,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.9533,
+      "vote_entropy": 1.0,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 106.9,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.77,
+      "baseline_verify_verdict": "SUPPORTED",
+      "delta": 0.1833,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 108.0
+    },
+    {
+      "id": "FW2-CTRL-01",
+      "origin": "control",
+      "category": "control_known_fact",
+      "claim": "Joe Biden served as the 46th President of the United States",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.6,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.96,
+      "vote_entropy": 0.985228,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 106.4,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.9,
+      "baseline_verify_verdict": "SUPPORTED",
+      "delta": 0.06,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 107.0
+    }
+  ]
+}

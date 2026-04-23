@@ -1,13 +1,22 @@
 #!/usr/bin/env node
 /**
- * Copies project data into ui/public/data/ for the dashboard:
+ * Refreshes ui/public/data/ from the project's local sources:
  *   - demos/benchmark_runs/*.json  → individual run files + manifest.json
  *   - data/devnet_pushed.json      → on-chain attestation manifest (Phase C.2)
  *
- * Runs as predev / prebuild npm hook. Both inputs are optional — missing
- * files emit a warning but don't fail the build.
+ * Runs as predev / prebuild npm hook.
+ *
+ * On Vercel (or any environment where the source dirs are not accessible —
+ * e.g. monorepo deployments where Root Directory = "ui/" cuts off the rest
+ * of the repo), the script is a no-op: the committed contents of
+ * ui/public/data/ are used as-is. This is why public/data/ is tracked in git.
+ *
+ * Local workflow when adding a new scenario:
+ *   1. Run the Python pipeline → writes new JSON to demos/benchmark_runs/
+ *   2. Run `npm run dev` (or `npm run prebuild`) → refreshes ui/public/data/
+ *   3. `git add ui/public/data/` → commit → push → Vercel re-deploys
  */
-import { copyFile, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,25 +26,18 @@ const RUNS_SRC = resolve(REPO_ROOT, 'demos', 'benchmark_runs');
 const ONCHAIN_SRC = resolve(REPO_ROOT, 'data', 'devnet_pushed.json');
 const DEST = resolve(__dirname, '..', 'public', 'data');
 
-async function copyBenchmarkRuns() {
-  let entries;
+async function pathExists(p) {
   try {
-    entries = await readdir(RUNS_SRC, { withFileTypes: true });
+    await stat(p);
+    return true;
   } catch (err) {
-    if (err.code === 'ENOENT') {
-      console.warn(
-        `[copy-data] ${RUNS_SRC} not found — emitting empty manifest. ` +
-          'On Vercel, enable "Include source files outside of the Root Directory" ' +
-          'in Build & Deployment settings to include the demos/ folder.',
-      );
-      await writeFile(
-        join(DEST, 'manifest.json'),
-        `${JSON.stringify({ generatedAt: new Date().toISOString(), sourceDir: 'demos/benchmark_runs', runs: [] }, null, 2)}\n`,
-      );
-      return;
-    }
+    if (err.code === 'ENOENT') return false;
     throw err;
   }
+}
+
+async function copyBenchmarkRuns() {
+  const entries = await readdir(RUNS_SRC, { withFileTypes: true });
   const jsonFiles = entries.filter((e) => e.isFile() && e.name.endsWith('.json'));
 
   const runs = [];
@@ -75,30 +77,42 @@ async function copyBenchmarkRuns() {
 }
 
 async function copyOnChainManifest() {
-  try {
-    await copyFile(ONCHAIN_SRC, join(DEST, 'devnet_pushed.json'));
-    const raw = JSON.parse(await readFile(ONCHAIN_SRC, 'utf8'));
-    const total = Array.isArray(raw?.attestations) ? raw.attestations.length : 0;
-    const okCount = Array.isArray(raw?.attestations)
-      ? raw.attestations.filter((a) => a?.status === 'ok').length
-      : 0;
-    console.log(
-      `[copy-data] copied devnet_pushed.json (${okCount}/${total} on-chain)`,
+  if (!(await pathExists(ONCHAIN_SRC))) {
+    console.warn(
+      '[copy-data] data/devnet_pushed.json not found — keeping any existing copy in public/data/. ' +
+        'Run scripts/push_to_devnet.py to populate it.',
     );
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      console.warn(
-        '[copy-data] data/devnet_pushed.json not found — run scripts/push_to_devnet.py first to populate it. Dashboard will show empty on-chain section.',
-      );
-    } else {
-      console.warn(`[copy-data] could not copy devnet_pushed.json: ${err.message}`);
-    }
+    return;
   }
+  await copyFile(ONCHAIN_SRC, join(DEST, 'devnet_pushed.json'));
+  const raw = JSON.parse(await readFile(ONCHAIN_SRC, 'utf8'));
+  const total = Array.isArray(raw?.attestations) ? raw.attestations.length : 0;
+  const okCount = Array.isArray(raw?.attestations)
+    ? raw.attestations.filter((a) => a?.status === 'ok').length
+    : 0;
+  console.log(`[copy-data] copied devnet_pushed.json (${okCount}/${total} on-chain)`);
 }
 
 async function main() {
+  // If the project sources aren't accessible (typical Vercel monorepo case),
+  // skip the entire copy and rely on the committed contents of public/data/.
+  // The check on RUNS_SRC is sufficient — if the repo root is missing, both
+  // sources are missing.
+  const sourcesAccessible = await pathExists(RUNS_SRC);
+  if (!sourcesAccessible) {
+    console.log(
+      `[copy-data] ${RUNS_SRC} not accessible — skipping refresh, using committed public/data/.`,
+    );
+    return;
+  }
+
+  await mkdir(DEST, { recursive: true });
+  // Wipe DEST only when we're about to refresh from source — never on the
+  // "no source" path above, otherwise we'd nuke the committed files Vercel
+  // depends on.
   await rm(DEST, { recursive: true, force: true });
   await mkdir(DEST, { recursive: true });
+
   await copyBenchmarkRuns();
   await copyOnChainManifest();
 }

@@ -1,0 +1,112 @@
+{
+  "scenario": "scenario_flywheel",
+  "adr": "ADR-018",
+  "timestamp": "2026-03-13T20:33:49.118467+00:00",
+  "models": [
+    "mistral:latest",
+    "llama3.1:8b",
+    "gemma3:latest"
+  ],
+  "acled_enabled": false,
+  "flywheel_enabled": true,
+  "claims": [
+    {
+      "id": "FLYWHEEL-01",
+      "origin": "JIANG-RESOLVED-01",
+      "category": "flywheel_wikidata",
+      "claim": "Donald Trump won the 2024 US presidential election",
+      "frame": "general_knowledge_v1.0",
+      "deterministic_source": "wikidata",
+      "deterministic_score": 0.85,
+      "deterministic_status": "found",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.6,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.8947,
+      "vote_entropy": 0.996792,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 109.6,
+      "flywheel_anchors_found": 1,
+      "flywheel_sources_injected": [
+        "wikidata"
+      ],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.43,
+      "baseline_verify_verdict": "CONTESTED",
+      "delta": 0.4647,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 110.2
+    },
+    {
+      "id": "FLYWHEEL-02",
+      "origin": "GEO-CONTROL-01",
+      "category": "flywheel_acled",
+      "claim": "Yemen is experiencing active armed conflict in 2025 as documented in conflict event databases",
+      "frame": "geopolitical_forecast_v1.0",
+      "deterministic_source": "acled",
+      "deterministic_score": null,
+      "deterministic_status": "skipped_no_credentials",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.0,
+      "verify_verdict": "SUPPORTED",
+      "verify_score": 0.9767,
+      "vote_entropy": 0.996792,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 104.6,
+      "flywheel_anchors_found": 0,
+      "flywheel_sources_injected": [],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.97,
+      "baseline_verify_verdict": "SUPPORTED",
+      "delta": 0.0067,
+      "expected_verdict": "SUPPORTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 104.6
+    },
+    {
+      "id": "FLYWHEEL-CONTROL-01",
+      "origin": "GEO-CONTROL-02",
+      "category": "control_no_flywheel",
+      "claim": "Switzerland is experiencing active armed conflict on its sovereign territory in 2025",
+      "frame": "geopolitical_forecast_v1.0",
+      "deterministic_source": null,
+      "deterministic_score": null,
+      "deterministic_status": "control_no_source",
+      "deterministic_errors": "",
+      "deterministic_duration_s": 0.0,
+      "verify_verdict": "CONTESTED",
+      "verify_score": 0.6196,
+      "vote_entropy": 0.996792,
+      "claim_type": "empirical",
+      "verify_errors": "",
+      "verify_duration_s": 106.5,
+      "flywheel_anchors_found": 0,
+      "flywheel_sources_injected": [],
+      "flywheel_enabled": true,
+      "baseline_verify_score": 0.61,
+      "baseline_verify_verdict": "CONTESTED",
+      "delta": 0.0096,
+      "expected_verdict": "CONTESTED",
+      "verdict_ok": true,
+      "models": [
+        "mistral:latest",
+        "llama3.1:8b",
+        "gemma3:latest"
+      ],
+      "duration_s": 106.5
+    }
+  ]
+}

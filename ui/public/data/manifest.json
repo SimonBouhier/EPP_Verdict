@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-04-23T15:51:09.366Z",
+  "sourceDir": "demos/benchmark_runs",
+  "runs": [
+    {
+      "filename": "deterministic_sources_20260415_132340.json",
+      "scenario": "scenario_deterministic_sources",
+      "timestamp": "2026-04-15T11:23:40.276332+00:00",
+      "claimsCount": 8,
+      "adr": "ADR-012"
+    },
+    {
+      "filename": "deterministic_sources_20260415_104725.json",
+      "scenario": "scenario_deterministic_sources",
+      "timestamp": "2026-04-15T08:47:25.547967+00:00",
+      "claimsCount": 8,
+      "adr": "ADR-012"
+    },
+    {
+      "filename": "deterministic_sources_20260415_103219.json",
+      "scenario": "scenario_deterministic_sources",
+      "timestamp": "2026-04-15T08:32:19.750131+00:00",
+      "claimsCount": 8,
+      "adr": "ADR-012"
+    },
+    {
+      "filename": "flywheel_v2_20260412_101847.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-12T08:18:47.166286+00:00",
+      "claimsCount": 5,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_v2_20260411_145206.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-11T12:52:06.022936+00:00",
+      "claimsCount": 5,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_v2_baseline_20260411_143743.json",
+      "scenario": "flywheel_v2_baseline",
+      "timestamp": "2026-04-11T12:37:43.368077+00:00",
+      "claimsCount": 4
+    },
+    {
+      "filename": "flywheel_v2_20260411_135551.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-11T11:55:51.664249+00:00",
+      "claimsCount": 6,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_v2_baseline_20260411_134251.json",
+      "scenario": "flywheel_v2_baseline",
+      "timestamp": "2026-04-11T11:42:51.947114+00:00",
+      "claimsCount": 5
+    },
+    {
+      "filename": "flywheel_v2_20260411_121736.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-11T10:17:36.298702+00:00",
+      "claimsCount": 6,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_v2_20260411_120418.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-11T10:04:18.950653+00:00",
+      "claimsCount": 6,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_v2_20260411_115317.json",
+      "scenario": "scenario_flywheel_v2",
+      "timestamp": "2026-04-11T09:53:17.623376+00:00",
+      "claimsCount": 6,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_20260411_105358.json",
+      "scenario": "scenario_flywheel",
+      "timestamp": "2026-04-11T08:53:58.229930+00:00",
+      "claimsCount": 3,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_20260411_095640.json",
+      "scenario": "scenario_flywheel",
+      "timestamp": "2026-04-11T07:56:40.459570+00:00",
+      "claimsCount": 3,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_20260411_093921.json",
+      "scenario": "scenario_flywheel",
+      "timestamp": "2026-04-11T07:39:21.032069+00:00",
+      "claimsCount": 3,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "flywheel_20260313_213349.json",
+      "scenario": "scenario_flywheel",
+      "timestamp": "2026-03-13T20:33:49.118467+00:00",
+      "claimsCount": 3,
+      "adr": "ADR-018"
+    },
+    {
+      "filename": "jiang_20260311_082057.json",
+      "scenario": "scenario_jiang",
+      "timestamp": "2026-03-11T07:20:57.876401+00:00",
+      "claimsCount": 8
+    },
+    {
+      "filename": "scenario6_1_20260309_193253.json",
+      "scenario": "scenario_6_1_edge_cases",
+      "timestamp": "2026-03-09T18:32:53.520006+00:00",
+      "claimsCount": 14
+    },
+    {
+      "filename": "scenario6_2b_20260302_232201.json",
+      "scenario": "scenario_6_2b_qualifier_sensitivity_big_models",
+      "timestamp": "2026-03-02T22:22:01.584424+00:00",
+      "claimsCount": 12
+    },
+    {
+      "filename": "scenario6_2_20260302_215338.json",
+      "scenario": "scenario_6_2_qualifier_sensitivity",
+      "timestamp": "2026-03-02T20:53:38.134224+00:00",
+      "claimsCount": 15
+    },
+    {
+      "filename": "graph_seeder_blockchain_20260302_143728.json",
+      "scenario": "graph_seeder_blockchain",
+      "timestamp": "2026-03-02T14:42:39.395473+00:00",
+      "claimsCount": 30
+    },
+    {
+      "filename": "scenario6_20260301_103608.json",
+      "scenario": "scenario_6_full_pipeline",
+      "timestamp": "2026-03-01T10:07:49.606602+00:00",
+      "claimsCount": 0
+    },
+    {
+      "filename": "scenario6_1_20260301_093141.json",
+      "scenario": "scenario_6_1_edge_cases",
+      "timestamp": "2026-03-01T08:31:41.630395+00:00",
+      "claimsCount": 14
+    },
+    {
+      "filename": "scenario6_20260228_214343.json",
+      "scenario": "scenario_6_full_pipeline",
+      "timestamp": "2026-02-28T21:15:13.099536+00:00",
+      "claimsCount": 0
+    },
+    {
+      "filename": "benchmark_results_20260224_130111.json",
+      "scenario": "unknown",
+      "timestamp": "",
+      "claimsCount": 0
+    }
+  ]
+}
