@@ -1,4 +1,6 @@
+import type { OnChainAttestation } from '@/domain';
 import { cn } from '@/lib/cn';
+import { lookupOnChain } from '@/services/onchain';
 import { FlywheelRow } from './FlywheelRow';
 import {
   type FlywheelClaimDetail,
@@ -8,9 +10,10 @@ import {
 interface Props {
   claims: readonly FlywheelClaimDetail[];
   summary: FlywheelSplitSummary;
+  onChainIndex?: Map<string, OnChainAttestation>;
 }
 
-export function FlywheelSplit({ claims, summary }: Props) {
+export function FlywheelSplit({ claims, summary, onChainIndex }: Props) {
   return (
     <div>
       <SummaryStrip summary={summary} />
@@ -20,7 +23,7 @@ export function FlywheelSplit({ claims, summary }: Props) {
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
           {claims.map((c) => (
             <li key={c.id}>
-              <FlywheelRow claim={c} />
+              <FlywheelRow claim={c} onChain={lookupOnChain(onChainIndex, c.text)} />
             </li>
           ))}
         </ul>

@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { loadRun } from '@/data/loader';
+import { loadOnChainManifest, loadRun } from '@/data/loader';
 import {
   FlywheelSplit,
   parseFlywheelClaims,
   summarizeFlywheelSplit,
 } from '@/features/flywheel-split';
+import { buildOnChainIndex } from '@/services/onchain';
 import { Card, CardContent } from '@/ui/Card';
 
 export default function FlywheelPage() {
@@ -45,6 +46,15 @@ function FlywheelView({ filename }: ViewProps) {
       summary: summarizeFlywheelSplit(claims),
     };
   }, [data]);
+
+  const { data: onChainManifest } = useQuery({
+    queryKey: ['onchain'],
+    queryFn: loadOnChainManifest,
+  });
+  const onChainIndex = useMemo(
+    () => (onChainManifest ? buildOnChainIndex(onChainManifest) : undefined),
+    [onChainManifest],
+  );
 
   return (
     <div>
@@ -88,7 +98,11 @@ function FlywheelView({ filename }: ViewProps) {
         </Card>
       ) : null}
       {flywheelData ? (
-        <FlywheelSplit claims={flywheelData.claims} summary={flywheelData.summary} />
+        <FlywheelSplit
+          claims={flywheelData.claims}
+          summary={flywheelData.summary}
+          onChainIndex={onChainIndex}
+        />
       ) : null}
     </div>
   );

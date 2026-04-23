@@ -1,7 +1,8 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, NavLink, Route, Routes } from 'react-router-dom';
 import ClaimViewerPage from '@/routes/claim-viewer';
 import FlywheelPage from '@/routes/flywheel';
 import HomePage from '@/routes/home';
+import OnChainPage from '@/routes/onchain';
 
 export default function App() {
   return (
@@ -18,12 +19,30 @@ export default function App() {
             </span>
           </Link>
           <nav className="ml-auto flex items-center gap-4 text-sm">
-            <Link
+            <NavLink
               to="/"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              end
+              className={({ isActive }) =>
+                isActive
+                  ? 'text-foreground'
+                  : 'text-muted-foreground transition-colors hover:text-foreground'
+              }
             >
               Runs
-            </Link>
+            </NavLink>
+            <NavLink
+              to="/onchain"
+              className={({ isActive }) =>
+                `inline-flex items-center gap-1 ${
+                  isActive
+                    ? 'text-cyan'
+                    : 'text-muted-foreground transition-colors hover:text-foreground'
+                }`
+              }
+            >
+              <span aria-hidden="true">⛓</span>
+              On-chain
+            </NavLink>
           </nav>
         </div>
       </header>
@@ -33,6 +52,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/claims" element={<ClaimViewerPage />} />
           <Route path="/flywheel" element={<FlywheelPage />} />
+          <Route path="/onchain" element={<OnChainPage />} />
           <Route
             path="*"
             element={

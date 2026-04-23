@@ -1,18 +1,22 @@
+import type { OnChainAttestation } from '@/domain';
 import { cn } from '@/lib/cn';
+import { OnChainBadge } from '@/ui/OnChainBadge';
 import { VerdictBadge } from '@/ui/VerdictBadge';
 import type { FlywheelClaimDetail } from './parseFlywheelClaims';
 
 interface Props {
   claim: FlywheelClaimDetail;
+  onChain?: OnChainAttestation | null;
 }
 
-export function FlywheelRow({ claim }: Props) {
+export function FlywheelRow({ claim, onChain }: Props) {
   return (
     <article className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[5rem_minmax(0,1fr)_auto_auto_auto] md:items-center md:gap-4">
       {/* ID + origin */}
       <div className="flex items-center gap-2 md:flex-col md:items-start md:gap-1">
         <div className="font-mono text-xs text-muted-foreground">{claim.id}</div>
         <OriginBadge origin={claim.origin} />
+        {onChain ? <OnChainBadge attestation={onChain} /> : null}
       </div>
 
       {/* Claim text + metadata */}

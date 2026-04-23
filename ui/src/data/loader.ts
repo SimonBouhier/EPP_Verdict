@@ -1,4 +1,11 @@
-import { type RunManifest, RunManifestSchema, type ScenarioRun } from '@/domain';
+import {
+  EMPTY_ONCHAIN_MANIFEST,
+  type OnChainManifest,
+  OnChainManifestSchema,
+  type RunManifest,
+  RunManifestSchema,
+  type ScenarioRun,
+} from '@/domain';
 import { detectAdapter } from './adapters';
 
 /**
@@ -27,4 +34,23 @@ export async function loadRun(filename: string): Promise<ScenarioRun> {
   const raw = await fetchJson(`/data/${encodeURIComponent(filename)}`);
   const adapter = detectAdapter(raw);
   return adapter(raw);
+}
+
+/**
+ * Loads the on-chain attestation manifest produced by
+ * scripts/push_to_devnet.py. Returns an empty manifest if the file
+ * doesn't exist yet (graceful UI degradation before the first push).
+ */
+export async function loadOnChainManifest(): Promise<OnChainManifest> {
+  try {
+    const raw = await fetchJson('/data/devnet_pushed.json');
+    return OnChainManifestSchema.parse(raw);
+  } catch (err) {
+    // Distinguish "not yet pushed" (404) from real errors.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes(' 404 ')) {
+      return EMPTY_ONCHAIN_MANIFEST;
+    }
+    throw err;
+  }
 }

@@ -1,11 +1,13 @@
-import type { ClaimVerdict } from '@/domain';
+import type { ClaimVerdict, OnChainAttestation } from '@/domain';
+import { OnChainBadge } from '@/ui/OnChainBadge';
 import { VerdictBadge } from '@/ui/VerdictBadge';
 
 interface Props {
   claim: ClaimVerdict;
+  onChain?: OnChainAttestation | null;
 }
 
-export function ClaimRow({ claim }: Props) {
+export function ClaimRow({ claim, onChain }: Props) {
   return (
     <article className="flex items-start gap-4 px-4 py-3">
       <div className="w-20 shrink-0 font-mono text-xs text-muted-foreground">{claim.id}</div>
@@ -34,6 +36,7 @@ export function ClaimRow({ claim }: Props) {
       <div className="flex shrink-0 flex-col items-end gap-1">
         <VerdictBadge verdict={claim.verdict} />
         <span className="font-mono text-xs tabular-nums">{claim.consensusScore.toFixed(3)}</span>
+        {onChain ? <OnChainBadge attestation={onChain} /> : null}
       </div>
     </article>
   );

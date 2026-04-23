@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { loadRun } from '@/data/loader';
+import { loadOnChainManifest, loadRun } from '@/data/loader';
 import { ClaimList } from '@/features/claim-viewer';
+import { buildOnChainIndex } from '@/services/onchain';
 import { Card, CardContent } from '@/ui/Card';
 
 export default function ClaimViewerPage() {
@@ -33,6 +35,15 @@ function RunView({ filename }: RunViewProps) {
     queryKey: ['run', filename],
     queryFn: () => loadRun(filename),
   });
+
+  const { data: onChainManifest } = useQuery({
+    queryKey: ['onchain'],
+    queryFn: loadOnChainManifest,
+  });
+  const onChainIndex = useMemo(
+    () => (onChainManifest ? buildOnChainIndex(onChainManifest) : undefined),
+    [onChainManifest],
+  );
 
   return (
     <div>
@@ -75,7 +86,7 @@ function RunView({ filename }: RunViewProps) {
         </Card>
       ) : null}
 
-      {data ? <ClaimList claims={data.claims} /> : null}
+      {data ? <ClaimList claims={data.claims} onChainIndex={onChainIndex} /> : null}
     </div>
   );
 }
