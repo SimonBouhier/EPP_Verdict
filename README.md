@@ -1,15 +1,26 @@
-# EPP — Epistemic Proof Protocol
+# EPP — Epistemic Proof Program
 
-**Verifiable AI Consensus on Solana**
+**Verifiable AI Consensus on Solana.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-852%20passed-brightgreen)](tests/)
 [![ADRs](https://img.shields.io/badge/ADRs-20-blue)](docs/adr/)
-[![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://solana.com)
+[![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://epp-verdict.vercel.app/onchain)
+[![Dashboard](https://img.shields.io/badge/dashboard-live-06b6d4)](https://epp-verdict.vercel.app)
 
 > *"The oracle problem is not just technical but epistemological."*
 > — Caldarelli, 2025 · Bank for International Settlements, 2023
+
+---
+
+## ⚠️ Proofs of process, not verdicts on truth
+
+EPP produces cryptographic measurements of multi-LLM deliberation under specified metrological frames. These attestations record *what was deliberated, by whom, and how*. They are **not** legal verdicts, regulatory decisions, or substitutes for human or institutional adjudication.
+
+Per the *UNESCO Recommendation on the Ethics of Artificial Intelligence* (193 Member States, 2021), ultimate ethical and legal responsibility for any decision based on an AI output remains with the natural or legal persons consuming it. EPP supports human oversight; it does not replace it.
+
+The full liability framing — and the alignment with UNESCO §3/§5/§11 plus the emerging legal recognition of blockchain evidence (Tribunal judiciaire de Marseille 2025, CJUE *DigitalArt GmbH* 2024, Luxembourg Code civil 2024) — is in [`WHITEPAPER.md` → Liability & Scope](WHITEPAPER.md#liability--scope).
 
 ---
 
@@ -17,312 +28,26 @@
 
 **[https://epp-verdict.vercel.app](https://epp-verdict.vercel.app)** — verifiable dashboard reading the project's benchmark JSONs and **12 attestations published to Solana devnet** under program `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`. Click any ⛓ badge or the `/onchain` page to open the corresponding transaction on Solana Explorer.
 
-> ⚠️ **HACKATHON DEPLOYMENT WORKAROUND — NOT A RECOMMENDED PATTERN**
->
-> The directory `ui/public/data/` (24 benchmark JSONs + on-chain manifest, ~700 KB) is **committed to git** as a build input, because Vercel's "Root Directory = `ui/`" mode does not give the build context access to sibling folders such as `../demos/` — even with the dashboard option *"Include source files outside of the Root Directory"* enabled. Under this mode the `prebuild` script crashes with `ENOENT` on `/vercel/path0/demos/`, so we ship the data files inside `ui/` to make the deploy reproducible.
->
-> **This is a hackathon shipping concession, not a clean production pattern.** It introduces a duplication between the source of truth (`demos/benchmark_runs/`, written by the Python pipeline) and the deployed copy (`ui/public/data/`, committed to git). After Colosseum, refactor along one of:
-> 1. Have the Python pipeline write **directly** into `ui/public/data/` (single source of truth).
-> 2. Split the dashboard into its own repository (no monorepo issue).
-> 3. Add a thin backend (Vercel Function, Cloudflare Worker, etc.) serving the manifests from blob storage.
-> 4. Switch deployment to a platform whose monorepo mode does include sibling folders (Cloudflare Pages, Netlify, Render).
->
-> **Workflow today**: after a new scenario is generated under `demos/benchmark_runs/`, run `npm run prebuild` from `ui/`, then `git add ui/public/data/`, commit, push — Vercel auto-deploys.
+> **Hackathon deployment workaround — not a recommended pattern.** `ui/public/data/` (24 benchmark JSONs + on-chain manifest, ~700 KB) is committed to git as a build input, because Vercel's "Root Directory = `ui/`" mode does not give the build context access to sibling folders such as `../demos/`. This introduces duplication between the source of truth (`demos/benchmark_runs/`, written by the Python pipeline) and the deployed copy. Post-Colosseum refactor options documented at the original commit `0c2e9d6`.
 
 ---
 
 ## What is EPP?
 
-EPP is a consensus engine for knowledge claims, anchored on Solana. Multiple AI models deliberate through structured debate cycles to reach consensus on factual assertions, producing cryptographically verifiable attestations stored on-chain.
+EPP is a consensus protocol for knowledge claims, anchored on Solana. Multiple architecturally distinct AI models deliberate through structured adversarial cycles, and the protocol produces a cryptographic attestation recording *what* was concluded, *how*, *by whom*, *under what methodology*, and *with what degree of agreement*.
 
-Existing oracles solve the data feed problem — prices, timestamps, scores. **EPP solves the truth problem** — Is this claim factually supported? Does the evidence agree? Is this entity compliant?
+Every attestation carries a **5-dimensional epistemic signature** (agreement, consistency, centrality, stability, diversity) produced under a versioned **metrological frame** and stored as a **462-byte PDA** on Solana devnet. Same kernel, same on-chain format, regardless of domain — what changes per domain is an adapter (fetches external data) and a frame (defines the measurement methodology).
 
-The result is an attestation that says not just *what* was concluded, but *how*, *by whom*, and *under what conditions* — permanently, verifiably, without a single point of trust.
+Three operational paths:
 
----
+| Path | When | Example |
+|:-----|:-----|:--------|
+| **VERIFY** | Multi-model deliberation needed | *"Solana effective TPS exceeds 3000"* |
+| **DETERMINISTIC** | Authoritative source exists | *"Entity X is on the OFAC sanctions list"* |
+| **FLYWHEEL** | Both — verified data injected into AI reasoning | *"Trump won the 2024 election"* (0.43 CONTESTED → 0.89 SUPPORTED, +0.46 delta) |
 
-## The Epistemic Flywheel (ADR-018)
-
-LLMs are structurally blind to events after their training cutoff. EPP exploits this limitation instead of suffering it.
-
-| Stage | Score | Verdict | Time | Compute |
-|:------|:------|:--------|:-----|:--------|
-| LLMs alone | 0.43 | CONTESTED | 105s | 3 models |
-| + Flywheel (Wikidata injected) | **0.89** | **SUPPORTED** | 110s | 3 models |
-| Subsequent queries (cache) | **0.89** | **SUPPORTED** | **<1ms** | **Zero** |
-
-**Claim:** "Donald Trump won the 2024 US presidential election"
-**Delta: +0.46.** Same models. Same claim. No retraining. The graph learned by itself.
-
-The Flywheel connects AI deliberation to authoritative data sources (Wikidata, ACLED, NIST, OFAC). When a verified fact exists for a claim, it is automatically injected into the LLM reasoning context during VERIFY — not as a directive, but as evidence the models are free to contest. The corrected attestation feeds back into model evaluation (Brier scoring), so the protocol learns not just *what* is true, but *which models* are most reliable on *which domains*.
-
----
-
-## Three Paths, One Protocol
-
-**EXPLORE** (Divergent → Debate → Meta) — Open-ended knowledge extraction. Models build a semantic knowledge graph through divergent exploration, dialectic debate, and meta-reflection. Each triplet is weighted by structural consensus (Brier scores, diversity bonuses, semantic fingerprinting).
-
-**VERIFY** (ASSESS → CHALLENGE → ADJUDICATE) — Structured factual verification with epistemic isolation. Each model evaluates independently, challenges its neighbor in circular rotation (model[i] sees only model[(i+1)%N]), then collective weighted adjudication. The output is a signed 5-dimensional epistemic signature.
-
-**DETERMINISTIC** (ADR-012) — For facts that don't need debate. Sanctions screening, carbon credit validation, physical constants. EPP queries authoritative sources, hashes the raw response (SHA-256), and produces a traceable attestation without invoking LLMs — because adding uncertainty to a binary fact is not epistemology, it's noise.
-
----
-
-## How It Works
-
-### Claim Classification & Decidability
-
-Before any evaluation, the protocol auto-classifies every claim into one of four types: **empirical** (verifiable against data), **definitional** (depends on term definitions), **normative** (value judgment — no objective answer), or **speculative** (unfalsifiable). This classification drives a double penalty system that adjusts scores before crystallization:
-
-| Verdict | Penalty | | Claim Type | Penalty |
-|:--------|:--------|---|:-----------|:--------|
-| SUPPORTED | ×1.0 | | empirical | ×1.0 |
-| CONTESTED | ×0.65 | | definitional | ×0.90 |
-| INSUFFICIENT_EVIDENCE | ×0.45 | | normative | ×0.70 |
-| | | | speculative | ×0.75 |
-| | | | security_audit | ×1.0 |
-
-This is how "Pineapple on pizza is delicious" scores 0.29 (normative × insufficient evidence), while "Earth orbits the Sun in 365.25 days" scores 0.99 (empirical × supported). The protocol knows what it cannot adjudicate.
-
-### Consensus Engine — Three Layers
-
-The consensus is computed in three complementary passes, each catching what the previous one missed:
-
-**Layer 0 — Normalize** (`normalize_triplet()`) — Static dictionary of known synonyms (11 canonical relation groups, abbreviation expansion, whitespace normalization). Cost: O(1).
-
-**Layer 1 — Semantic Fingerprinting** (ADR-011) — Each model generates a micro-graph of neighbors for each term (EXPAND phase). Terms whose neighborhood structures overlap above a threshold are identified as synonyms and merged via an alignment table (MATCH + APPLY phases). Uses Jaro-Winkler similarity + embedding cosine as a waterfall cascade. Cost: O(n² × k).
-
-**Layer 2 — Semantic Merge** (`_semantic_merge()`) — Residual clustering by embedding cosine similarity for cases that fingerprinting misses. Cost: O(n² × d).
-
-Order is strict: L0 → L1 → hash (SHA-256) → L2. If Layer 1 is disabled or times out, Layers 0 and 2 ensure baseline coverage.
-
-### Epistemic Cache (ADR-013)
-
-Before launching a costly multi-model run, the pipeline checks the persistent graph for an existing attestation matching the claim hash with a valid TTL (default 7 days). If found, the cached result is returned at zero compute cost. This is what produces the `<1ms` response time on subsequent queries in the Flywheel table above.
-
-### Weighted Consensus by Brier Score (R-2.1.1)
-
-Model weights in the consensus computation are not equal — they are dynamically adjusted based on each model's historical track record. After each crystallization, the `post_crystallization_hook` records each model's prediction. When predictions are resolved against ground truth, Brier scores are computed per model. Models with better calibration carry more weight in future deliberations. The feedback loop is: predict → record → resolve → reweight → predict better.
-
-### Commit-Reveal (R-2.2.3)
-
-Initial model responses during the ASSESS phase are SHA-256 committed before the CHALLENGE phase begins. After adjudication, commits are verified against reveals. This makes post-hoc rationalization detectable — a model cannot retroactively adjust its initial assessment to match the consensus. The `commit_reveal` table stores hashes per model/phase, and the `commit_reveal_verified` column in attestations records integrity status.
-
-### Response Deduplication (R-2.2.2)
-
-Before consensus computation, a `ResponseDeduplicator` filters near-duplicate responses by embedding cosine similarity. This prevents a model that produces multiple paraphrases of the same answer from inflating its vote count.
-
-### Metrological Frames
-
-Every attestation is produced under a versioned metrological frame — a structured specification of the measurement methodology. The frame hash is included in the claim hash (ADR-006), making attestations produced under different frames explicitly non-comparable.
-
-Seven predefined frames:
-
-| Frame ID | Domain |
-|:---------|:-------|
-| `general_knowledge_v1.0` | Default epistemic evaluation |
-| `blockchain_tps_v1.0` | Blockchain performance claims |
-| `compliance_sanctions_v1.0` | AML/KYC sanctions screening |
-| `carbon_credits_vcs_v1.0` | Verra VCS carbon credit validation |
-| `rwa_identity_v1.0` | RWA identity verification |
-| `smartcontract_audit_v1.0` | Smart contract security (SWC + Trail of Bits) |
-| `geopolitical_forecast_v1.0` | ACLED-based conflict assessment |
-
-Each frame specifies: domain, metric, parameters, required sources, governance authority, and a deterministic hash. Custom frames can be created for any domain.
-
----
-
-## Empirical Results
-
-### Flywheel Effect (ADR-018)
-| Claim | Without Flywheel | With Flywheel | Delta |
-|:------|:-----------------|:--------------|:------|
-| Trump won 2024 election | 0.43 CONTESTED | 0.89 SUPPORTED | **+0.46** |
-
-### Geopolitical Assessment (ADR-016)
-| Claim | LLM Verdict | Score | Deterministic Source |
-|:------|:------------|:------|:---------------------|
-| Yemen active conflict 2025 | SUPPORTED | 0.96 | ACLED: ready |
-| Switzerland active conflict | CONTESTED | 0.62 | — |
-| Iran proxy escalation | CONTESTED | 0.42 | ACLED: ready |
-
-### Smart Contract Audit (ADR-014)
-| Function | Vulnerable? | Light (7B) | Heavy (20B+) |
-|:---------|:------------|:-----------|:-------------|
-| withdrawBalance (SWC-107) | YES | 0.55 CONTESTED | 0.46 CONTESTED |
-| addToBalance | No | 0.79 SUPPORTED | 0.74 SUPPORTED |
-| getBalance | No | 0.79 SUPPORTED | 0.41 CONTESTED |
-
-**Finding:** reasoning models over-contest uniformly (~0.45). Smaller 7B models discriminate better. The divergence between model families IS the signal.
-
-### Epistemic Edge Cases
-| Claim | Type Detected | Score | Signal |
-|:------|:-------------|:------|:-------|
-| Pineapple on pizza is delicious | Normative | 0.29 | Refuses to adjudicate |
-| Moon is made of cheese | — | 0 attestations | Graceful refusal |
-| Bitcoin replaces fiat in 10 years | Speculative | 0.40 | Penalty ×0.75 applied |
-| Earth orbits Sun in 365.25 days | Empirical | 0.99 | Baseline anchor |
-| Napoleon was shorter than average | Empirical | 0.96 SUPPORTED ✗ | Shared training bias exposed |
-
----
-
-## Five Founding Axioms
-
-1. **Model Obsolescence** — Models are consumables, not infrastructure. Any LLM can enter or leave the system.
-2. **Graph Survival** — Knowledge graph data survives all system changes. Data is sovereign.
-3. **Transparent Regression Cuts** — Every methodology change is versioned. Attestations produced under different conditions are explicitly non-comparable.
-4. **Local Computation, On-Chain Proof** — AI runs locally (privacy, cost control). Only the cryptographic proof goes on-chain.
-5. **Divergence is the Signal** — Disagreement between model families is more epistemically valuable than a unanimous verdict. Uniformity is a failure mode, not a feature.
-
----
-
-## On-Chain
-
-Solana program deployed on devnet: `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`
-
-Each attestation occupies **462 bytes** as a PDA. It carries: claim hash, epistemic signature (5 dimensions × u16), confidence tier, metrological frame hash, source anchor, protocol version.
-
-Four confidence tiers (ADR-005):
-
-| Tier | Threshold | Conditions |
-|:-----|:----------|:-----------|
-| Sandbox | < 0.40 | No additional requirements |
-| Proposition | ≥ 0.40 | + ≥ 2 models consulted |
-| Validated | ≥ 0.70 | + ≥ 3 models + ≥ 2 architecture families |
-| Verified | ≥ 0.85 | + source anchor OR validation count ≥ 3 |
-
-The 5-dimensional epistemic signature captures: **agreement** (how strongly the models converge), **consistency** (how stable positions are across phases), **centrality** (how close each model is to the aggregate), **stability** (how much positions shifted between ASSESS and ADJUDICATE), and **diversity** (how architecturally heterogeneous the panel is).
-
----
-
-## Formal Verification (Lean 4)
-
-Eleven theorems on the abstract epistemic protocol are mechanically proven in Lean 4 under `Formal/`, across four modules:
-
-- `Encoding.lean` (INV-1) — float ↔ u16 round-trip, bound preservation (4 theorems).
-- `TierBoundary.lean` (INV-4) — `verified` tier implies score ≥ 8500 ∧ (models ≥ 3 ∨ anchor).
-- `SourceAnchor.lean` (INV-6) — `deterministic` attestations require a non-zero source anchor (2 theorems).
-- `ClaimHash.lean` (INV-2) — claim identity depends only on `(subject, predicate, object, frame)`; timestamp- and submitter-independence (3 theorems). Condition of possibility for ADR-017 cross-cluster queries.
-
-`Formal/Formal/RedTests.lean` verifies non-tautology via six red tests (falsification protocol C6: each invariant must fail compilation when its underlying property is broken). `Main.lean` imports the library so `lake build` (the command run by `leanprover/lean-action@v1` in CI) compiles all 18 jobs on every push. The gap between the Lean specification and the Python/Rust runtime is human-maintained and explicitly documented — see **ADR-020 (Architecture Dual-Trust)** for the full inventory, conformity checks, and acceptance criteria for future invariants. See also ADR-019.
-
----
-
-## Security & Integrity
-
-**Anti-Sybil** — `infer_architecture_family()` enforces minimum 2 distinct architecture families per deliberation panel. Three instances of the same model architecture do not count as diverse consensus.
-
-**Prompt Injection Defense** — XML boundary delimiters (`<system_instruction>`, `<user_query>`) isolate trusted prompts from user input. `_sanitize_concept()` strips control characters and enforces `MAX_QUESTION_LENGTH=5000`.
-
-**Devnet-Only Guard** — The `SolanaCluster` enum intentionally has no `MAINNET` value. `validate_cluster()` blocks any attempt to submit to mainnet.
-
-**Keypair Security** — Private keys are never logged (ADR-008). Only the public key appears in logs and attestations.
-
----
-
-## Architecture
-
-```
-EPP_Verdict/
-├── services/
-│   ├── esmm/                    # ESMM dual-mode protocol
-│   │   ├── orchestrator.py      # ESMMRunConfig, ClaimNature, cycle dispatch
-│   │   ├── pipeline.py          # run_pipeline() — unified entry point + Flywheel (ADR-018)
-│   │   ├── attestation.py       # EpistemicAttestation, Signature5D, crystallize()
-│   │   ├── consensus_engine.py  # Brier scores, diversity bonus, semantic merge
-│   │   ├── fingerprint_*.py     # ADR-011: semantic reconciliation (4 modules)
-│   │   ├── cycle_prompts.py     # Dual-mode prompt templates (EXPLORE + VERIFY + AUDIT)
-│   │   ├── cycle_manager.py     # Cycle execution, model queries, retry logic
-│   │   ├── relation_vocabulary.py # 11 canonical relation groups, synonym mapping
-│   │   ├── post_crystallization.py # Brier track record + tier transitions + diversity bonus
-│   │   └── source_anchor_builder.py  # ADR-012: deterministic path
-│   ├── sources/adapters/        # OFAC, OpenSanctions, EU CFSP, Verra VCS, ACLED, Wikidata
-│   ├── providers/               # Ollama, OpenAI-compat, Anthropic (base.py interface)
-│   └── solana/                  # Bridge, client, metrological frames
-├── services/audit/              # ADR-014: smart contract audit (slicer, runner, SWC taxonomy)
-├── programs/epp/                # Anchor/Rust — lib.rs, state.rs, errors.rs, constants.rs
-├── database/
-│   ├── engine.py                # ISpaceDB — async, ~100 methods
-│   ├── schema.sql               # 25+ tables, 7 views
-│   └── pool.py                  # Connection pool, LRU cache
-├── cli/epp_cli.py               # ask, submit, query, frame, verify-rwa, audit, models stats
-├── demos/                       # Scenario scripts + benchmark_runs/ (timestamped JSON)
-├── scripts/
-│   └── push_to_devnet.py        # Curated batch push of attestations to Solana devnet (Apr 2026)
-├── ui/                          # Vite + React 19 + Tailwind v4 dashboard — deployed to epp-verdict.vercel.app (Apr 2026)
-│   ├── src/{domain,data,services,features,ui,routes}/  # 4-circle architecture
-│   ├── public/data/             # Committed copy of benchmark JSONs + devnet manifest (Vercel monorepo workaround — see top of README)
-│   ├── scripts/copy-data.mjs    # Local refresh hook (predev/prebuild)
-│   └── vercel.json              # Framework: Vite, deployed via Vercel Hobby
-├── docs/
-│   ├── adr/                     # ADR-001 through ADR-020
-│   ├── ARCHITECTURE.md          # Living document, updated with each structural change
-│   └── CHANGELOG.md             # Authoritative chronological journal
-└── tests/                       # 852 tests — RED-GREEN-FIX strict protocol
-```
-
-### Database Schema (key tables)
-
-| Table | Purpose |
-|:------|:--------|
-| `concepts` | Knowledge graph nodes (embeddings, rho_static, degree) |
-| `concept_aliases` | Canonical resolution ("IA" → "ia", "AI" → "ia") |
-| `relations` | Graph edges (weight, kappa curvature, relation type) |
-| `attestations` | Crystallized verdicts (signature 5D, consensus_meta, Solana tx) |
-| `model_track_record` | Per-model Brier scoring (predicted vs actual) |
-| `tier_transitions` | Audit log of confidence tier promotions/demotions |
-| `metrological_frames` | Versioned measurement frameworks (auto-seeded) |
-| `commit_reveal` | SHA-256 commit hashes per model/phase |
-| `knowledge_gaps` | Detected gaps for guided exploration |
-| `canonical_relations` | 18 relation types across 6 categories |
-| `graph_deltas` | Append-only mutation history (ADR-007) |
-| `esmm_runs` | Run metadata and lifecycle |
-
----
-
-## Deterministic Sources
-
-Seven authoritative data sources integrated:
-
-| Source | Domain | Adapter | Status |
-|:-------|:-------|:--------|:-------|
-| OFAC SDN | US Treasury sanctions | `ofac.py` | Integrated |
-| OpenSanctions | Open-source sanctions/PEP | `opensanctions.py` | Integrated |
-| EU CFSP | European Union sanctions | `eu_cfsp.py` | Integrated |
-| Verra VCS | Carbon credit registry | `verra_vcs.py` | Integrated |
-| ACLED | Armed conflict events | `acled.py` | Integrated (pending API access) |
-| Wikidata | Structured knowledge base (CC-0) | `wikidata.py` | Integrated (Flywheel demonstrated) |
-| NIST | Physical constants | `nist_codata.py` | In development |
-
-Each adapter implements the `SourceAdapter` interface: `fetch()`, `normalize()`, `get_source_version()`. A new source can be integrated in a single day.
-
-Wikidata scores are capped at 0.85 (never 1.0) because it is publicly editable. NIST constants receive 1.0 as a primary authoritative source. This confidence ceiling is a design choice, not a limitation.
-
----
-
-## Smart Contract Audit (ADR-014)
-
-The ESMM kernel treats code analysis claims identically to any other domain. The `services/audit/` module decomposes Solidity contracts into per-function units (`contract_slicer.py`), classifies vulnerabilities against dual taxonomies (33 SWC categories + 8 Trail of Bits classes via `swc_taxonomy.py`), and runs each unit through the full ASSESS → CHALLENGE → ADJUDICATE pipeline (`audit_runner.py`).
-
-Optional Slither integration provides a deterministic pre-analysis via the `SlitherAdapter` (ADR-012 pattern). When both paths run, a concordance check compares static analysis results against epistemic consensus.
-
----
-
-## Current Status (April 2026)
-
-| Metric | Value |
-|:-------|:------|
-| Test suite | **852 passed**, 10 skipped, 0 failed |
-| Architecture decisions | **20 ADRs** |
-| AI models tested | 6: Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b |
-| Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + **FLYWHEEL** |
-| Deterministic sources | 7 integrated |
-| Operational domains | 5: epistemic exploration, smart contract audit, geopolitical assessment, compliance/AML, physical sciences |
-| Benchmark datasets | 7, with 37+ claims evaluated |
-| Flywheel effect | **+0.46 demonstrated** (0.43 → 0.89) |
-| Solana program | Anchor/Rust, deployed on devnet, PDA-based |
-| Security | Commit-reveal, response deduplication, anti-Sybil, prompt injection guards, devnet-only |
-| Governance markers | `COMMUNITY_DECISION_REQUIRED` in codebase for open design choices |
+**For the full architectural and epistemological narrative** → [`WHITEPAPER.md`](WHITEPAPER.md).
+**For the 3-minute pitch** → [`PITCH.md`](PITCH.md).
 
 ---
 
@@ -334,12 +59,13 @@ Optional Slither integration provides a deterministic pre-analysis via the `Slit
 Python 3.11+
 Ollama (≥ 2 models: mistral + llama3.1 recommended)
 SQLite (included with Python)
+Node 20+ (for the ui/ dashboard)
 
-# For on-chain anchoring (optional, devnet):
-Solana CLI 3.0+  |  Anchor 0.32+  |  Rust 1.70+
+# For on-chain anchoring (optional, devnet only):
+Solana CLI 3.0+  |  Anchor 0.32+  |  Rust 1.70+  (WSL on Windows)
 ```
 
-### Installation
+### Install
 
 ```bash
 git clone https://github.com/SimonBouhier/EPP_Verdict.git
@@ -348,7 +74,7 @@ python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate (
 pip install -r requirements.txt
 ```
 
-### Run a Scenario
+### Run a scenario
 
 ```bash
 # Flywheel demonstration (Trump + Wikidata + controls)
@@ -357,50 +83,99 @@ python demos/scenario_flywheel.py
 # Geopolitical assessment (Jiang predictions + controls)
 python demos/scenario_jiang.py
 
-# Epistemic edge cases (14 claims: opinions, absurdities, bias)
+# Epistemic edge cases (14 claims: opinions, absurdities, biased framings)
 python demos/scenario_6_1_edge_cases.py
 ```
 
 ### CLI
 
 ```bash
-# Epistemic deliberation
+# Epistemic deliberation (VERIFY mode)
 python -m cli.epp_cli ask "Solana effective TPS exceeds 3000" --frame blockchain_tps_v1.0
 
-# Deterministic verification
+# Deterministic verification (DETERMINISTIC mode)
 python -m cli.epp_cli verify-rwa --source opensanctions --entity "Acme Corp" \
   --frame compliance_sanctions_v1.0
 
 # Smart contract audit
 python -m cli.epp_cli audit contracts/vulnerable.sol --frame smartcontract_audit_v1.0
 
-# On-chain push to devnet — pushes 12 curated attestations from local DBs.
-# (Note: cli/epp_cli.py:submit only updates DB submission status; this script
-# is what actually calls EppSolanaClient.submit_attestation(). The CLI gap
-# will be closed post-hackathon.)
-python scripts/push_to_devnet.py [--dry-run | --general-count N | --audit-count N]
-
 # Query existing attestations
 python -m cli.epp_cli query "solana" --min-confidence 0.8
 
+# On-chain push to devnet (curated batch, 8 general_knowledge + 4 smartcontract_audit)
+# Note: cli.epp_cli:submit only marks DB status; this script is what actually pushes.
+python scripts/push_to_devnet.py [--dry-run | --general-count N | --audit-count N]
+
 # Model performance dashboard
 python -m cli.epp_cli models stats
+```
 
-# Available metrological frames
-python -m cli.epp_cli frame list
+### Dashboard (local dev)
 
-# Knowledge graph statistics
-python -m cli.epp_cli graph stats
+```bash
+# Windows: double-click start-ui.bat from the repo root, OR:
+cd ui && npm install && npm run dev
+# → http://localhost:5173
 ```
 
 ### Tests
 
 ```bash
 pytest tests/ -v                              # Full suite (852 tests)
-pytest tests/test_adr018_flywheel.py -v       # Flywheel tests
+pytest tests/test_adr018_flywheel.py -v       # Flywheel
 pytest tests/test_adr014_audit_runner.py -v   # Smart contract audit
-pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
+pytest tests/test_adr020_*.py -v              # Lean 4 conformance
 ```
+
+---
+
+## Architecture at a glance
+
+```
+EPP_Verdict/
+├── services/
+│   ├── esmm/             # ESMM dual-mode protocol (orchestrator, pipeline, consensus, attestation)
+│   ├── sources/adapters/ # OFAC, OpenSanctions, EU CFSP, Verra VCS, ACLED, Wikidata, NIST
+│   ├── providers/        # Ollama, OpenAI-compat, Anthropic
+│   ├── solana/           # Bridge, client, metrological frames
+│   └── audit/            # Smart contract audit kernel (ADR-014)
+├── programs/epp/         # Anchor/Rust on-chain program (submit_attestation, state, errors)
+├── database/             # ISpaceDB (async SQLite, WAL, ~100 methods)
+├── Formal/               # Lean 4 formal verification (11 theorems, 6 red tests, ADR-020)
+├── cli/epp_cli.py        # CLI surface (ask, query, frame, audit, verify-rwa)
+├── scripts/
+│   └── push_to_devnet.py # Curated batch push to Solana devnet
+├── ui/                   # Vite + React 19 + Tailwind v4 dashboard — epp-verdict.vercel.app
+│   ├── src/{domain,data,services,features,ui,routes}/
+│   ├── public/data/      # Committed benchmark JSONs + on-chain manifest (see Vercel note above)
+│   └── scripts/copy-data.mjs
+├── demos/                # Scenario scripts + benchmark_runs/ (timestamped JSON)
+├── docs/
+│   ├── adr/              # 20 ADRs
+│   ├── ARCHITECTURE.md   # Living structural document
+│   ├── positioning/      # Internal strategic material (NOT public vitrine)
+│   └── fr/CHANGELOG.md   # Chronological journal
+└── tests/                # 852 tests — RED-GREEN-FIX strict protocol
+```
+
+**Full component-by-component map** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## Current Status
+
+| Metric | Value |
+|:-------|:------|
+| Tests | **852 passed**, 10 skipped, 0 failed |
+| Architecture decisions | **20 ADRs** |
+| AI models tested | 6 (Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b) |
+| Deterministic sources | 7 integrated |
+| Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + FLYWHEEL |
+| Solana program | `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166) |
+| On-chain attestations | **12** pushed ([data/devnet_pushed.json](data/devnet_pushed.json)) |
+| Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) |
+| Formal verification | Lean 4 — **11 theorems proven**, 6 red tests (ADR-020) |
 
 ---
 
@@ -412,73 +187,26 @@ pytest tests/test_adr012_source_anchor.py -v  # Deterministic sources
 | `EPP_MODEL` | `mistral:latest` | Default Ollama model |
 | `EPP_NUM_CTX` | `8192` | Context window (tokens) |
 | `EPP_EMBEDDING_MODEL` | `mxbai-embed-large` | Embedding model |
-| `EPP_ALLOWED_ORIGINS` | `http://localhost:{3000,8000}` (+ 127.0.0.1) | CORS allow-list (CSV). Production: set explicit origins — wildcard `*` rejected (S7-001) |
+| `EPP_ALLOWED_ORIGINS` | `http://localhost:{3000,8000}` (+ 127.0.0.1) | CORS allow-list — wildcard `*` rejected (S7-001) |
 | `OPENSANCTIONS_ENDPOINT` | `http://localhost:8080` | yente server |
-| `OFAC_API_KEY` | — | OFAC SDN API key (never in config.yaml) |
-| `ACLED_EMAIL` | — | ACLED API credentials |
-| `ACLED_PASSWORD` | — | ACLED API credentials |
+| `OFAC_API_KEY` | — | OFAC SDN (never in `config.yaml`) |
+| `ACLED_EMAIL` / `ACLED_PASSWORD` | — | ACLED API credentials |
 
 ---
 
-## Architecture Decision Records
+## Learn More
 
-20 ADRs document every critical design choice:
-
-| ADR | Decision |
-|:----|:---------|
-| ADR-001 | Float → u16 [0, 10000] encoding for Solana |
-| ADR-002 | INSERT strategy (OR IGNORE vs OR REPLACE) |
-| ADR-003 | Singleton management (get_pool, get_db) |
-| ADR-004 | session_storage INSERT OR IGNORE |
-| ADR-005 | Multi-criteria confidence tiers (sandbox → verified) |
-| ADR-006 | Claim hash = SHA-256(subject \| predicate \| object \| frame) — immutable |
-| ADR-007 | Append-only for events and graph_deltas |
-| ADR-008 | Solana submitter authentication (keypair, devnet guard) |
-| ADR-009 | Language neutrality in ESMM protocol |
-| ADR-010 | Methodology traceability — consensus_meta mandatory at crystallization |
-| ADR-011 | Semantic reconciliation via structural fingerprinting (EXPAND → MATCH → APPLY) |
-| ADR-012 | Deterministic/epistemic bifurcation — authoritative source integration |
-| ADR-013 | Persistent graph + epistemic cache-hit (TTL-based) |
-| ADR-014 | Smart contract security audit pipeline (SWC + Trail of Bits) |
-| ADR-015 | Grand Decoupling — tripartite architecture (deferred post-hackathon) |
-| ADR-016 | Geopolitical oracle — ACLED + Wikidata dual-path |
-| ADR-017 | Epistemic Cluster network architecture (proposed) |
-| ADR-018 | **Epistemic Flywheel — self-improving knowledge graph** |
-| ADR-019 | **Epistemic Enum V2 — 3-category on-chain projection (Lean 4-ready)** |
-| ADR-020 | **Dual-Trust Architecture — Lean 4 formal invariants: 11 theorems, 6 red tests, documented model ↔ code gap** |
+- **[`WHITEPAPER.md`](WHITEPAPER.md)** — Full architectural and epistemological narrative: ESMM deliberation, metrological frames, flywheel, formal verification, cluster vision, references.
+- **[`PITCH.md`](PITCH.md)** — 3-minute pitch: three acts, three primitives nobody implements, the five axioms, the verdict that survives the counterpoint stress-test.
+- **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** — Living component-by-component map.
+- **[`docs/adr/`](docs/adr/)** — 20 Architecture Decision Records.
+- **[`docs/positioning/`](docs/positioning/)** — Internal strategic material (competitive scan, counterpoint responses, formal methods landscape, track strategy, *the negative space* essay). Not public vitrine — source material informing the public docs.
+- **[`docs/fr/CHANGELOG.md`](docs/fr/CHANGELOG.md)** — Chronological journal of significant changes.
 
 ---
 
-## The Cluster Vision (ADR-017)
+## License & Contributing
 
-EPP was designed as a network protocol of which only one node exists today. The unit of decentralization is the **Epistemic Cluster** — an autonomous instance with its own models, sources, and metrological frames. Trust emerges from cumulative Brier track records, calculable by anyone directly from the blockchain.
+MIT. The codebase contains `COMMUNITY_DECISION_REQUIRED` markers at open governance points — treatment of CONTESTED consensus, scope of language neutrality (ADR-009), cluster slashing conditions. These decisions are deliberately left to the open-source community rather than the founding team.
 
-Each cluster publishes its configuration. Verification happens through results, not promises. When two clusters attest the same claim differently, the divergence captures methodology differences — it is measurement, not redundancy.
-
----
-
-## Open Governance
-
-Several design decisions are intentionally left open for the community. The codebase contains `COMMUNITY_DECISION_REQUIRED` markers at decision points including: treatment of CONTESTED consensus (cap tier? reduce diversity bonus? require additional debate cycles?), and the scope of ADR-009 (language neutrality). These decisions should be made by the open-source community, not by the founding team.
-
----
-
-## From Intuition to Infrastructure
-
-Before a single line of Python was written, EPP existed as handwritten mappings between attention mechanisms and what its creator called "vibratory weights." Concepts like divergence as signal, multi-agent deliberation, and bidirectional knowledge transfer were sketched in metaphor before becoming Architecture Decision Records and pytest assertions.
-
-The path from there to here — 852 tests, 20 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
-
-This is what one person built in sixteen months. The question is what becomes possible when a team carries it forward.
-
----
-
-## References
-
-1. Egberts, A. (2017). The Oracle Problem. SSRN.
-2. Chainalysis (2023). Oracle manipulation attacks rising.
-3. Duley et al. (2023). The oracle problem and the future of DeFi. BIS Bulletin No. 76.
-4. Caldarelli, G. (2025). Can AI solve the blockchain oracle problem? arXiv:2507.02125.
-5. Xian et al. (2024). Connecting LLMs with Blockchain. arXiv:2412.02263.
-6. Zintus-Art et al. (2025). Multi-Agent Argumentation for Trustworthy AI.
-7. Lin, Li et al. (2026). Does Socialization Emerge in AI Agent Society? arXiv:2602.14299.
+**Built by one person in sixteen months on a consumer GPU. Ready for a team.**
