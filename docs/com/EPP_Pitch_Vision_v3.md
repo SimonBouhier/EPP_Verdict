@@ -249,7 +249,9 @@ Before a single line of Python was written, EPP existed as something else — a 
 
 The path from there to here — 18 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta, five operational domains — was walked by one person with no technical background, a consumer GPU, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
 
-This is what one person built in sixteen months. The protocol is proven. The architecture scales. The question is no longer whether it works — the data answers that. The question is what becomes possible when a team carries it forward.
+This is what one person built during a hackathon sprint, on top of a prior personal exploration of LLM orchestration (the project formally begins on 2026-02-13 with commit `f12a922`, within the Colosseum sprint eligibility window). The protocol is proven within its declared window — the commit history is the record. The architecture scales. The question is no longer whether it works. The question is what becomes possible when a team carries it forward.
+
+> *Note (2026-04-24)*: this Vision v3 draft is preserved as a snapshot of the pre-restructure pitch material. The current public narrative lives at [`PITCH.md`](../../PITCH.md), [`WHITEPAPER.md`](../../WHITEPAPER.md), and [`README.md`](../../README.md) at the repo root.
 
 ---
 

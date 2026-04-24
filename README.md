@@ -209,4 +209,4 @@ EPP_Verdict/
 
 MIT. The codebase contains `COMMUNITY_DECISION_REQUIRED` markers at open governance points — treatment of CONTESTED consensus, scope of language neutrality (ADR-009), cluster slashing conditions. These decisions are deliberately left to the open-source community rather than the founding team.
 
-**Built by one person in sixteen months on a consumer GPU. Ready for a team.**
+**Built by one person during the Colosseum sprint window — formal project start at commit [`f12a922`](https://github.com/SimonBouhier/EPP_Verdict/commit/f12a922) (2026-02-13), forking the ESMM kernel from prior LLM-orchestration tinkering. Consumer GPU. No formal CS or math background. Ready for a team.**

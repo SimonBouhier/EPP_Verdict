@@ -119,7 +119,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 | On-chain taxonomy | V2 — 3 categories, Lean 4-ready | ADR-019 |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + FLYWHEEL | `services/esmm/pipeline.py` |
 
-**Built by one person in sixteen months. Consumer GPU. No VC funding. No team. One belief: making AI models disagree on purpose produces something more honest than making them agree.**
+**Built by one person during the Colosseum sprint window — formal project start at commit [`f12a922`](https://github.com/SimonBouhier/EPP_Verdict/commit/f12a922) (2026-02-13), forking the ESMM kernel from prior personal LLM-orchestration exploration. Consumer GPU. No VC funding. No team. No formal CS or math background — just a logical mind, scientific transparency, and a belief that making AI models disagree on purpose produces something more honest than making them agree.**
 
 ---
 
