@@ -1,10 +1,17 @@
-# docs/positioning/ — Internal strategic material
+# docs/positioning/ — Strategic reasoning behind the public docs
 
-These documents are **internal positioning material**, not public-facing
-documentation. They are tracked in git so that future context loads
-(new contributors, future Claude sessions, post-hackathon stakeholders)
-inherit the same strategic baseline that produced the current README,
-WHITEPAPER, and PITCH.
+These documents are the **working material** behind the project's
+public narrative (`README.md`, `PITCH.md`, `WHITEPAPER.md`). They are
+tracked in git, and therefore public on GitHub, because the project is
+an open-source solo build and the reasoning leading to the public
+claims is itself part of the record. A reader wondering *"how was the
+defensible thesis arrived at?"* or *"how does EPP position against
+Supra / UMA / Pyth?"* should be able to see the work.
+
+They are **not normative**. The README, PITCH, and WHITEPAPER are the
+official project narrative; these documents are the scaffolding that
+produced them. If this folder contradicts the public docs, the public
+docs win.
 
 | File | Purpose |
 |:-----|:--------|
@@ -16,10 +23,10 @@ WHITEPAPER, and PITCH.
 
 ## Conventions
 
-- **Public docs do not link here.** README, WHITEPAPER, and PITCH cite
-  primary sources (UNESCO, BIS, Caldarelli, jurisprudence, ADRs), not
-  internal strategy memos. The material here informs the public docs;
-  it does not appear *in* them as authority.
+- **Public docs cite primary sources, not this folder.** README,
+  WHITEPAPER, and PITCH cite UNESCO, BIS, Caldarelli, jurisprudence,
+  ADRs — not internal strategy memos. The material here informs the
+  public docs; it does not appear *in* them as authority.
 - **No marketing claims.** Honest assessment. The counterpoints file
   exists precisely to prevent EPP from over-claiming in the pitch.
 - **Update over fragment.** When new strategic material is produced,

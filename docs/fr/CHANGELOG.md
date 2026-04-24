@@ -4,6 +4,25 @@
 
 ---
 
+## [2026-04-23] Retrait expérience kappa_risk (Claw4S) + cohérence docs/positioning
+
+Nettoyage post-documentation : suppression de la branche expérimentale avortée (kappa_risk / Claw4S) et reframe du header `docs/positioning/README.md` pour cohérence avec sa visibilité publique sur GitHub.
+
+### Fichiers retirés (kappa_risk)
+
+- `demos/scenario_kappa_risk.py` + `demos/scenario_kappa_risk_claw.py` — scénarios kappa-Risk v1.1 (Anthropic API direct, 4 stances épistémiques × conditions alpha/beta × 3 répétitions). Utilisaient une pipeline hors-EPP, non-alignée avec le kernel ESMM.
+- `build_lyra_edges_nodes.py` — transformation corpus → graph edges pondérés avec Ollivier-Ricci simplifié, conditions alpha/beta hardcodées. Dédié exclusivement au pipeline kappa_risk.
+- `analyze_kappa_phase.py` + `run_kappa_topology_on_lyra.py` — downstream kappa topology + phase analysis. Déjà supprimés dans la working copy depuis sprint précédent, finalisés dans ce commit.
+- `demos/benchmark_runs/kappa_risk/` (11 artefacts : .jsonl, _meta.json, .md) — dossier jamais tracké git, nettoyé du disque local.
+
+**Distinction critique conservée** : `KappaCalculator` (courbure Ollivier-Ricci sur le graphe sémantique EPP, `database/graph_delta.py`) reste en place. Composant central du pipeline ESMM, indépendant de l'expérience kappa_risk abandonnée.
+
+### `docs/positioning/README.md` — reframing
+
+Le header initial *"internal positioning material, not public-facing"* était incohérent avec la réalité : le dossier est public sur GitHub via le commit `7d43845`. Reframing honnête : *"working material behind the public docs"*. Règle explicite ajoutée : **README/PITCH/WHITEPAPER sont la narrative officielle ; si contradiction avec le positioning, public wins.**
+
+---
+
 ## [2026-04-23] Dashboard UI (ui/), push 12 attestations devnet, déploiement Vercel
 
 Sprint hackathon Colosseum — création d'un dashboard React lisant les `demos/benchmark_runs/*.json` et le manifest on-chain, push de 12 attestations sur Solana devnet, déploiement public sur `epp-verdict.vercel.app`. Commits `5bd13e0`, `f5e58b8`, `afeca79`, `5b11f51`, `94da9da`, `0c2e9d6`.
