@@ -86,11 +86,58 @@ function stripLeadingH1(body) {
   return body.replace(/^#\s+.+?\r?\n\r?\n?/, '');
 }
 
+/**
+ * Rewrites internal markdown links from their source-tree paths to their
+ * Starlight URLs. Examples:
+ *   [Whitepaper](WHITEPAPER.md)                    → [Whitepaper](/whitepaper/)
+ *   [§scope](WHITEPAPER.md#liability--scope)       → [§scope](/whitepaper/#liability--scope)
+ *   [essay](docs/positioning/the_negative_space.md)→ [essay](/positioning/the-negative-space/)
+ *   [ADR-020](docs/adr/ADR-020.md)                 → [ADR-020](/adrs/adr-020/)
+ *   [ARCH](docs/ARCHITECTURE.md)                   → [ARCH](/architecture/)
+ *   [positioning](docs/positioning/)               → [positioning](/positioning/)
+ *   [README](README.md)                            → [README] on GitHub (no docs portal page)
+ *
+ * External links (http/https) and in-page anchors (starting with #) pass
+ * through untouched.
+ */
+function rewriteLinks(body) {
+  return (
+    body
+      // README.md → point back to GitHub (no README in the docs portal).
+      .replace(
+        /\]\(\.?\/?README\.md(#[^)]*)?\)/g,
+        '](https://github.com/SimonBouhier/EPP_Verdict#readme)',
+      )
+      // Root-level docs.
+      .replace(/\]\(\.?\/?WHITEPAPER\.md(#[^)]*)?\)/g, '](/whitepaper/$1)')
+      .replace(/\]\(\.?\/?PITCH\.md(#[^)]*)?\)/g, '](/pitch/$1)')
+      // docs/ subtree.
+      .replace(/\]\(\.?\/?docs\/ARCHITECTURE\.md(#[^)]*)?\)/g, '](/architecture/$1)')
+      .replace(/\]\(\.?\/?docs\/fr\/CHANGELOG\.md(#[^)]*)?\)/g, '](/changelog/$1)')
+      // positioning files (underscores → hyphens).
+      .replace(
+        /\]\(\.?\/?docs\/positioning\/([a-zA-Z0-9_-]+)\.md(#[^)]*)?\)/g,
+        (_m, slug, hash) =>
+          `](/positioning/${slug.toLowerCase().replace(/_/g, '-')}/${hash || ''})`,
+      )
+      // positioning README.md → section landing.
+      .replace(
+        /\]\(\.?\/?docs\/positioning\/(README\.md)?(#[^)]*)?\)/g,
+        '](/positioning/$2)',
+      )
+      // ADRs (lowercase slug, preserve any suffix like "-avenir" / "-différé").
+      .replace(
+        /\]\(\.?\/?docs\/adr\/(ADR-[\wàâéèêëîïôûùüÿñæœ-]+)\.md(#[^)]*)?\)/gi,
+        (_m, adr, hash) => `](/adrs/${adr.toLowerCase()}/${hash || ''})`,
+      )
+  );
+}
+
 async function copyOne(srcPath, destPath, fallbackTitle, { editUrl = true } = {}) {
   const raw = await readFile(srcPath, 'utf8');
   const title = deriveTitle(raw, fallbackTitle);
   const description = deriveDescription(raw);
-  const body = stripLeadingH1(raw);
+  const body = rewriteLinks(stripLeadingH1(raw));
   const content = makeFrontmatter({ title, description, editUrl: editUrl ? undefined : false }) + body;
   await mkdir(dirname(destPath), { recursive: true });
   await writeFile(destPath, content);

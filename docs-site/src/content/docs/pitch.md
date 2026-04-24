@@ -3,7 +3,7 @@ title: "EPP — One Protocol, Any Truth"
 description: "Blockchains can verify that a transaction happened. They cannot verify that a claim is true."
 ---
 > **Pitch document.** Three minutes, three acts, one claim. For the full
-> epistemological and architectural narrative see [`WHITEPAPER.md`](WHITEPAPER.md).
+> epistemological and architectural narrative see [`WHITEPAPER.md`](/whitepaper/).
 > For the live dashboard: [epp-verdict.vercel.app](https://epp-verdict.vercel.app).
 
 ---
@@ -149,7 +149,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 
 **Long-term vision:**
 - LiveBench on-chain — every attestation a benchmark data point with full provenance, a reference infrastructure for evaluating AI model performance in an adversarial, domain-specific setting that cannot be gamed because it was never curated in the first place
-- The graph that trains models *on disagreement* — see the concept essay [`docs/positioning/the_negative_space.md`](docs/positioning/the_negative_space.md)
+- The graph that trains models *on disagreement* — see the concept essay [`docs/positioning/the_negative_space.md`](/positioning/the-negative-space/)
 
 ---
 

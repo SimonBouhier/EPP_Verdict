@@ -7,11 +7,11 @@ description: "EPP outputs proofs of process, not verdicts on truth. Each attesta
 > **Verifiable AI Consensus on Solana.**
 >
 > This document is the long-form architectural and epistemological
-> narrative. For the shippable pitch see [`PITCH.md`](PITCH.md). For
-> practical install/run instructions see [`README.md`](README.md). For
+> narrative. For the shippable pitch see [`PITCH.md`](/pitch/). For
+> practical install/run instructions see [`README.md`](https://github.com/SimonBouhier/EPP_Verdict#readme). For
 > the internal strategic material (competitive landscape, counterpoint
 > responses, formal methods panorama, track positioning) see
-> [`docs/positioning/`](docs/positioning/).
+> [`docs/positioning/`](/positioning/).
 
 ---
 
@@ -296,7 +296,7 @@ Eleven theorems on the abstract epistemic protocol are mechanically proven in Le
 
 **The formal layer is honest about its own limitations.** It cannot prove that 0.85 is the *right* threshold. Only that the threshold is *enforced*. The rightness comes from the empirical layer — from thousands of attestations, from Brier scores against ground truth, from the evolutionary pressure of competing clusters. The formal and empirical layers verify each other without either being sufficient alone.
 
-**Why this matters — the landscape data.** Across the entire Colosseum hackathon corpus (5,400+ projects), only 3 touch formal verification — making it the rarest technical primitive in the ecosystem. Zero oracle protocols (Pyth, Switchboard, Chainlink) have published formal proofs of their aggregation logic. Zero AI inference pipelines have been formally verified anywhere. A formally verified epistemic oracle is genuinely novel. (See [`docs/positioning/formal_methods_landscape.md`](docs/positioning/formal_methods_landscape.md) for the full panorama.)
+**Why this matters — the landscape data.** Across the entire Colosseum hackathon corpus (5,400+ projects), only 3 touch formal verification — making it the rarest technical primitive in the ecosystem. Zero oracle protocols (Pyth, Switchboard, Chainlink) have published formal proofs of their aggregation logic. Zero AI inference pipelines have been formally verified anywhere. A formally verified epistemic oracle is genuinely novel. (See [`docs/positioning/formal_methods_landscape.md`](/positioning/formal-methods-landscape/) for the full panorama.)
 
 The gap between the Lean specification and the Python/Rust runtime is human-maintained and explicitly documented in ADR-020. Conformity checks for INV-1 and INV-2 are completed; INV-3 (PDA uniqueness), INV-5 (regression cut isolation), INV-7 (Brier proper scoring), and INV-8 (consensus convergence) remain on the roadmap.
 
@@ -348,7 +348,7 @@ Optional Slither integration provides a deterministic pre-analysis via the `Slit
 
 ## The Negative Space of Machine Knowledge
 
-> *The conceptual kernel of EPP. Extended essay at [`docs/positioning/the_negative_space.md`](docs/positioning/the_negative_space.md).*
+> *The conceptual kernel of EPP. Extended essay at [`docs/positioning/the_negative_space.md`](/positioning/the-negative-space/).*
 
 Everyone builds AI systems to produce answers. Better answers. Faster answers. More confident answers. EPP produces **disagreement** — not as a failure mode, but as the primary output.
 

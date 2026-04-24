@@ -43,6 +43,15 @@ export default function App() {
               <span aria-hidden="true">⛓</span>
               On-chain
             </NavLink>
+            <a
+              href="https://epp-verdict-docs.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Docs
+              <span aria-hidden="true" className="text-[10px]">↗</span>
+            </a>
           </nav>
         </div>
       </header>
