@@ -1,8 +1,33 @@
 ---
 title: "CHANGELOG.md — EPP_Verdict"
-description: "Nettoyage post-documentation : suppression de la branche expérimentale avortée (kappa_risk / Claw4S) et reframe du header docs/positioning/README.md pour cohérence avec sa visibilité publique sur G…"
+description: "Correction de cohérence avec les règles Colosseum (jugement sur la production + démarrage projet possible jusqu'à 2 mois avant le sprint). La formulation antérieure \"Built by one person in sixteen …"
 ---
 > Journal factuel des modifications. Format : date, titre court, 2-3 lignes de faits.
+
+---
+
+## [2026-04-24] Retrait revendication "sixteen months" + ancrage temporel commit `f12a922`
+
+Correction de cohérence avec les règles Colosseum (jugement sur la production + démarrage projet possible jusqu'à 2 mois avant le sprint). La formulation antérieure *"Built by one person in sixteen months"* mélangeait le timeline d'exploration personnelle des LLMs (causale, pas projet) avec l'historique formel d'EPP, créant une ambiguïté défavorable au regard du règlement. Reframing sur le commit de démarrage formel `f12a922` (2026-02-13) qui ouvre la séquence ESMM/Solana documentée par git.
+
+### Fichiers corrigés
+
+- `README.md:212` — closing line.
+- `PITCH.md:122` — closing line "Built by one person…".
+- `WHITEPAPER.md:442-446` — section *From Intuition to Infrastructure* refondue (3 paragraphes) : antériorité conceptuelle décrite comme "casual LLM-orchestration tinkering" sans codebase, point de départ formel ancré sur `f12a922`, walk explicitement nommé "hackathon sprint, on top of a prior personal exploration".
+- `docs-site/scripts/sync-docs.mjs` (writeIndexMdx) — landing portal réécrite cohérente.
+- `docs-site/src/content/docs/{pitch,whitepaper,index}.mdx` — re-synced via `node scripts/sync-docs.mjs`.
+- `docs/com/EPP_Pitch_Vision_v3.md:252` — draft historique également corrigé + note ajoutée pointant vers les docs root canoniques.
+
+### Substance préservée
+
+- L'antériorité conceptuelle est conservée (pas niée), mais clairement étiquetée comme exploration personnelle, pas projet codé.
+- Le caveat "no formal CS or math background" + "logical mind, scientific transparency" reste, alignant la voix narrative sur l'honnêteté méthodologique.
+- Le commit `f12a922` est cliquable dans toutes les occurrences (URL GitHub directe).
+
+### Audit
+
+`grep -rn "sixteen months\|16 months" --include="*.md" --include="*.mdx" --include="*.mjs"` retourne zéro occurrence dans les fichiers tracked. Les références restantes sont dans `.claude/worktrees/` (gitignored, non publiques).
 
 ---
 
