@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.astro/
+*.log
+.DS_Store
+.env
+.env.local
+
+# src/content/docs/ is committed: Vercel's monorepo "Root Directory"
+# mode does not grant access to sibling folders (../PITCH.md, etc.),
+# so the synced docs ship as a build input. Same workaround as ui/public/data/.
+# Locally, scripts/sync-docs.mjs refreshes them on npm run dev / build —
+# commit the result when source .md files change.

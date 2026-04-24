@@ -1,0 +1,61 @@
+---
+title: "EPP — Epistemic Proof Program"
+description: "Verifiable AI consensus on Solana. Multiple architecturally distinct LLMs deliberate under structured adversarial cycles; the result is a cryptographic attestation with methodology traceability."
+template: splash
+hero:
+  tagline: "The oracle that doesn't trust itself."
+  actions:
+    - text: Read the pitch (3 min)
+      link: /pitch/
+      icon: right-arrow
+      variant: primary
+    - text: Open the live dashboard ↗
+      link: https://epp-verdict.vercel.app
+      icon: external
+      variant: secondary
+    - text: See the code on GitHub ↗
+      link: https://github.com/SimonBouhier/EPP_Verdict
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## What this portal contains
+
+<CardGrid>
+  <LinkCard
+    title="Pitch (3 minutes)"
+    description="Three acts, three primitives nobody implements, the defensible thesis that survives the counterpoint stress-test."
+    href="/pitch/"
+  />
+  <LinkCard
+    title="Whitepaper"
+    description="The long-form architectural and epistemological narrative. ESMM deliberation, metrological frames, the flywheel, formal verification, why blockchain, cluster vision."
+    href="/whitepaper/"
+  />
+  <LinkCard
+    title="Architecture (living)"
+    description="Component-by-component map of the codebase. Updated whenever the structure changes."
+    href="/architecture/"
+  />
+  <LinkCard
+    title="ADRs"
+    description="20 Architecture Decision Records covering encoding, schema, consensus, flywheel, formal invariants, and open governance."
+    href="/adrs/adr-001/"
+  />
+</CardGrid>
+
+## How to read this
+
+> **⚠ Proofs of process, not verdicts on truth.** EPP produces cryptographic measurements of multi-LLM deliberation under specified metrological frames. These attestations record *what was deliberated, by whom, and how* — they are **not** legal verdicts, regulatory decisions, or substitutes for human or institutional adjudication. Per the [UNESCO Recommendation on the Ethics of AI](https://en.unesco.org/artificial-intelligence/ethics) (193 Member States, 2021), ultimate responsibility for any decision based on an AI output remains with the natural or legal persons consuming it. Full framing in the [Whitepaper — Liability & Scope](/whitepaper/#liability--scope).
+
+EPP is a **solo open-source build**, sixteen months in, MIT-licensed. The public narrative (Pitch, Whitepaper, Architecture) is the official project position. The [Positioning section](/positioning/) exposes the working material behind that narrative — competitive scans, counterpoint stress-tests, formal methods landscape, Colosseum track strategy, and the conceptual essay *The Negative Space of Machine Knowledge*. It's public because the reasoning leading to the public claims is itself part of the record.
+
+## Current state (verifiable)
+
+- **852 passing tests** · **20 ADRs** · **12 attestations live on Solana devnet**
+- Program ID `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166)
+- **11 formally verified Lean 4 theorems** (Encoding, TierBoundary, SourceAnchor, ClaimHash)
+- **+0.46 flywheel delta** demonstrated end-to-end (0.43 → 0.89 on the 2024 election claim)
+- Live dashboard at [epp-verdict.vercel.app](https://epp-verdict.vercel.app) — auto-redeploy on each `git push` to main

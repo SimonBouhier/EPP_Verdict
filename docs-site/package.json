@@ -1,0 +1,25 @@
+{
+  "name": "epp-docs",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public documentation portal for EPP — Astro + Starlight, deployed to Vercel.",
+  "scripts": {
+    "predev": "node scripts/sync-docs.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/sync-docs.mjs",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/starlight": "^0.38.4",
+    "astro": "^6.1.9",
+    "sharp": "^0.33.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
