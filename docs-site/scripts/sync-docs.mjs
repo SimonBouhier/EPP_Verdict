@@ -125,9 +125,11 @@ function rewriteLinks(body) {
         /\]\(\.?\/?docs\/positioning\/(README\.md)?(#[^)]*)?\)/g,
         '](/positioning/$2)',
       )
-      // ADRs (lowercase slug, preserve any suffix like "-avenir" / "-différé").
+      // ADRs (lowercase slug, preserve any English suffix like "-deferred" / "-future").
+      // Both French (docs/adr/) and English (docs/adr-en/) source paths are
+      // remapped to the same /adrs/<slug>/ portal route.
       .replace(
-        /\]\(\.?\/?docs\/adr\/(ADR-[\wàâéèêëîïôûùüÿñæœ-]+)\.md(#[^)]*)?\)/gi,
+        /\]\(\.?\/?docs\/adr(?:-en)?\/(ADR-[\wàâéèêëîïôûùüÿñæœ-]+)\.md(#[^)]*)?\)/gi,
         (_m, adr, hash) => `](/adrs/${adr.toLowerCase()}/${hash || ''})`,
       )
   );
@@ -233,8 +235,10 @@ async function main() {
     copied.push(...positioningResults);
   }
 
-  // ADRs — 20 files, flat. Sort numerically in sidebar via filename.
-  const adrSrc = join(REPO_ROOT, 'docs', 'adr');
+  // ADRs — public English versions live at docs/adr-en/ (FR originals at
+  // docs/adr/ stay private to the maintainer). 20 files, flat. Sort
+  // numerically in sidebar via filename.
+  const adrSrc = join(REPO_ROOT, 'docs', 'adr-en');
   const adrDest = join(DOCS_DIR, 'adrs');
   if (await pathExists(adrSrc)) {
     const adrResults = await copyDir(adrSrc, adrDest);
