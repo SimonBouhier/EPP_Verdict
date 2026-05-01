@@ -1,11 +1,11 @@
 ---
 title: "ARCHITECTURE.md — EPP_Verdict"
-description: "Dernière mise à jour : 2026-04-23"
+description: "Dernière mise à jour : 2026-05-01"
 ---
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-04-23
+**Dernière mise à jour** : 2026-05-01
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -239,7 +239,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 | ADR-017 | Réseau de Clusters Épistémiques — architecture multi-opérateurs | Proposé |
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
 | ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
-| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4 (11 théorèmes, 6 red tests, gap modèle↔code documenté) | Actif |
+| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4. Inventaire post-audit P1–P4 (cf. `docs/audit/`) : 5 théorèmes structurels (4 `iff` sur tiers + 1 corollaire) + 7 regression tests + 2 invariants au niveau du type (B5 fermé par `Option SourceAnchor`). Gap modèle↔code documenté. | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 
@@ -271,27 +271,37 @@ run_pipeline() [is_verify=True]
 
 **Attestation SELECT alignment (2026-04-11)** : les 4 méthodes de lecture (`get_attestation_by_hash`, `get_attestations_by_subject`, `get_attestations_by_question`, `get_attestation_history`) sont alignées sur 29 colonnes avec `consensus_meta` en dernière position (index 28). `_row_to_attestation_dict()` désérialise `consensus_meta` via `json.loads`. `get_latest_attestation()` utilise `ORDER BY timestamp` (corrigé depuis `created_at`).
 
-### Vérification formelle (Lean 4 — ADR-019, ADR-020)
+### Vérification formelle (Lean 4 — ADR-019, ADR-020 + audit P1–P4)
 
-Onze théorèmes formellement prouvés sur le protocole abstrait, quatre modules, six red tests de non-tautologie exercés par la CI. Projet Lake dédié sous `Formal/` (`lean-toolchain`, `lakefile.toml`, `lake-manifest.json`).
+Couche Lean 4 auditée ligne par ligne en quatre phases (P1 hygiène, P2 nettoyage tautologies, P3 correction structurelle, P4 alignement Python ↔ Lean). Rapports détaillés sous `docs/audit/SESSION_AUDIT_FORMAL_*`.
 
-| Fichier | Rôle | Théorèmes | État |
-|---------|------|-----------|------|
-| `Formal/Formal/Basic.lean` | Types de base : `EpistemicType`, `ConfidenceTier`, `Score`, `Attestation` (11 champs dont noyau canonique 4-uple) | — | ✅ Actif |
-| `Formal/Formal/Encoding.lean` | INV-1 : round-trip float ↔ u16 (ADR-001) | 4 | ✅ Prouvés |
-| `Formal/Formal/TierBoundary.lean` | INV-4 : `verified` implique score ≥ 8500 ∧ (models ≥ 3 ∨ anchor) (ADR-005) | 1 | ✅ Prouvé |
-| `Formal/Formal/SourceAnchor.lean` | INV-6 : attestation `deterministic` ⇒ `source_anchor` non-nul (ADR-012) | 2 | ✅ Prouvés |
-| `Formal/Formal/ClaimHash.lean` | INV-2 : identité du claim dépend uniquement de `(subject, predicate, object, frame)` ; timestamp/submitter indépendance — condition de possibilité ADR-017 | 3 | ✅ Prouvés |
-| `Formal/Formal/RedTests.lean` | 6 red tests (4 TierBoundary : 2 RED-TIER + 2 GREEN-TIER ; 2 ClaimHash : timestamp/submitter independence) | — | ✅ Exercés |
-| `Formal/Formal/Eval.lean` | Tests `#eval` interactifs | — | ✅ Actif |
-| `Formal/Main.lean` | Point d'entrée exécutable ; `import Formal` pour que `lake build` par défaut charge toute la lib (fix commit `20ab6f7`) | — | ✅ Actif |
-| `.github/workflows/lean_action_ci.yml` | CI `lake build` à chaque push — compile désormais les 18 jobs (avant fix : 4 jobs, lib invisible) | — | ✅ Actif |
+**Compte honnête post-audit** : **5 théorèmes structurels** (4 `iff` complets sur les tiers + 1 corollaire derived) + **7 regression tests** + **2 invariants au niveau du type** (typage strict `Option SourceAnchor` qui ferme le biais B5 « drapeau Bool qui peut mentir »). Total : **14 énoncés Lean compilés** (`lake build` retourne **16 jobs**).
 
-Protocole C6 double falsification appliqué à chaque invariant (TierBoundary, SourceAnchor, ClaimHash) : falsification temporaire → build échoue → restauration → build vert. Non-tautologie des garde-fous confirmée.
+| Fichier | Rôle | Énoncés | État |
+|---------|------|---------|------|
+| `Formal/Formal/Basic.lean` | Types de base : `EpistemicType`, `ConfidenceTier`, `Score`, `SourceAnchor` (non-construible avec hash vide — ajouté P3.A), `Attestation` (10 champs métier dont `source_anchor : Option SourceAnchor`) | — | ✅ Actif |
+| `Formal/Formal/TierBoundary.lean` | INV-4 : caractérisation `iff` complète des 4 tiers (`verified`/`validated`/`proposition`/`sandbox`) — ferme le biais B4 (asymétrie soundness/complétude) ; ancien théorème directionnel conservé en corollaire pour traçabilité | **5** structurels | ✅ Prouvés (P3.B) |
+| `Formal/Formal/ClaimHash.lean` | INV-2 : `claim_hash_purity` — regression test sur la projection `toClaimCore`. Doublons textuels (`claim_hash_timestamp_independent`, `claim_hash_submitter_independent`) supprimés en P1.2 (commentaire de traçabilité préservé). | **1** regression | ✅ Prouvé |
+| `Formal/Formal/SourceAnchor.lean` | INV-6 : `wellFormed` adapté à `Option.isSome` (P3.A) ; les deux théorèmes restent tautologiques *en preuve* mais l'invariant qu'ils expriment est désormais porté par le système de types Lean (B5 fermé par construction). | **2** type-level | ✅ Prouvés |
+| `Formal/Formal/RedTests.lean` | 6 regression tests : 4 tier red/green + 2 hash red (hypothèses fantômes B7 retirées en P2.6) | **6** regression | ✅ Exercés |
+| `Formal/Formal/Sanity.lean` | Tests `#eval` interactifs (renommé d'`Eval.lean` en P1) | — | ✅ Actif |
+| `Formal/Main.lean` | Point d'entrée exécutable ; `import Formal` charge toute la lib | — | ✅ Actif |
+| `.github/workflows/lean_action_ci.yml` | CI `lake build` à chaque push — 16 jobs après audit P1–P4 | — | ✅ Actif |
 
-Limites explicites documentées dans ADR-020 : les preuves portent sur le modèle Lean abstrait ; le lien modèle ↔ code Python/Rust est humain, vérifié par observation, pas mécaniquement garanti. Conformité vérifiée à la rédaction pour INV-1 et INV-2 (grep + lecture intégrale `compute_claim_hash`). Gap Rust (programme Anchor) non comblé — levée future possible via Aeneas/hax/Certora.
+**Suppressions de l'audit** :
+- `Formal/Basic.lean` (racine, orphelin résiduel `lake init`) — supprimé P1.
+- `Formal/Formal/Encoding.lean` — 4 énoncés tautologiques sans `Float` ni roundtrip réel (B1 + B3 *« mauvais étiquetage »*) supprimés P2 ; le bornage des scores reste garanti par la struct `Score` elle-même (`val ≤ 10000` au niveau du type).
+- `_RedTestVacuity.lean` — fichier RED temporaire P3.B (preuve observable du biais B4) supprimé après extension `iff`.
 
-Commits : `1d703fd` (init) ; `20ab6f7` (fix TierBoundary + câblage Main) ; `0fea8b3` (INV-2 ClaimHash + extension Attestation).
+**Pont Python ↔ Lean** :
+- 26 unitaires + property-based tests dans `tests/test_lean_conformance.py` et `tests/test_lean_conformance_property.py`. Run profond `HYPOTHESIS_MAX_EXAMPLES=10000` couvre ~160 000 inputs aléatoires sans contre-exemple.
+- **Alignement P4.2 (2026-05-01)** : `services/esmm/attestation.py::EpistemicAttestation.source_anchor` porte un `pattern=r"^[0-9a-f]{64}$"` Pydantic aligné sur le contrat Lean `SourceAnchor` (longueur 64, charset hex minuscule). Classe `TestInv6SourceAnchorContractEnforced` (5 tests) vérifie le rejet de hash invalides côté Python.
+
+**Méthodologie** : Protocole C6 double falsification (RED → GREEN → restauration) appliqué à chaque nouvel invariant. Toute hypothèse non consommée (B7) ou doublon textuel (cas `claim_hash_*_independent`) signalé et corrigé.
+
+**Limites assumées** (ADR-020 §5) : les preuves portent sur le modèle Lean abstrait ; le lien modèle ↔ code Python est testé empiriquement (suite conformance), le lien modèle ↔ code Rust (programme Anchor) reste non couvert. Levée future possible via Aeneas/hax/Certora ou via property-based testing croisé Python ↔ Lean (chantier P4.1, cf. `TECH_DEBT.md::TD-005`).
+
+Commits : `1d703fd` (init) ; `20ab6f7` (fix TierBoundary + câblage Main) ; `0fea8b3` (INV-2 ClaimHash) ; audit P1–P4 (2026-04-30 → 2026-05-01).
 
 ### Dashboard UI (`ui/`) — Sprint hackathon Colosseum (2026-04-23)
 

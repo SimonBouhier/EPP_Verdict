@@ -1,8 +1,60 @@
 ---
 title: "CHANGELOG.md — EPP_Verdict"
-description: "Correction de cohérence avec les règles Colosseum (jugement sur la production + démarrage projet possible jusqu'à 2 mois avant le sprint). La formulation antérieure \"Built by one person in sixteen …"
+description: "Ajout d'un pattern=r\"^[0-9a-f]{64}$\" au champ Pydantic EpistemicAttestation.source_anchor (services/esmm/attestation.py:89-100) pour aligner le runtime Python sur le contrat Lean SourceAnchor intro…"
 ---
 > Journal factuel des modifications. Format : date, titre court, 2-3 lignes de faits.
+
+---
+
+## [2026-05-01] Audit Lean P4.2 — alignement Python ↔ Lean sur le contrat `SourceAnchor`
+
+Ajout d'un `pattern=r"^[0-9a-f]{64}$"` au champ Pydantic `EpistemicAttestation.source_anchor` (`services/esmm/attestation.py:89-100`) pour aligner le runtime Python sur le contrat Lean `SourceAnchor` introduit en P3.A (longueur 64, charset hex minuscule). Ferme la divergence documentée §4.1 de `docs/audit/SESSION_AUDIT_FORMAL_P4.md`.
+
+### Sites de tests adaptés (4)
+- `tests/test_lean_conformance.py:273` — `"hex_anchor_1234"` → `"a" * 64`.
+- `tests/test_lean_conformance_property.py` — stratégie `text_field` (random 1-100) → nouvelle `hash_field = st.text(alphabet="0123456789abcdef", min_size=64, max_size=64)`.
+- `tests/test_lean_conformance_property.py::TestInv6SourceAnchorContract` → renommé `TestInv6SourceAnchorContractEnforced` ; 1 PASS + 2 `xfail strict` documentaires → 5 tests PASS strict (valid + 4 cas de rejet).
+- `tests/test_phase03_integration.py:345` — `"test_anchor"` → `"a" * 64`.
+
+### Validation
+`lake build` GREEN (16 jobs) inchangé. `pytest tests/` complet : **908 passed, 11 skipped, 0 failed** (vs 852 documenté avant audit P1–P4). Run profond `HYPOTHESIS_MAX_EXAMPLES=10000` : 16 property tests × ~10 000 inputs ≈ 160 000 cas couverts sans contre-exemple. Aucune modification du code Python pipeline (les hash en production sont calculés par `services/esmm/source_anchor_builder.py` via `hashlib.sha256(...).hexdigest()`).
+
+### Documents impactés
+- `services/esmm/attestation.py` (modification unique en code de production).
+- `tests/test_lean_conformance.py`, `tests/test_lean_conformance_property.py`, `tests/test_phase03_integration.py`.
+- `docs/audit/SESSION_AUDIT_FORMAL_P4.md` §13 (addendum d'alignement).
+- `README.md`, `PITCH.md`, `WHITEPAPER.md`, `docs/ARCHITECTURE.md`, `TECH_DEBT.md` (consolidation des compteurs et statut Lean).
+
+---
+
+## [2026-04-30] Audit Lean P1–P3 — couche `Formal/` revue ligne par ligne
+
+Audit indépendant suivant le protocole §7 de `docs/To_do_list/Formal_Review_EPP.md`, exécuté en quatre phases (P1 hygiène, P2 nettoyage tautologies, P3 correction structurelle). Validation finale : `lake clean && lake build` GREEN (**16 jobs**, vs 18 pré-audit), `pytest tests/test_lean_conformance.py -v` **26 passed**.
+
+### P1 (hygiène)
+- Suppression de `Formal/Basic.lean` (racine, orphelin résiduel `lake init`, jamais importé).
+- Suppression des doublons textuels `claim_hash_timestamp_independent` et `claim_hash_submitter_independent` (`Formal/Formal/ClaimHash.lean`) — strictement identiques au sens Lean (mêmes paramètres, conclusion, preuve), redondants avec `claim_hash_purity`.
+- Renommage `Formal/Formal/Eval.lean` → `Sanity.lean` (3 `#eval`, 0 théorème, hors périmètre formel).
+- Retrait des hypothèses fantômes B7 (`ht_differ`, `hs_differ`) des deux red hash tests dans `RedTests.lean`.
+- Reclassification `claim_hash_purity` en regression test sur la projection `toClaimCore` (NOTE GATEKEEPER ajoutée).
+
+### P2 (nettoyage tautologies)
+- Suppression de `Formal/Formal/Encoding.lean` (4 énoncés tautologiques B1+B2+B3 : titre annonçait "INV-1 — Encodage float↔u16" mais aucun `Float` n'apparaissait, juste un bornage trivial sur `Nat`). Le bornage des scores reste garanti par la struct `Score` elle-même (`val ≤ 10000` au niveau du type).
+
+### P3.A (refactor B5 — drapeau `Bool` → typage strict `Option`)
+- `Formal/Formal/Basic.lean` : nouveau type `SourceAnchor` non-construible avec hash vide (`h_nonempty : hash ≠ ""`). Champ `Attestation.source_anchor` : `Bool` (`source_anchor_nonzero`) → `Option SourceAnchor`. La non-vacuité du hash est désormais portée *par le système de types*, pas par un drapeau qui peut mentir.
+- `Formal/Formal/SourceAnchor.lean` : `wellFormed` adapté à `Option.isSome = true` ; les deux théorèmes (`deterministic_requires_anchor`, `deterministic_without_anchor_not_wellformed`) restent tautologiques *en preuve* mais l'invariant qu'ils expriment est désormais structurel (B5 fermé).
+- `Formal/Formal/RedTests.lean` : 4 occurrences `source_anchor_nonzero := san` → `source_anchor := san` ; paramètre `(san : Bool)` → `(san : Option SourceAnchor)`. Preuves `rfl` inchangées.
+
+### P3.B (extension `iff` sur les 4 tiers — ferme le biais B4)
+- `Formal/Formal/TierBoundary.lean` : 4 nouveaux théorèmes `iff` (`tier_verified_iff_conditions`, `tier_validated_iff_conditions`, `tier_proposition_iff_conditions`, `tier_sandbox_iff_conditions`) qui caractérisent **complètement** le comportement de `assignTier`. Une implémentation triviale qui ne retournerait jamais `verified` ne passe plus la spécification — elle doit *aussi* retourner `verified` quand les conditions sont remplies. L'ancien `tier_verified_implies_conditions` est conservé en corollaire (`(iff …).mp`) pour traçabilité historique.
+- Preuve observable du biais B4 par `_RedTestVacuity.lean` (théorème prouvant que la version directionnelle est vacuusement satisfaite par `assignTierTrivial = fun _ _ _ => sandbox`) ; fichier supprimé après extension `iff`.
+
+### Compte honnête post-audit
+**5 théorèmes structurels** (4 `iff` + 1 corollaire derived) + **7 regression tests** (1 `claim_hash_purity` + 4 tier red/green + 2 hash red) + **2 invariants au niveau du type** (`SourceAnchor.lean` rendus utiles par typage strict). Total 14 énoncés Lean compilés. Aucun ajout de dépendance mathlib.
+
+### Documents produits
+- `docs/audit/SESSION_AUDIT_FORMAL_P3.md`, `docs/audit/SESSION_AUDIT_FORMAL_P4.md`, `docs/research/RESEARCH_FORMAL_AUDIT.md`.
 
 ---
 

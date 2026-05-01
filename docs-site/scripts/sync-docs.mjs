@@ -307,9 +307,9 @@ EPP is a **solo open-source build**, formally started at commit [\`f12a922\`](ht
 
 ## Current state (verifiable)
 
-- **852 passing tests** · **20 ADRs** · **12 attestations live on Solana devnet**
+- **908 passing tests** · **20 ADRs** · **12 attestations live on Solana devnet**
 - Program ID \`9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD\` (devnet, deployed at slot 450099166)
-- **11 formally verified Lean 4 theorems** (Encoding, TierBoundary, SourceAnchor, ClaimHash)
+- **5 structural Lean 4 theorems** (4 \`iff\` characterising the four confidence tiers + 1 corollary) + 7 regression tests + 2 type-level invariants — see audit P1–P4 under [\`docs/audit/\`](https://github.com/SimonBouhier/EPP_Verdict/tree/main/docs/audit)
 - **+0.46 flywheel delta** demonstrated end-to-end (0.43 → 0.89 on the 2024 election claim)
 - Live dashboard at [epp-verdict.vercel.app](https://epp-verdict.vercel.app) — auto-redeploy on each \`git push\` to main
 `;
