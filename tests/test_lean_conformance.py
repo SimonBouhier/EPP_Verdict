@@ -5,14 +5,20 @@ Cette suite vérifie que le code runtime Python respecte les règles
 formellement prouvées dans Formal/. Les preuves Lean spécifient le
 protocole ; ces tests vérifient que l'implémentation s'y conforme.
 
-Invariants couverts :
-  - INV-1 : encodage float↔u16 (bridge.py)
+Invariants couverts (tests unitaires sur cas spécifiques) :
+  - U16 round-trip : encodage float↔u16 (bridge.py) — voir TestPyU16RoundTrip
   - INV-2 : claim hash purity (attestation.py::compute_claim_hash)
   - INV-4 : tier boundary (attestation.py::derive_confidence_tier)
   - INV-6 : deterministic ⇒ source_anchor non-nul (guards crystallize)
 
+Le complément property-based (10 000+ inputs aléatoires) vit dans
+`tests/test_lean_conformance_property.py` (P4.1, 2026-04-30).
+
 Notes de conformité (voir ADR-020 §5) :
-  - INV-1 : conformité stricte. Tests exhaustifs.
+  - U16 round-trip : conformité stricte côté Python. Pas d'homologue
+    Lean actuel — `Encoding.lean` a été supprimé en P2 (4 tautologies
+    sans modélisation de Float). Les tests Python restent utiles comme
+    garde-fou runtime sur les conversions de score.
   - INV-2 : Python applique `.lower().strip()` — propriété plus FORTE
             qu'INV-2 Lean. Les tests vérifient la propriété Lean + la
             normalisation Python. Pas de divergence de sécurité.
@@ -27,7 +33,12 @@ Notes de conformité (voir ADR-020 §5) :
 
 Voir ADR-020 §4 pour le protocole de double falsification.
 """
+import sys
+from pathlib import Path
+
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from services.solana.bridge import float_to_u16, u16_to_float, SCORE_SCALE
 from services.esmm.attestation import (
@@ -66,11 +77,20 @@ def _make_sig():
 
 
 # ═══════════════════════════════════════════════════════════════
-# INV-1 — Encoding float ↔ u16 (Formal/Encoding.lean)
+# U16 round-trip — conversion float ↔ u16 (bridge.py)
+#
+# Note (P4.1, 2026-04-30) : cette classe testait précédemment INV-1
+# Lean ; mais `Formal/Formal/Encoding.lean` a été supprimé en P2 (4
+# tautologies sans modélisation de Float). La classe est conservée
+# pour sa valeur de garde-fou runtime sur les conversions de score
+# utilisées partout (consensus_score, signature 5D), mais ne prétend
+# plus tester un invariant Lean — d'où le renommage de TestInv1Encoding
+# en TestPyU16RoundTrip. Le fichier n'a pas d'homologue Lean actuel.
 # ═══════════════════════════════════════════════════════════════
 
-class TestInv1Encoding:
-    """INV-1 : les conversions float ↔ u16 préservent les bornes [0, 1]."""
+class TestPyU16RoundTrip:
+    """Round-trip Python u16 ↔ float : préserve les bornes [0, 1]
+    avec tolérance 1e-4. Pas d'homologue Lean (cf. note P4.1)."""
 
     def test_float_to_u16_bounds_lower(self):
         assert float_to_u16(0.0) == 0
@@ -243,21 +263,26 @@ class TestInv6DeterministicAnchorCrystallizeGuard:
             )
 
     def test_crystallize_accepts_deterministic_method_with_meta(self):
-        """Côté passant : source_anchor_meta fourni → attestation cristallisée."""
+        """Côté passant : source_anchor_meta fourni → attestation cristallisée.
+
+        Note (P4.2 alignement, 2026-05-01) : `source_anchor` doit désormais
+        être un SHA-256 hex 64 chars (pattern Pydantic aligné sur Lean P4.2).
+        Hash de test : `sha256(b"P4.2 alignment fixture").hexdigest()`."""
+        valid_hash = "a" * 64  # 64 chars hex minuscules — conforme au pattern Lean P4.2
         att = crystallize(
             subject="s", predicate="p", object_="o",
             consensus_score=0.9,
             model_votes=_make_votes(3, 3),
             signature_5d=_make_sig(),
             epistemic_type="deterministic",
-            source_anchor="hex_anchor_1234",
+            source_anchor=valid_hash,
             consensus_meta={
                 "methodology": {"consensus_method": "deterministic_source_v1"},
                 "source_anchor_meta": {"source_id": "wikidata", "query": "Q1"},
             },
         )
         assert att.epistemic_type == "deterministic"
-        assert att.source_anchor == "hex_anchor_1234"
+        assert att.source_anchor == valid_hash
 
 
 class TestInv6DeterministicAnchorStrict:

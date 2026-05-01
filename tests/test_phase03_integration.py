@@ -337,12 +337,16 @@ class TestCrystallizationPipeline:
 
     def test_all_confidence_tiers(self):
         """Attestations correctly derive all confidence tiers."""
+        # NB (P4.2 alignement, 2026-05-01) : `source_anchor` doit être un
+        # SHA-256 hex 64 chars conforme au pattern Pydantic
+        # `^[0-9a-f]{64}$` aligné sur Lean P4.2.
+        _VALID_HASH_64 = "a" * 64
         test_cases = [
             # (consensus, n_models, arch_families, source_anchor, expected_tier)
             (0.2, 1, 1, None, "sandbox"),
             (0.5, 2, 1, None, "proposition"),
             (0.75, 3, 2, None, "validated"),
-            (0.95, 3, 2, "test_anchor", "verified"),
+            (0.95, 3, 2, _VALID_HASH_64, "verified"),
         ]
 
         for consensus, n_models, arch_families, anchor, expected_tier in test_cases:

@@ -44,7 +44,16 @@ def claimHash (a : Attestation) : String :=
 
 /-- INV-2 — Claim Hash Purity.
     Deux attestations au noyau canonique identique ont le même hash,
-    peu importe leur timestamp, submitter, ou décision épistémique. -/
+    peu importe leur timestamp, submitter, ou décision épistémique.
+
+    NOTE GATEKEEPER (2026-04-30) : ce théorème est un regression test sur
+    la définition de `toClaimCore`. Si quelqu'un modifiait la projection
+    canonique pour y inclure un champ supplémentaire (timestamp,
+    submitter, etc.), les 4 hypothèses ne suffiraient plus à conclure
+    et la preuve casserait. Sa valeur n'est pas une garantie universelle
+    sur SHA-256 (le vrai hash est en Python/Rust) mais bien la
+    protection contre une mutation accidentelle de la projection
+    canonique côté Lean. -/
 theorem claim_hash_purity (a₁ a₂ : Attestation)
     (hs : a₁.subject = a₂.subject)
     (hp : a₁.predicate = a₂.predicate)
@@ -54,23 +63,18 @@ theorem claim_hash_purity (a₁ a₂ : Attestation)
   unfold claimHash toClaimCore claimHashCore
   rw [hs, hp, ho, hf]
 
-/-- Corollaire : deux attestations qui ne diffèrent QUE sur le timestamp
-    ont le même hash. Cross-cluster : deux opérateurs émettant le même
-    claim à des moments différents produisent des attestations
-    comparables. -/
-theorem claim_hash_timestamp_independent
-    (a₁ a₂ : Attestation)
-    (hcore : toClaimCore a₁ = toClaimCore a₂) :
-    claimHash a₁ = claimHash a₂ := by
-  unfold claimHash
-  rw [hcore]
-
-/-- Corollaire : deux attestations qui ne diffèrent QUE sur le submitter
-    ont le même hash. Cross-cluster : deux clusters émettent le même
-    claim_hash pour le même claim. -/
-theorem claim_hash_submitter_independent
-    (a₁ a₂ : Attestation)
-    (hcore : toClaimCore a₁ = toClaimCore a₂) :
-    claimHash a₁ = claimHash a₂ := by
-  unfold claimHash
-  rw [hcore]
+-- ═══════════════════════════════════════════════════════════════
+-- Théorèmes supprimés le 2026-04-30 (audit P1.2) :
+--   - claim_hash_timestamp_independent
+--   - claim_hash_submitter_independent
+--
+-- Justification : ces deux théorèmes avaient une hypothèse
+-- `hcore : toClaimCore a₁ = toClaimCore a₂` qui les rendait strictement
+-- équivalents l'un à l'autre (mêmes paramètres, même conclusion, même
+-- preuve `unfold claimHash; rw [hcore]`) et redondants avec
+-- `claim_hash_purity` (qui couvre déjà la propriété au bon niveau
+-- d'abstraction via les 4 hypothèses canoniques). Les RedTests
+-- `red_hash_1_timestamp_independence` et `red_hash_2_submitter_independence`
+-- (RedTests.lean) sont les regression tests adéquats pour ces invariants
+-- spécifiques.
+-- ═══════════════════════════════════════════════════════════════

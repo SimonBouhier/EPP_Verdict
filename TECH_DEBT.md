@@ -4,7 +4,7 @@ This file centralizes deliberate, conscious technical debts taken during
 the Colosseum sprint. Each item is a compromise, not a bug. Each item has
 a planned resolution.
 
-Last updated: 2026-04-26
+Last updated: 2026-05-01
 
 ---
 
@@ -77,26 +77,23 @@ the 4 existing adapters (`flywheel_v2_baseline`, `scenario_6_1_*`,
 
 ## TD-003 — Test count drift between live and documentation
 
-**Status:** active, slated W4
+**Status:** resolved
 **Since:** noticed 2026-04-26 audit
+**Resolved:** 2026-05-01 (consolidation sweep with audit P1–P4 docs update)
 
 ### What
-- Local `pytest tests/ -q`: **892 passed, 11 skipped**.
-- README badge, PITCH "What Exists Today", `docs-site/...index.mdx:57`:
-  all show **852**.
+- Local `pytest tests/ -q` (post-audit P1–P4): **908 passed, 11 skipped**.
+- README badge, PITCH "What Exists Today", WHITEPAPER closing line all
+  aligned to 908 in the same sweep.
 
-### Why this is debt
-The drift is positive (more green tests than advertised) but it is a
-drift. A reviewer running `pytest` will see the discrepancy.
+### Resolution applied (2026-05-01)
+Single sweep across `README.md`, `PITCH.md`, `WHITEPAPER.md`. Verified
+count: `python -m pytest tests/ --tb=short -q` → `908 passed, 11 skipped,
+1 warning`. The lone warning (`invalid escape sequence '\ '` in
+`tests/test_phase4_runtime_fixes.py`) is pre-existing and unrelated.
 
-### Why it was accepted
-Sprint ergonomics: chasing the count weekly creates noise. Decided
-2026-04-26 to consolidate one rigorous count update in W4 with all
-other consolidations.
-
-### Planned resolution
-W4: single sweep across README, PITCH, WHITEPAPER, `docs-site/`,
-re-run pytest, lock the count at the verified value, push.
+`docs-site/` not re-synced as part of this resolution — sync via
+`node docs-site/scripts/sync-docs.mjs` is a separate maintenance task.
 
 ---
 
@@ -121,3 +118,70 @@ hash itself, defeating the purpose.
 ### Planned resolution
 None. Document in the Colosseum submission form if a "git author
 discrepancy" question is asked.
+
+---
+
+## TD-005 — Lean spec ↔ Python/Rust drift not mechanically guarded
+
+**Status:** active, prioritised next (audit P4.1 prereq)
+**Since:** documented 2026-04-30 (audit P3 closure) ; reaffirmed
+2026-05-01 (audit P4.2 closure)
+
+### What
+The `Formal/` Lean 4 spec proves invariants on an abstract model of the
+protocol (`EpistemicType`, `ConfidenceTier`, `Score`, `SourceAnchor`,
+`Attestation`). The runtime systems live in Python (`services/esmm/`,
+`services/solana/bridge.py`) and Rust (`programs/epp/`). The link between
+the Lean model and the runtime code is **human-maintained**, observed
+by a conformance test suite (`tests/test_lean_conformance.py`,
+`tests/test_lean_conformance_property.py` — 26 unit tests + 16 property
+tests with up to 10 000 inputs each), but **not mechanically guaranteed**.
+
+ADR-020 §5 documents this gap explicitly. Audit P4 proved 5 structural
+theorems (4 `iff` on tiers + 1 corollary) and aligned Python ↔ Lean on
+the `SourceAnchor` contract (P4.2: `pattern=r"^[0-9a-f]{64}$"`), but
+did not close the structural gap — only narrowed it.
+
+### Why this is debt
+- A future modification to `services/esmm/attestation.py::compute_claim_hash`
+  could silently diverge from the Lean `claimHash` definition. The
+  property test would catch most cases (5 INV-2 properties × 10 000
+  inputs), but coverage is empirical, not formal.
+- The Rust gap is wider still — `programs/epp/src/lib.rs` has no
+  conformance harness against the Lean spec at all. Anchor instructions
+  enforce `epistemic_type <= 2` at the byte level (ADR-019) but not the
+  full inter-field invariants (e.g. `epistemic_type=1 ⇒ source_anchor ≠ [0; 32]`).
+- A LLM agent or human contributor working on either side can break
+  the alignment without the build catching it.
+
+### Why it was accepted
+- Mechanical extraction Rust → Lean (Aeneas, hax) is not production-ready
+  in April 2026.
+- Certora support for Anchor 0.32 is not stable.
+- The empirical conformance suite is honest and observable: when a
+  divergence appears, it tends to surface as a failing test (cf. P4.2
+  alignment, where the suite immediately exposed the 4 sites where
+  Python had been more permissive than Lean).
+
+### Planned resolution
+
+**P4.1 (recommended next chantier — see `docs/audit/SESSION_AUDIT_FORMAL_P4.md` §8.1)** :
+property-based testing croisé Python ↔ Lean. Implementation sketch:
+
+1. Reimplement `assignTier` and `compute_claim_hash` in Python as `lean_oracle_*`
+   functions that mirror the Lean spec exactly.
+2. Use Hypothesis to generate 10 000 random `(score, models, has_anchor)`
+   triplets and `(s, p, o, f, timestamp, submitter)` tuples.
+3. Assert per-input equality between the production function and the
+   oracle. Any divergence is a hard failure in CI.
+
+Estimated cost: 2-3 days. Highest leverage of all post-audit P4 chantiers
+because it converts an *affirmation* of fidelity into an *empirical
+guarantee* over a large sample.
+
+**Beyond P4.1** :
+- Strengthen the Rust ↔ Lean link when Aeneas/hax mature, or via
+  Certora when Anchor 0.32 support is stable.
+- Add INV-7 (Brier proper scoring, binary case) — see
+  `docs/research/RESEARCH_B_lean4_inv7_brier.md`. Estimated 12-19h
+  for a 6th structural theorem.

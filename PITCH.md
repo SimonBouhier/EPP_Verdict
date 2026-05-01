@@ -106,7 +106,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 | Metric | Value | Proof |
 |:-------|:------|:------|
 | Live dashboard | `https://epp-verdict.vercel.app` | Vercel production, auto-redeploy on push |
-| Test suite | **852 passed**, 10 skipped, 0 failed | `pytest tests/ -q` |
+| Test suite | **908 passed**, 11 skipped, 0 failed | `pytest tests/ -q` |
 | Architecture decisions | **20 ADRs** | `docs/adr/ADR-*.md` |
 | On-chain attestations | **12 pushed** to devnet | `data/devnet_pushed.json` + Solana Explorer |
 | Solana program | Live on devnet | `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD`, deployed slot 450099166 |
@@ -115,7 +115,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 | Metrological frames | 7 predefined + custom | `services/solana/metrological_frame.py` |
 | Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) | `demos/benchmark_runs/flywheel_v2_*.json` |
 | Epistemic cache | < 1 ms on cache hit | ADR-013 |
-| Formal verification | Lean 4 — **11 theorems proven**, 6 red tests | `Formal/` (ADR-020) |
+| Formal verification | Lean 4 — **5 structural theorems** + 7 regression tests + 2 type-level invariants (audit P1–P4) | `Formal/` (ADR-020 + [`docs/audit/`](docs/audit/)) |
 | On-chain taxonomy | V2 — 3 categories, Lean 4-ready | ADR-019 |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + FLYWHEEL | `services/esmm/pipeline.py` |
 
@@ -153,7 +153,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 
 ## The Pitch in One Paragraph
 
-EPP is a protocol that turns any verifiable question into a cryptographic attestation on Solana. Multiple AI models deliberate, authoritative sources anchor, and the result — a 5-dimensional epistemic signature — is stored on-chain for anyone to verify. The same kernel handles sanctions screening, carbon credit validation, election verification, and smart contract auditing without modification. What changes between domains is an adapter and a frame, not the protocol. **Today, live and verifiable: 852 tests, 20 ADRs, 12 attestations on Solana devnet, a +0.46 flywheel delta, a Lean 4-ready on-chain taxonomy, and a public dashboard at [epp-verdict.vercel.app](https://epp-verdict.vercel.app).** Built by one person. Ready for a team.
+EPP is a protocol that turns any verifiable question into a cryptographic attestation on Solana. Multiple AI models deliberate, authoritative sources anchor, and the result — a 5-dimensional epistemic signature — is stored on-chain for anyone to verify. The same kernel handles sanctions screening, carbon credit validation, election verification, and smart contract auditing without modification. What changes between domains is an adapter and a frame, not the protocol. **Today, live and verifiable: 908 tests, 20 ADRs, 12 attestations on Solana devnet, a +0.46 flywheel delta, a Lean 4-ready on-chain taxonomy, and a public dashboard at [epp-verdict.vercel.app](https://epp-verdict.vercel.app).** Built by one person. Ready for a team.
 
 ---
 

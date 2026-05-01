@@ -88,7 +88,13 @@ class EpistemicAttestation(BaseModel):
     )
     source_anchor: Optional[str] = Field(
         default=None,
-        description="Hash de source vérifiable externe (brise la circularité)"
+        pattern=r"^[0-9a-f]{64}$",
+        description=(
+            "Hash de source vérifiable externe (brise la circularité). "
+            "Aligné sur Lean P4.2 (Formal/Formal/Basic.lean::SourceAnchor) : "
+            "SHA-256 hexadécimal minuscule de longueur exacte 64 caractères. "
+            "Le pattern Pydantic enforce ce contrat au niveau du type."
+        ),
     )
     run_id: Optional[int] = Field(
         default=None,

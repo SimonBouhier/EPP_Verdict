@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-852%20passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-908%20passed-brightgreen)](tests/)
 [![ADRs](https://img.shields.io/badge/ADRs-20-blue)](docs/adr/)
 [![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://epp-verdict.vercel.app/onchain)
 [![Dashboard](https://img.shields.io/badge/dashboard-live-06b6d4)](https://epp-verdict.vercel.app)
@@ -122,7 +122,7 @@ cd ui && npm install && npm run dev
 ### Tests
 
 ```bash
-pytest tests/ -v                              # Full suite (852 tests)
+pytest tests/ -v                              # Full suite (908 tests)
 pytest tests/test_adr018_flywheel.py -v       # Flywheel
 pytest tests/test_adr014_audit_runner.py -v   # Smart contract audit
 pytest tests/test_adr020_*.py -v              # Lean 4 conformance
@@ -142,7 +142,7 @@ EPP_Verdict/
 │   └── audit/            # Smart contract audit kernel (ADR-014)
 ├── programs/epp/         # Anchor/Rust on-chain program (submit_attestation, state, errors)
 ├── database/             # ISpaceDB (async SQLite, WAL, ~100 methods)
-├── Formal/               # Lean 4 formal verification (11 theorems, 6 red tests, ADR-020)
+├── Formal/               # Lean 4 formal verification (5 structural theorems + 7 regression tests + 2 type-level invariants — audit P1–P4, ADR-020)
 ├── cli/epp_cli.py        # CLI surface (ask, query, frame, audit, verify-rwa)
 ├── scripts/
 │   └── push_to_devnet.py # Curated batch push to Solana devnet
@@ -156,7 +156,7 @@ EPP_Verdict/
 │   ├── ARCHITECTURE.md   # Living structural document
 │   ├── positioning/      # Internal strategic material (NOT public vitrine)
 │   └── fr/CHANGELOG.md   # Chronological journal
-└── tests/                # 852 tests — RED-GREEN-FIX strict protocol
+└── tests/                # 908 tests — RED-GREEN-FIX strict protocol
 ```
 
 **Full component-by-component map** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -167,7 +167,7 @@ EPP_Verdict/
 
 | Metric | Value |
 |:-------|:------|
-| Tests | **852 passed**, 10 skipped, 0 failed |
+| Tests | **908 passed**, 11 skipped, 0 failed |
 | Architecture decisions | **20 ADRs** |
 | AI models tested | 6 (Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b) |
 | Deterministic sources | 7 integrated |
@@ -175,7 +175,7 @@ EPP_Verdict/
 | Solana program | `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166) |
 | On-chain attestations | **12** pushed ([data/devnet_pushed.json](data/devnet_pushed.json)) |
 | Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) |
-| Formal verification | Lean 4 — **11 theorems proven**, 6 red tests (ADR-020) |
+| Formal verification | Lean 4 — **5 structural theorems** (4 tier `iff` + 1 corollary) + **7 regression tests** + **2 type-level invariants** (B5 closed by `Option SourceAnchor` strict typing) — see ADR-020 + audit P1–P4 in [`docs/audit/`](docs/audit/) |
 
 ---
 
