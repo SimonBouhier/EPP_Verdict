@@ -1,11 +1,23 @@
 ---
-title: "ADR-020: Dual-Trust Architecture — Lean 4 formal invariants"
-description: "Status: Active (v1 — closing the first Lean session)"
+title: "ADR-020: Formal Specification Layer — Lean 4 invariants for the on-chain attestation contract"
+description: "Status: Active (v1 — closing the first Lean session) ; scope clarified 2026-05-02"
 ---
 **Date**: 2026-04-17
-**Status**: Active (v1 — closing the first Lean session)
+**Status**: Active (v1 — closing the first Lean session) ; scope clarified 2026-05-02
 **Dependencies**: ADR-001 (float↔u16 encoding), ADR-005 (multi-criteria tiers), ADR-006 (deterministic claim hash), ADR-012 (deterministic bifurcation), ADR-017 (cluster network), ADR-019 (on-chain Enum V2)
 **Axioms invoked**: 3 (regression-cut transparency), 4 (local computation, on-chain proof)
+
+> **Scope clarification — 2026-05-02.** The current public framing —
+> "Formal Specification Layer" — supersedes the earlier "Dual-Trust"
+> wording kept in the body of this ADR for historical accuracy.
+> The formal layer documents the on-chain attestation contract; the
+> empirical layer measures AI calibration. The bridge between the two
+> is human-maintained, not mechanical: see WHITEPAPER §"Formal
+> Specification Layer (ADR-020)" for current framing, and
+> `TECH_DEBT.md::TD-005` for the planned mechanical Python ↔ Lean
+> conformance bridge. This note does not amend the decisions taken
+> on 2026-04-17; it documents how those decisions were re-framed once
+> the modesty of the actual deliverable was assessed.
 
 ---
 
@@ -39,7 +51,7 @@ This discovery gives strength to what follows: the requirements of this ADR are 
 
 ---
 
-## 2. Decision — Dual-Trust Architecture
+## 2. Decision — Formal Specification Layer (originally framed as "Dual-Trust", see scope clarification above)
 
 ### 2.1 — Two complementary layers of trust
 
@@ -208,9 +220,9 @@ This limitation is accepted and documented. It will be lifted when:
 - Certora adds stable Anchor 0.32 support, **or**
 - The concerned invariants are manually ported to `require!` with on-chain RED test (as done for Enum V2 in ADR-019).
 
-### 5.5 — Conformance tests: the second pillar of Dual-Trust
+### 5.5 — Conformance tests: the empirical bridge between specification and runtime
 
-The Dual-Trust architecture (§2.1) described two layers: empirical (runtime) and mathematical (Lean). The 2026-04-18 session formalized the **observable link** between the two, via the `tests/test_lean_conformance.py` suite: 26 tests that exercise the Python code against the rules proven in Lean.
+The architecture (§2.1) describes two layers: empirical (runtime) and the formal specification (Lean). The 2026-04-18 session formalized the **observable link** between the two, via the `tests/test_lean_conformance.py` suite: 26 tests that exercise the Python code against the rules specified in Lean.
 
 These tests are not a mechanical extraction (Rust↔Lean remains beyond 2026 tools), but an **observable guardrail**: if the runtime code drifts from a proven rule, the corresponding test fails in CI.
 

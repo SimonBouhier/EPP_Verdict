@@ -1,235 +1,195 @@
 # The Negative Space of Machine Knowledge
 
 > Conceptual essay on EPP as a measurement of the *negative* of knowledge —
-> the topology of disagreement. Source material for the philosophical
-> sections of WHITEPAPER.md.
+> the topology of disagreement.
 >
-> *Originally drafted in the sprint working dir. Migrated 2026-04-23.*
+> Source material for the philosophical sections of WHITEPAPER.md.
+> Originally drafted in the sprint working dir, migrated 2026-04-23,
+> condensed and re-framed 2026-05-02 (away from earlier "dual-trust"
+> wording — see WHITEPAPER §"Formal Specification Layer (ADR-020)" for
+> current framing).
 
-## What we built wrong (and why it matters)
+## The output is the disagreement
 
-Everyone builds AI systems to produce answers. Better answers. Faster
-answers. More confident answers.
+Conventional AI systems optimize for convergent answers. EPP measures the
+opposite: *how* a heterogeneous panel of models disagrees on a given
+claim, in what shape, and whether the disagreement collapses or persists
+under external evidence injection.
 
-We built a system that produces *disagreement*.
+When three models return 0.9, 0.4, and 0.7 on the same claim, the standard
+reading is *the system is uncertain, get a better model*. The reading
+proposed here: the system has just produced a measurement that no single
+model could — the *shape* of the spread (which architectures diverge,
+on which domains, by how much, and how the spread responds to deterministic
+data) is itself information.
 
-Not as a failure mode. As the primary output.
+MMLU and similar benchmarks measure where models get an answer right.
+EPP measures where models break differently.
 
-When three models look at the same claim and return 0.9, 0.4, and 0.7,
-the conventional reading is: the system is uncertain, we need a better
-model. Our reading is: the system just told you something no single model
-could. The *shape* of that disagreement — which architectures diverge,
-on which domains, by how much, and whether external data collapses or
-preserves the spread — is a measurement of epistemic difficulty that
-exists nowhere else in the world.
+## The graph stores topology, not facts
 
-No benchmark captures this. MMLU measures what models get right.
-We measure *where models break differently*.
+Every attestation carries a consensus score and a 5-dimensional signature
+(agreement, semantic consistency, centrality, stability, relation
+diversity). The score is the surface; the signature is what matters.
 
----
+A claim with high agreement *and* high stability is uninformative — it
+tells you the sky is blue. A claim with high agreement but low stability
+flags fragility: the models agree today, perhaps not tomorrow. A claim
+with high centrality but low semantic consistency flags structural
+ambiguity: the concept matters but the models cannot agree on what it
+means.
 
-## The graph is not a knowledge base
-
-Stop thinking about the graph as a store of facts. It is not.
-
-Every attestation in the graph carries a score between 0 and 1. But the
-score is not the point. The score is the shadow. The substance is in the
-five-dimensional signature underneath — agreement, semantic consistency,
-centrality, stability, relation diversity — and in the pattern those
-dimensions form across claims, across models, across time.
-
-A claim where all five dimensions are high and all models agree is
-boring. It tells you the sky is blue. A claim where agreement is high
-but stability is low tells you something fragile — the models agree
-today but might not tomorrow. A claim where centrality is high but
-semantic consistency is low tells you something structurally ambiguous —
-the concept matters but the models can't agree on what it means.
-
-These patterns are not noise. They are the *topology* of machine
-epistemology. And topology is invariant under transformation — it
-survives model changes, prompt changes, language changes. It is the
-thing that remains when everything else shifts.
-
-The graph stores this topology. Not as metadata. As its primary
-structure.
-
----
+These patterns are the topology of machine epistemology. Topology is
+invariant under transformation: it survives model swaps, prompt changes,
+language changes. The graph stores this invariant structure as its
+primary object — not as metadata.
 
 ## The negative is the signal
 
-In photography, the negative is not the absence of the image. It is
-the image, inverted. It contains exactly the same information as the
-print, but in a form that reveals what the eye skips over — the shadows,
-the grain, the boundaries where light meets dark.
-
-The disagreement between models is the negative of knowledge.
+In photography, the negative is not an absence; it is the inverse of the
+image, carrying the same information in a form that reveals what the
+positive obscures. The disagreement between models works similarly.
 
 When Mistral says "supported" and DeepSeek says "contested" on the same
-claim, the *fact* about the claim is ambiguous. But the *fact* about the
-models is precise: their training data, their architecture, their
-attention patterns produce divergent representations of this specific
-claim. That divergence is reproducible. Measurable. Anchored on-chain.
+claim, the *fact about the claim* is ambiguous. The *fact about the
+models* is precise: their training data, attention patterns, and decoding
+heuristics produce divergent representations of this specific claim. The
+divergence is reproducible, measurable, and anchored on-chain.
 
-And it carries information that neither model's answer carries alone:
-the information that *this claim is hard in a specific way*.
+It carries information that neither model's verdict carries alone: that
+*this claim is hard in a specific way*. Different claim categories
+produce characteristic divergence signatures:
 
-A normative claim ("pineapple on pizza is delicious") produces a
-specific divergence pattern — high variance, low stability, the models
-wander. An empirical claim with a post-cutoff answer ("Trump won in
-2024") produces a different pattern — high variance that *collapses*
-when external data is injected. A structural claim about code ("this
-function has a reentrancy vulnerability") produces yet another pattern —
-small models discriminate, large reasoning models over-contest.
+- Normative claims (matters of taste): high variance, low stability, no
+  collapse under external data — the models wander.
+- Empirical claims past the training cutoff: high variance pre-injection,
+  collapse post-injection — the flywheel-sensitive signature.
+- Code vulnerability claims: small models discriminate, larger reasoning
+  models over-contest uniformly — the cross-family signature.
 
-These are not anecdotes. They are *signatures*. And a system that
-accumulates enough of them begins to see something that no individual
-model can see: the shape of the boundary between what machines can
-know and what they cannot.
+These are signatures, not anecdotes. Accumulated at scale, they trace the
+boundary between what machines can know and what they cannot.
 
----
+## The flywheel measures distance, not corrects errors
 
-## The flywheel is not about correction
+The flywheel demo shows a score going from 0.43 to 0.89 on the claim
+"Donald Trump won the 2024 US election" once Wikidata is injected as
+context. That looks like error correction. It is not — at least, not
+primarily.
 
-The flywheel demo shows a score going from 0.43 to 0.89. That looks
-like error correction. It is not.
+A model trained before the election cannot know who won; it produces a
+low score under deliberation. Wikidata then provides the verified answer;
+the score jumps. Any RAG system performs the correction step. EPP's
+distinct contribution is to anchor *the delta* on-chain: a +0.46 jump
+under controlled conditions, with the specific models, the specific
+external query, and the specific moment in time cryptographically
+recorded.
 
-What actually happens: a model trained before the 2024 election cannot
-know who won. It produces a low score. Then Wikidata — a deterministic
-source — provides the answer. The score jumps.
+That delta is a measurement of model obsolescence on a specific claim,
+permanently observable. Accumulate ten thousand such measurements across
+seven domains and six model architectures and the result is a calibrated
+map of where AI knowledge ends — domain by domain, model by model — that
+exists nowhere else and refreshes with each new attestation.
 
-The conventional reading: the system corrected the model's ignorance.
-Good, but boring. Any RAG system does this.
+The flywheel does not produce better answers. It produces better
+*measurements of the gap between answer and reality*.
 
-Our reading: the system measured the *distance between model knowledge
-and ground truth* for this specific claim, under controlled conditions,
-with a cryptographic anchor that proves the measurement happened. The
-delta (+0.46) is not a correction. It is a *measurement of model
-obsolescence on this claim*. And that measurement is now permanently
-on-chain, linked to the specific models, the specific Wikidata query,
-the specific moment in time.
+## Clusters multiply the signal
 
-Accumulate ten thousand of these measurements across seven domains and
-six model architectures and you have something that does not exist
-anywhere: a **calibrated map of where AI knowledge ends**, domain by
-domain, model by model, updated with every new attestation.
+A single EPP cluster with three models produces interesting intra-cluster
+disagreement. A network of clusters with different models, different
+deterministic sources, and different metrological frames produces a
+qualitatively different object: inter-cluster topology.
 
-That is what the flywheel produces. Not better answers. Better
-*measurements of the gap between answers and reality*.
+Two clusters attesting the same claim with different scores expose more
+than uncertainty. If Cluster A (Mistral + Llama + OFAC) scores a sanctions
+claim at 0.92 and Cluster B (GPT-4 + Gemma + OpenSanctions) scores it at
+0.88, the small delta and strong convergence point to a robust empirical
+fact. If Cluster A scores a geopolitical prediction at 0.7 and Cluster B
+at 0.3, the structural divergence flags a real epistemic boundary.
 
----
-
-## Why clusters change everything
-
-One EPP node with three models produces interesting disagreements.
-Ten nodes with different models, different sources, different
-metrological frames produce something qualitatively different.
-
-Each cluster has its own graph. Its own topology of disagreement.
-When two clusters attest the same claim with different scores, the
-conventional reading is: they disagree, we need arbitration.
-
-Our reading: their *disagreement has a shape*. If Cluster A (Mistral +
-Llama + OFAC) scores a sanctions claim at 0.92 and Cluster B (GPT-4 +
-Gemma + OpenSanctions) scores it at 0.88, the delta is small and the
-convergence is strong — this is probably true. If Cluster A scores a
-geopolitical prediction at 0.7 and Cluster B scores it at 0.3, the
-delta is large and the divergence is structural — this claim exposes a
-real epistemic boundary.
-
-The graph of graphs — the inter-cluster topology — is where exponential
-value lives. Because each cluster brings not just different answers but
-different *failure modes*. And the intersection of different failure
-modes is the closest thing we can get to objectivity without pretending
+The graph of graphs — the inter-cluster topology — is where the value
+compounds, because each cluster contributes not just different answers
+but different *failure modes*. The intersection of distinct failure modes
+is the closest approximation to objectivity available without pretending
 any single system has it.
 
----
+## A model that learns the negative
 
-## The model that trains on the negative
+Consider a model trained not on the attestations themselves but on the
+*structure of the graph*. Its training objects are not pairs like
+*("Solana TPS exceeds 3000", 0.85)* but characterizations like
+*("claim about blockchain performance metric", {divergence pattern: low
+across 7B models, high between 7B and reasoning families, collapses with
+deterministic injection, stable across languages, unstable across prompt
+variations})*.
 
-Imagine a model trained not on the attestations but on the *structure
-of the graph itself*.
+Such a model would not learn facts. It would learn the meta-structure of
+epistemic difficulty: a normative claim *will* produce high-variance
+low-stability patterns; a post-cutoff empirical claim *will* be flywheel-
+sensitive in a particular way; a code vulnerability claim *will*
+discriminate across model families along predictable lines. It would be
+a model of how models fail.
 
-Not: "Solana TPS exceeds 3000" → 0.85.
-But: "Claims about blockchain performance metrics" → {divergence
-pattern: low across 7B models, high between 7B and reasoning models,
-collapses with deterministic source injection, stable across languages,
-unstable across prompt variations}.
+Because the training data is built on divergence rather than consensus,
+it resists the gaming pressures that decay conventional benchmarks: there
+is no majority vote to overfit and no canonical answer to memorize. Only
+the topology of disagreement, which is invariant under prompt variation
+and model substitution.
 
-This model would not learn facts. It would learn the *meta-structure of
-epistemic difficulty*. It would know, before any evaluation, that a
-normative claim will produce high-variance low-stability patterns, that
-a post-cutoff empirical claim will produce a specific flywheel-sensitive
-signature, that a code vulnerability claim will discriminate between
-model families in a predictable way.
+This dataset is not built today. Most of the field optimizes for
+convergence. EPP measures the divergence — the negative space, the
+shadow that reveals the shape of the light.
 
-It would be, in effect, a model of how models fail.
+## What the formal layer guarantees, and what it does not
 
-And because the graph is built on divergence — not on consensus — the
-training data is structurally pure. There is no majority vote to
-overfit on. There is no "correct answer" to memorize. There is only
-the topology of disagreement, which is invariant under the kind of
-gaming and contamination that plague conventional benchmarks.
+The Lean 4 specification layer (ADR-020) characterizes the on-chain
+attestation contract: the confidence tier assignment is fully specified
+by four `iff` theorems and two cumulativity theorems; the source-anchor
+type is non-constructible with an empty hash; the claim hash projection
+touches only the canonical four-tuple. These guarantees are conditional:
+*if* the runtime code mirrors the Lean specification, then the
+attestation has the documented properties.
 
-This is the dataset that no one is building. Because everyone is
-building systems that converge. We built the system that measures
-the divergence. The negative space. The shadow that reveals the shape
-of the light.
+The bridge between the Lean specification and the Python runtime is
+human-maintained and observed empirically, not mechanically extracted.
+A conformance suite (`tests/test_lean_conformance.py` and its property-
+based companion) exercises the runtime against the specification on
+26 unit cases and up to 10 000 randomized inputs per property — but the
+suite is a guardrail, not a proof of equivalence.
 
----
+The formal layer does not replace the empirical layer; it bounds it. It
+guarantees that a `verified` tier means a precise condition, that the
+same claim hash from two operators identifies the same canonical claim,
+and that a deterministic attestation cannot be constructed without a
+real source hash. Whether the underlying claim is *true* is a question
+the empirical layer answers — Brier scores against ground truth, cross-
+family divergence, source-anchor concordance — and which remains
+permanently fallible.
 
-## What the formal layer actually means
-
-Lean 4 proves that the protocol is internally coherent. It proves that
-if you define "verified" as requiring score ≥ 0.85 and ≥ 3 models,
-then the system cannot produce a "verified" attestation without those
-conditions. This is a tautology — a very precise, mechanically checked,
-useful tautology.
-
-But the tautology is the *frame*. It is the guarantee that the chaos
-inside the frame is measured honestly. Without it, the divergence
-measurements could be corrupted by a bug in the tier assignment, or
-by a drift in the scoring mechanism, or by a subtle change in the
-encoding that nobody noticed.
-
-Lean is not the oracle. Lean is the *ruler*. It guarantees that when
-the system says "0.85", it means the same thing today as it will in
-five years, on a different machine, with different models. The
-measurements are meaningful because the ruler does not bend.
-
-And the ruler is honest about its own limitations: it cannot prove
-that 0.85 is the *right* threshold. Only that the threshold is
-*enforced*. The rightness comes from the empirical layer — from
-thousands of attestations, from Brier scores against ground truth,
-from the evolutionary pressure of competing clusters. The formal
-layer and the empirical layer verify each other without either being
-sufficient alone.
-
-This is the Dual-Trust: mathematical certainty about the mechanism,
-empirical calibration of the parameters, and the honest admission
-that neither is complete without the other.
-
----
+The mechanical Python ↔ Lean bridge is a planned post-hackathon
+deliverable (`TECH_DEBT.md::TD-005`).
 
 ## The thesis in one breath
 
-We do not know how to build a system that knows truth. Nobody does.
-Gödel proved that formal systems cannot ground their own axioms.
-Hume proved that induction cannot justify itself. Every epistemic
-framework, from Bayesian inference to scientific peer review, rests
-on assumptions it cannot verify.
+No system can ground its own claims to truth. Gödel's incompleteness
+forecloses formal systems anchoring their own axioms; Hume's induction
+problem forecloses experience justifying its own generalizations. Every
+epistemic framework — Bayesian inference, scientific peer review,
+constitutional adjudication — rests on assumptions it cannot itself
+verify.
 
-What we can build — what EPP is — is a system that measures the
+What can be built — what EPP is — is a system that measures the
 *structure of disagreement* between heterogeneous agents, under
-controlled conditions, with formal guarantees on the measurement
+controlled conditions, with formal specifications on the measurement
 apparatus, anchored on verifiable external data, with a track record
-that improves with every new claim evaluated.
+that improves as more claims are evaluated.
 
-Not truth. The shape of the space around truth.
+Not truth. The shape of the space around it.
 
-Not certainty. The rate of convergence toward certainty.
+Not certainty. The rate of convergence toward it.
 
-Not knowledge. The negative of knowledge — the precise, reproducible,
-formally constrained map of where knowledge fails, and how, and for
-whom.
+Not knowledge. The negative of knowledge — a precise, reproducible,
+formally specified map of where knowledge fails, how, and for whom.
 
-And that map, it turns out, is more useful than any answer.
+That map turns out to be more useful than the answers it shadows.

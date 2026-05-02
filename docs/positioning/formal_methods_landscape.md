@@ -93,6 +93,6 @@ The formal verification landscape creates a unique opportunity:
 - **The rarity signal is powerful.** 3 out of 5,400 hackathon projects. Excalead won Honorable Mention just for combining AI with formal verification. A formally verified epistemic oracle would be genuinely novel across the entire crypto ecosystem.
 
 The data says: nobody has done it for oracles, nobody has done it for
-AI consensus, and the tooling exists. EPP's ADR-020 dual-trust
-architecture (Lean 4 + empirical Brier calibration) is the path
-forward.
+AI consensus, and the tooling exists. EPP's ADR-020 formal specification
+layer (Lean 4 invariants on the on-chain attestation contract, with
+empirical Brier calibration on the AI side) is the path forward.

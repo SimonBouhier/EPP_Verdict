@@ -239,7 +239,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 | ADR-017 | Réseau de Clusters Épistémiques — architecture multi-opérateurs | Proposé |
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
 | ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
-| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4. Inventaire post-audit P1–P4 + correction P1 cumulativity (cf. `docs/audit/`) : 6 théorèmes substantifs (4 `iff` sur tiers + 2 cumulativité de stratification) + 7 regression tests + 2 contrats au niveau du type (B5 fermé par `Option SourceAnchor`) + 1 corollaire historique + 1 lemme définitionnel. Gap modèle↔code documenté. | Actif |
+| ADR-020 | Couche de spécification formelle Lean 4 (anciennement « Architecture Dual-Trust » — périmètre clarifié 2026-05-02). Inventaire post-audit P1–P4 + correction P1 cumulativity (cf. `docs/audit/`) : 6 théorèmes substantifs (4 `iff` sur tiers + 2 cumulativité de stratification) + 7 regression tests + 2 contrats au niveau du type (B5 fermé par `Option SourceAnchor`) + 1 corollaire historique + 1 lemme définitionnel. Pont spec/code humain non-mécanisé (TD-005). | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 

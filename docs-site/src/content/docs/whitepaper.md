@@ -279,7 +279,7 @@ The **5-dimensional epistemic signature** captures: agreement (how strongly the 
 
 ---
 
-## Formal Verification — Dual-Trust Architecture (ADR-020)
+## Formal Specification Layer (ADR-020)
 
 EPP maintains a strict architectural boundary between the probabilistic nature of AI deliberations (empirical, measurable, inherently fallible) and the deterministic nature of the cryptographic infrastructure that anchors them. These are two distinct, non-substitutable layers of trust: one empirical (the AI verdict), one mathematical (the protocol itself).
 
@@ -307,7 +307,7 @@ Honesty about scope is part of the architecture, not a footnote:
 
 ### What the formal layer is for
 
-The formal layer's job is to make the chaos inside the frame *measurable honestly*, not to eliminate it. It guarantees that a `verified` tier published on Solana satisfies a precisely characterized condition (cumulativity included), that two independent operators producing the same claim hash queried the same canonical four-tuple, and that a `deterministic` attestation cannot be constructed without a non-empty source hash. None of this proves the underlying claim is *true*. Truth comes from the empirical layer — Brier scores against ground truth, divergence between architecturally heterogeneous models, source-anchor concordance — and remains permanently fallible. The formal and empirical layers verify each other without either being sufficient alone.
+The formal layer's job is to make the chaos inside the frame *measurable honestly*, not to eliminate it. It guarantees that a `verified` tier published on Solana satisfies a precisely characterized condition (cumulativity included), that two independent operators producing the same claim hash queried the same canonical four-tuple, and that a `deterministic` attestation cannot be constructed without a non-empty source hash. None of this proves the underlying claim is *true*. Truth comes from the empirical layer — Brier scores against ground truth, divergence between architecturally heterogeneous models, source-anchor concordance — and remains permanently fallible. The formal layer documents the on-chain contract; the empirical layer measures AI calibration. The conformance suite (`tests/test_lean_conformance.py`, 26 unit tests + 16 property-based tests) bridges the two empirically. The bridge is human-maintained; mechanical Python ↔ Lean conformance is a post-hackathon objective (see `TECH_DEBT.md::TD-005`).
 
 ### Implementation
 
@@ -442,7 +442,7 @@ These decisions should be made by the open-source community, not by the founding
 - Additional deterministic source integrations (EU CFSP endpoint migration, OpenSanctions cloud).
 
 **Medium-term (months):**
-- Remaining formal invariants: INV-3 (PDA uniqueness), INV-5 (regression cut isolation), INV-7 (Brier proper scoring), INV-8 (consensus convergence) — Lean 4 proofs per ADR-020 roadmap.
+- Formal specifications for additional on-chain contracts (INV-3 PDA uniqueness, INV-5 regression cut isolation, INV-7 Brier proper scoring, INV-8 consensus convergence) — Lean 4 specs pending the mechanical Python ↔ Lean conformance bridge before "proof" status is claimed.
 - Epistemic Cluster network (ADR-017) — second node operating independently, inter-cluster contestation as first-order signal.
 - Community governance of `COMMUNITY_DECISION_REQUIRED` markers.
 
