@@ -1,4 +1,10 @@
 """Tests Phase 1.3 -- Client Solana."""
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import asyncio
 import pytest
@@ -176,3 +182,15 @@ class TestClientLocalnet:
     async def test_two_submitters_same_claim(self):
         """Deux submitters differents peuvent attester le meme claim."""
         pass
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

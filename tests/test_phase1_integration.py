@@ -4,6 +4,12 @@ Tests d'integration Phase 1 -- flux complet.
 Requiert : solana-test-validator ou devnet configure.
 Ces tests sont skipped si EPP_TEST_INTEGRATION n'est pas set.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 import os
@@ -227,3 +233,15 @@ class TestEndToEnd:
         Le flux complet ne peut pas etre execute contre mainnet.
         """
         pass
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

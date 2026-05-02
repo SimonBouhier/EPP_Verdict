@@ -5,6 +5,12 @@ Tests:
   1. float↔u16 roundtrip (ADR-001): tolerance 1e-4
   2. compute_claim_hash determinism (ADR-006): 64 hex chars, deterministic
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 from hypothesis import given, settings
@@ -83,3 +89,15 @@ class TestConfidenceTierRoundtrip:
         for u8_val, tier in CONFIDENCE_TIER_REVERSE.items():
             assert tier in self.CANONICAL_TIERS, f"Reverse maps {u8_val} to non-canonical '{tier}'"
 
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

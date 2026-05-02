@@ -3,6 +3,12 @@ Tests for MultiProviderRotator.
 
 Tests rotation, batch processing, VRAM management, and provider orchestration.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 from services.esmm.multi_provider_rotator import (
@@ -290,3 +296,15 @@ class TestMultiProviderRotator:
         # Each provider should have been called twice
         assert mock_a.generate_count == 2
         assert mock_b.generate_count == 2
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

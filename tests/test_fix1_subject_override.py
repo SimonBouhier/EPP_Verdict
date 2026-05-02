@@ -6,6 +6,12 @@ au lieu du prompt ASSESS_AUDIT brut (800+ chars).
 
 Ces tests DOIVENT échouer avant l'implémentation.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 
 def test_esmm_run_config_accepts_subject_override():
@@ -56,3 +62,15 @@ def test_pipeline_uses_subject_override_in_crystallization():
     assert "subject_override" in source, (
         "pipeline.py doit référencer 'subject_override' (Fix 1 Lot A)"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

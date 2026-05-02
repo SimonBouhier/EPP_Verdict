@@ -5,6 +5,12 @@ RED-GREEN-FIX: tests written BEFORE implementation, must fail first.
 
 Directive source: docs/To_do_list/DIRECTIVE_CLAIM_VERIFY.md
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import pytest
 
 
@@ -991,3 +997,15 @@ def test_claim_type_majority_tie_is_deterministic():
     type_votes = {"empirical": 2, "definitional": 2}
     consensus_type = max(type_votes, key=type_votes.get)
     assert consensus_type in {"empirical", "definitional"}
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

@@ -7,6 +7,12 @@ Section 2: Hash stability CI gate (ADR-006 — no existing hash may change)
 Reference hashes computed from consensus_engine.py _RELATION_GROUPS snapshot
 (2026-02-20, pre-refactoring). These are immutable constants.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import hashlib
 import re
 
@@ -221,3 +227,15 @@ def test_hash_stability_created_by():
     # New hash (invented_by → CREATED_BY, different from legacy passthrough)
     expected = hashlib.sha256("bitcoin|CREATED_BY|satoshi".encode()).hexdigest()[:16]
     assert h == expected
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

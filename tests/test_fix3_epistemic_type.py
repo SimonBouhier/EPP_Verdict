@@ -3,6 +3,12 @@ Fix 3 — RED tests : epistemic_type="security_audit" pour les attestations d'au
 
 Ces tests DOIVENT échouer avant l'implémentation.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 from pydantic import ValidationError
@@ -59,3 +65,15 @@ def test_foundational_is_not_used_for_audit():
         "Le PipelineConfig par défaut ne doit pas être 'security_audit'"
     )
     assert config_audit.default_epistemic_type == "security_audit"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

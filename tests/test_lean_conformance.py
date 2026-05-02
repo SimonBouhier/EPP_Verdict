@@ -309,3 +309,15 @@ class TestInv6DeterministicAnchorStrict:
                 source_anchor=None,
                 consensus_meta=None,
             )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/test_lean_conformance.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

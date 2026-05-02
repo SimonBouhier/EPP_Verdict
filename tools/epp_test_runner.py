@@ -38,6 +38,18 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 
+# Force UTF-8 sur stdout/stderr pour que les emojis (✅ ❌ ⚠️ ⏭️ ❓) ne
+# crashent pas le print final sous Windows cp1252. Best-effort : si stdout
+# est redirigé ou ne supporte pas reconfigure, on tombe en silence — les
+# artefacts fichier restent écrits via Path.write_text en UTF-8 explicite,
+# indépendamment de l'encoding console.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+except (AttributeError, ValueError, OSError):
+    pass
+
+
 # =========================
 # Helpers
 # =========================

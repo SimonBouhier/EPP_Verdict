@@ -9,6 +9,12 @@ Vérifie que :
 3. Section manquante → defaults.
 4. Override partiel (seuls les champs présents sont modifiés).
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import pytest
 
 from services.esmm.fingerprint_config import FingerprintConfig, load_fingerprint_config
@@ -111,3 +117,15 @@ def test_load_fingerprint_config_partial_override(monkeypatch):
     assert cfg.matching_algorithm == "jaro_winkler"
     assert cfg.min_unique_terms == 5
     assert cfg.inject_micro_graphs is False
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

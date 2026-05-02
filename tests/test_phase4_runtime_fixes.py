@@ -2,6 +2,12 @@
 Tests Phase 4.1/4.2 — RED-GREEN-FIX pour crashs runtime et corruptions silencieuses.
 Chaque test doit ÉCHOUER avant la correction, PASSER après.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import json
 import os
@@ -295,3 +301,15 @@ class TestSingletonPollution:
         # Après reset, get_config recharge
         config2 = get_config()
         assert config2 is not None
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

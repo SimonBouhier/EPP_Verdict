@@ -14,6 +14,12 @@ Expected state after GREEN:
     bytes are always valid UTF-8 when decoded.
 """
 from __future__ import annotations
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 
@@ -81,3 +87,15 @@ class TestS1_003_ShortPaths:
     def test_shorter_than_max_is_zero_padded(self) -> None:
         b = string_to_fixed_bytes("hi", 8)
         assert b == b"hi\x00\x00\x00\x00\x00\x00"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

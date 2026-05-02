@@ -10,6 +10,12 @@ Scenarios:
 - B: Fort contexte (tension basse, coherence haute)
 - C: Cas extrêmes (edge cases)
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 from services.consciousness.metrics import ConsciousnessMetrics, ConsciousnessMonitor
@@ -287,5 +293,16 @@ class TestMetricsEdgeCases:
         print(f"  Stability: {result.stability_score:.3f}")
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/test_ab_metrics.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# (Remplace l'ancien `pytest.main([__file__, "-v", "-s"])` ; on ajoute `-s`
+# en extra_args pour préserver le comportement précédent qui désactive la
+# capture stdout — utile pour les prints diagnostic de ce fichier.)
+# ─────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__, extra_args=["-s"]))

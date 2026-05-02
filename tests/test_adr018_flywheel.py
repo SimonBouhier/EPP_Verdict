@@ -11,6 +11,12 @@ Bugs couverts :
 - B3 : threading anchor_context sur 4 frontières
 - P3 (Opus) : garde VERIFY-only, pas d'injection en mode EXPLORE
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -288,3 +294,15 @@ async def test_flywheel_skipped_in_explore_mode():
     assert is_verify is False
     assert anchors == []
     mock_db.get_attestations_by_question.assert_not_called()
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

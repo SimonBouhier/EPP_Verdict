@@ -3,6 +3,12 @@ Tests for provider layer: ABC contracts, dataclasses, OllamaProvider, Registry.
 
 No real network calls - all HTTP interactions are mocked.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 import pytest
 import httpx
@@ -623,3 +629,15 @@ class TestArchitectureFamilyCoherence:
         provider = OllamaProvider(base_url="http://localhost:11434", model="custom-model:latest")
         meta = provider.get_metadata()
         assert meta.architecture_family == "unknown"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

@@ -13,6 +13,12 @@ Expected state after GREEN:
     with contextual messages pointing to the offending key/section.
 """
 from __future__ import annotations
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 
 from pathlib import Path
 
@@ -107,3 +113,15 @@ class TestS6_001_ValidationRejectsUnknownSubKey:
             "pools_size_typo" in str(excinfo.value)
             or "extra" in str(excinfo.value).lower()
         ), f"Expected error for unknown sub-key, got: {excinfo.value!r}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

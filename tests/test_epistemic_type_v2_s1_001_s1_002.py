@@ -21,7 +21,12 @@ Expected state after GREEN (HYBRIDE V2):
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from services.solana.bridge import (
     EPISTEMIC_TYPE_MAP,
@@ -175,3 +180,15 @@ class TestV2RoundTripExplicit:
         u8 = EPISTEMIC_TYPE_MAP["security_audit"]
         assert u8 == 2
         assert EPISTEMIC_TYPE_REVERSE[u8] == "assessed"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

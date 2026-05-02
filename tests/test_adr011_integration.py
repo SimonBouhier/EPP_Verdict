@@ -4,6 +4,12 @@ orchestrator reconcile(), pipeline consensus_meta.
 
 RED-GREEN-FIX : ces tests DOIVENT échouer avant implémentation.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import pytest
 from dataclasses import fields
 
@@ -196,3 +202,15 @@ def test_accumulation_normalizes_objects_to_dicts():
             assert isinstance(t, dict), f"Expected dict, got {type(t)}"
     assert orch._raw_model_triplets["m1"][0]["subject"] == "solana"
     assert orch._raw_model_triplets["m1"][0]["confidence"] == 0.9
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

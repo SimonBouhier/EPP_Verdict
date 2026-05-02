@@ -1,4 +1,10 @@
 """ADR-014 Lot 1 — Tests: Contract Slicer."""
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 from pathlib import Path
 
 import pytest
@@ -87,3 +93,15 @@ def test_withdraw_has_state_writes():
     withdraw_units = [u for u in result.units if u.unit_name == "withdraw"]
     assert len(withdraw_units) == 1
     assert len(withdraw_units[0].state_writes) >= 1
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

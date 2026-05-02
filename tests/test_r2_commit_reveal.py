@@ -9,6 +9,12 @@ Vérifie que :
 3. attestation.commit_reveal_verified est mis à jour
 4. Schema : table commit_reveal existe, colonne commit_reveal_verified existe
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import hashlib
 import pytest
 
@@ -154,3 +160,15 @@ class TestCommitRevealSchema:
         assert "commit_reveal_verified" in columns, (
             f"commit_reveal_verified not found in attestations columns: {columns}"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

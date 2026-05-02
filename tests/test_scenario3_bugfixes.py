@@ -3,6 +3,12 @@ Tests for bugs F1, F2, F3 discovered via scenario_3_enrichment.py.
 
 RED-GREEN-FIX: tests written BEFORE fixes, must fail first.
 """
+# AUTO — permet `python tests/test_X.py` direct (cf. tests/_runner.py).
+import sys as _epp_sys
+import pathlib as _epp_pathlib
+_epp_sys.path.insert(0, str(_epp_pathlib.Path(__file__).resolve().parent.parent))
+del _epp_sys, _epp_pathlib
+
 import pytest
 
 
@@ -366,3 +372,15 @@ async def test_relation_normalizer_uses_provided_db(tmp_path):
     )
 
     rn_mod._normalizer_instance = None
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))

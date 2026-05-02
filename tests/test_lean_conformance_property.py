@@ -463,3 +463,15 @@ class TestInv6SourceAnchorContractEnforced:
         with pytest.raises(Exception):
             # 63 chars 'a' + 'g' (hors [0-9a-f])
             self._build_attestation("a" * 63 + "g")
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Single-file runner — `python tests/<this_file>.py`
+# Génère un rapport horodaté dans `test_results/individual/`.
+# Cf. `tests/_runner.py::run_self` pour le détail.
+# ─────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import sys, pathlib
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from tests._runner import run_self
+    raise SystemExit(run_self(__file__))
