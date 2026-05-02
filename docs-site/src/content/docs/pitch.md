@@ -117,7 +117,7 @@ Finding: **7B models discriminate (0.55 CONTESTED on the vulnerable function, 0.
 | Metrological frames | 7 predefined + custom | `services/solana/metrological_frame.py` |
 | Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) | `demos/benchmark_runs/flywheel_v2_*.json` |
 | Epistemic cache | < 1 ms on cache hit | ADR-013 |
-| Formal verification | Lean 4 — **5 structural theorems** + 7 regression tests + 2 type-level invariants (audit P1–P4) | `Formal/` (ADR-020 + [`docs/audit/`](docs/audit/)) |
+| Formal verification | Lean 4 — **6 substantive theorems** (tier `iff` + cumulativity) + 7 regression tests + 2 type-level invariants | `Formal/` (ADR-020 + [`docs/audit/`](docs/audit/)) |
 | On-chain taxonomy | V2 — 3 categories, Lean 4-ready | ADR-019 |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + FLYWHEEL | `services/esmm/pipeline.py` |
 

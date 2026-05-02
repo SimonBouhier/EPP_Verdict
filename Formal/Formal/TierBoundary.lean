@@ -5,21 +5,37 @@ import Formal.Basic
 
   Le tier "verified" ne peut être accordé que si :
     - consensus_score ≥ 8500 (sur 10000)
-    - ET (models_consulted ≥ 3 OU source_anchor est non-nul)
+    - ET models_consulted ≥ 3   (cumulativité — partagé avec validated)
+    - ET (source_anchor non-nul OU validation_count ≥ 3)
 
-  Note (audit P3.B, 2026-04-30) : extension du théorème directionnel
-  initial vers une caractérisation `iff` complète sur les 4 tiers.
-  L'ancien théorème `tier_verified_implies_conditions` est conservé
-  comme corollaire pour traçabilité historique. La version `iff` ferme
-  le biais B4 (asymétrie soundness/complétude) identifié dans
-  `Formal_Review_EPP.md` §2 : une implémentation triviale qui ne
-  retournerait jamais `verified` ne passe plus la spécification — elle
-  doit *aussi* retourner `verified` quand les conditions sont remplies.
+  Notes (audit P3.B + P1 cumulativity, 2026-04-30 → 2026-05-01) :
+  - L'extension `iff` (P3.B) ferme le biais B4 (asymétrie soundness/
+    complétude) — cf. `Formal_Review_EPP.md` §2.
+  - La correction P1 cumulativity (2026-05-01) ferme un bug de design
+    repéré par revue critique externe : la version pré-P1 permettait
+    `assignTier 8500 1 true = verified` (1 seul modèle + anchor),
+    alors que `validated` exigeait models ≥ 3. Les tiers étaient
+    présentés comme une stratification cumulative (sandbox <
+    proposition < validated < verified) sans l'être réellement.
+    Le fix : `verified` exige désormais TOUTES les conditions de
+    `validated` plus le couplet anchor∨vc≥3. Cumulativité prouvée
+    par les théorèmes `tier_*_implies_*_conditions` ci-dessous.
+  - Le 4ème paramètre `validationCount` aligne le modèle Lean sur
+    Python `derive_confidence_tier`, qui accepte deux chemins pour
+    `verified` : source_anchor non-nul OU validation_count ≥ 3
+    (cf. attestation.py:259-264). Sans ce paramètre, Lean serait
+    strictement plus restrictif que Python, créant une nouvelle
+    divergence spec/code (ce que P4.2 a justement fermé sur
+    SourceAnchor).
 -/
 
-/-- Règle d'assignation du tier — miroir de attestation.py -/
-def assignTier (score : Score) (models : Nat) (hasAnchor : Bool) : ConfidenceTier :=
-  if score.val ≥ 8500 ∧ (models ≥ 3 ∨ hasAnchor = true) then
+/-- Règle d'assignation du tier — miroir de
+    services/esmm/attestation.py::derive_confidence_tier (modulo
+    architecture_families ≥ 2 que Python exige en plus, cf. ADR-020 §5.2). -/
+def assignTier
+    (score : Score) (models : Nat) (hasAnchor : Bool) (validationCount : Nat) :
+    ConfidenceTier :=
+  if score.val ≥ 8500 ∧ models ≥ 3 ∧ (hasAnchor = true ∨ validationCount ≥ 3) then
     ConfidenceTier.verified
   else if score.val ≥ 7000 ∧ models ≥ 3 then
     ConfidenceTier.validated
@@ -29,21 +45,14 @@ def assignTier (score : Score) (models : Nat) (hasAnchor : Bool) : ConfidenceTie
     ConfidenceTier.sandbox
 
 -- ═══════════════════════════════════════════════════════════════
--- Caractérisation `iff` complète des 4 tiers (P3.B)
---
--- Chaque théorème prouve l'équivalence stricte entre le résultat de
--- `assignTier` et les conditions logiques cumulatives qui le définissent.
--- L'ensemble des 4 théorèmes caractérise EXHAUSTIVEMENT le comportement
--- de la fonction : pour tous (s, m, a), `assignTier s m a` retourne
--- exactement le tier dont les conditions sont vraies.
+-- Caractérisation `iff` complète des 4 tiers (P3.B + P1 cumulativity)
 -- ═══════════════════════════════════════════════════════════════
 
-/-- INV-4.verified — Caractérisation `iff` du tier `verified`.
-    `assignTier` retourne `verified` SI ET SEULEMENT SI le score est
-    ≥ 8500 et (au moins 3 modèles consultés OU source_anchor présent). -/
-theorem tier_verified_iff_conditions (s : Score) (m : Nat) (a : Bool) :
-    assignTier s m a = ConfidenceTier.verified ↔
-    (s.val ≥ 8500 ∧ (m ≥ 3 ∨ a = true)) := by
+/-- INV-4.verified — Caractérisation `iff` du tier `verified`. -/
+theorem tier_verified_iff_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat) :
+    assignTier s m a vc = ConfidenceTier.verified ↔
+    (s.val ≥ 8500 ∧ m ≥ 3 ∧ (a = true ∨ vc ≥ 3)) := by
   unfold assignTier
   constructor
   · intro h
@@ -57,13 +66,11 @@ theorem tier_verified_iff_conditions (s : Score) (m : Nat) (a : Bool) :
   · intro hA
     rw [if_pos hA]
 
-/-- INV-4.validated — Caractérisation `iff` du tier `validated`.
-    `assignTier` retourne `validated` SI ET SEULEMENT SI les conditions
-    de `verified` ne sont pas remplies, ET le score est ≥ 7000 avec ≥ 3
-    modèles consultés. -/
-theorem tier_validated_iff_conditions (s : Score) (m : Nat) (a : Bool) :
-    assignTier s m a = ConfidenceTier.validated ↔
-    (¬ (s.val ≥ 8500 ∧ (m ≥ 3 ∨ a = true))
+/-- INV-4.validated — Caractérisation `iff` du tier `validated`. -/
+theorem tier_validated_iff_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat) :
+    assignTier s m a vc = ConfidenceTier.validated ↔
+    (¬ (s.val ≥ 8500 ∧ m ≥ 3 ∧ (a = true ∨ vc ≥ 3))
      ∧ s.val ≥ 7000 ∧ m ≥ 3) := by
   unfold assignTier
   constructor
@@ -80,13 +87,11 @@ theorem tier_validated_iff_conditions (s : Score) (m : Nat) (a : Bool) :
   · intro ⟨hnA, h7, h3⟩
     rw [if_neg hnA, if_pos ⟨h7, h3⟩]
 
-/-- INV-4.proposition — Caractérisation `iff` du tier `proposition`.
-    `assignTier` retourne `proposition` SI ET SEULEMENT SI les conditions
-    de `verified` et `validated` ne sont pas remplies, ET le score est
-    ≥ 4000 avec ≥ 2 modèles consultés. -/
-theorem tier_proposition_iff_conditions (s : Score) (m : Nat) (a : Bool) :
-    assignTier s m a = ConfidenceTier.proposition ↔
-    (¬ (s.val ≥ 8500 ∧ (m ≥ 3 ∨ a = true))
+/-- INV-4.proposition — Caractérisation `iff` du tier `proposition`. -/
+theorem tier_proposition_iff_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat) :
+    assignTier s m a vc = ConfidenceTier.proposition ↔
+    (¬ (s.val ≥ 8500 ∧ m ≥ 3 ∧ (a = true ∨ vc ≥ 3))
      ∧ ¬ (s.val ≥ 7000 ∧ m ≥ 3)
      ∧ s.val ≥ 4000 ∧ m ≥ 2) := by
   unfold assignTier
@@ -105,12 +110,11 @@ theorem tier_proposition_iff_conditions (s : Score) (m : Nat) (a : Bool) :
   · intro ⟨hnA, hnB, h4, h2⟩
     rw [if_neg hnA, if_neg hnB, if_pos ⟨h4, h2⟩]
 
-/-- INV-4.sandbox — Caractérisation `iff` du tier `sandbox`.
-    `assignTier` retourne `sandbox` SI ET SEULEMENT SI aucune des
-    conditions des 3 tiers supérieurs n'est remplie. -/
-theorem tier_sandbox_iff_conditions (s : Score) (m : Nat) (a : Bool) :
-    assignTier s m a = ConfidenceTier.sandbox ↔
-    (¬ (s.val ≥ 8500 ∧ (m ≥ 3 ∨ a = true))
+/-- INV-4.sandbox — Caractérisation `iff` du tier `sandbox`. -/
+theorem tier_sandbox_iff_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat) :
+    assignTier s m a vc = ConfidenceTier.sandbox ↔
+    (¬ (s.val ≥ 8500 ∧ m ≥ 3 ∧ (a = true ∨ vc ≥ 3))
      ∧ ¬ (s.val ≥ 7000 ∧ m ≥ 3)
      ∧ ¬ (s.val ≥ 4000 ∧ m ≥ 2)) := by
   unfold assignTier
@@ -130,20 +134,49 @@ theorem tier_sandbox_iff_conditions (s : Score) (m : Nat) (a : Bool) :
     rw [if_neg hnA, if_neg hnB, if_neg hnC]
 
 -- ═══════════════════════════════════════════════════════════════
+-- Cumulativité des tiers (P1, 2026-05-01)
+--
+-- Théorèmes substantifs : si l'attestation atteint un tier supérieur,
+-- elle satisfait nécessairement les conditions de tous les tiers
+-- inférieurs. C'est la propriété de stratification que la nomenclature
+-- (sandbox < proposition < validated < verified) suggère et que la
+-- définition pré-P1 d'`assignTier` ne respectait pas (verified
+-- pouvait s'obtenir avec models = 1 si anchor = true, alors que
+-- validated exigeait models ≥ 3 — bug de design rendu visible par la
+-- caractérisation `iff` de P3.B).
+-- ═══════════════════════════════════════════════════════════════
+
+/-- INV-4.cumul1 — Cumulativité verified ⇒ validated.
+    Si l'attestation atteint le tier `verified`, alors elle satisfait
+    aussi les conditions de `validated` : score ≥ 7000 ∧ models ≥ 3.
+    C'est la propriété cumulative qui était violée pré-P1. -/
+theorem tier_verified_implies_validated_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat)
+    (h : assignTier s m a vc = ConfidenceTier.verified) :
+    s.val ≥ 7000 ∧ m ≥ 3 := by
+  rw [tier_verified_iff_conditions] at h
+  exact ⟨by omega, h.2.1⟩
+
+/-- INV-4.cumul2 — Cumulativité validated ⇒ proposition.
+    Si l'attestation atteint le tier `validated`, alors elle satisfait
+    aussi les conditions de `proposition` : score ≥ 4000 ∧ models ≥ 2. -/
+theorem tier_validated_implies_proposition_conditions
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat)
+    (h : assignTier s m a vc = ConfidenceTier.validated) :
+    s.val ≥ 4000 ∧ m ≥ 2 := by
+  rw [tier_validated_iff_conditions] at h
+  exact ⟨by omega, by omega⟩
+
+-- ═══════════════════════════════════════════════════════════════
 -- Corollaire conservé pour traçabilité historique (P3.B, 2026-04-30)
 -- ═══════════════════════════════════════════════════════════════
 
 /-- Conservé pour traçabilité historique : version directionnelle prouvée
-    avant l'extension `iff` (P3.B, 2026-04-30). Découle directement de
-    `tier_verified_iff_conditions` via `Iff.mp`.
-
-    Le théorème originel ne couvrait qu'une seule direction et était
-    *vacuusement* satisfait par toute fonction qui ne retourne jamais
-    `verified` (cf. `_RedTestVacuity.lean` pour la preuve observable).
-    L'extension `iff` ci-dessus ferme ce gap en exigeant aussi la
-    direction inverse. -/
+    avant l'extension `iff` (P3.B, 2026-04-30) et avant la correction
+    cumulativity (P1, 2026-05-01). Découle directement de
+    `tier_verified_iff_conditions` via `Iff.mp`. -/
 theorem tier_verified_implies_conditions
-    (s : Score) (m : Nat) (a : Bool)
-    (h : assignTier s m a = ConfidenceTier.verified) :
-    s.val ≥ 8500 ∧ (m ≥ 3 ∨ a = true) :=
-  (tier_verified_iff_conditions s m a).mp h
+    (s : Score) (m : Nat) (a : Bool) (vc : Nat)
+    (h : assignTier s m a vc = ConfidenceTier.verified) :
+    s.val ≥ 8500 ∧ m ≥ 3 ∧ (a = true ∨ vc ≥ 3) :=
+  (tier_verified_iff_conditions s m a vc).mp h

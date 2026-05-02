@@ -142,7 +142,7 @@ EPP_Verdict/
 │   └── audit/            # Smart contract audit kernel (ADR-014)
 ├── programs/epp/         # Anchor/Rust on-chain program (submit_attestation, state, errors)
 ├── database/             # ISpaceDB (async SQLite, WAL, ~100 methods)
-├── Formal/               # Lean 4 formal verification (5 structural theorems + 7 regression tests + 2 type-level invariants — audit P1–P4, ADR-020)
+├── Formal/               # Lean 4 formal verification (6 substantive theorems + 7 regression tests + 2 type-level invariants — audit P1–P4, ADR-020)
 ├── cli/epp_cli.py        # CLI surface (ask, query, frame, audit, verify-rwa)
 ├── scripts/
 │   └── push_to_devnet.py # Curated batch push to Solana devnet
@@ -175,7 +175,7 @@ EPP_Verdict/
 | Solana program | `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166) |
 | On-chain attestations | **12** pushed ([data/devnet_pushed.json](data/devnet_pushed.json)) |
 | Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) |
-| Formal verification | Lean 4 — **5 structural theorems** (4 tier `iff` + 1 corollary) + **7 regression tests** + **2 type-level invariants** (B5 closed by `Option SourceAnchor` strict typing) — see ADR-020 + audit P1–P4 in [`docs/audit/`](docs/audit/) |
+| Formal verification | Lean 4 — **6 substantive theorems** (4 tier `iff` characterization + 2 stratification cumulativity) + 7 regression tests + 2 type-level invariants (`Option SourceAnchor`) — see ADR-020 + audit P1–P4 in [`docs/audit/`](docs/audit/) |
 
 ---
 

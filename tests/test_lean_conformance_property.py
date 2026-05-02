@@ -256,17 +256,26 @@ class TestInv4TierBoundaryProperty:
         self, score, models, archs, anchor, vc,
     ):
         """Si Python retourne `verified`, les conditions Lean
-        (`tier_verified_iff_conditions`) sont nécessairement remplies :
-        score ≥ 0.85 ET (models ≥ 3 OR anchor non-nul). Python est strict
-        sur archs ≥ 2 et (anchor OR vc ≥ 3) en plus, donc Python ⇒ Lean."""
+        (`tier_verified_iff_conditions`) sont nécessairement remplies.
+
+        Note (P1 cumulativity, 2026-05-01) : la condition Lean est
+        désormais cumulative — verified exige score ≥ 0.85 ET
+        models ≥ 3 ET (anchor non-nul OU validation_count ≥ 3). Python
+        ajoute architecture_families ≥ 2 par-dessus (cf. attestation.py
+        lignes 259-264). Donc Python ⇒ Lean reste sûr (Python plus
+        strict). L'assertion reflète maintenant la condition Lean
+        complète, plus seulement sa projection partielle."""
         tier = derive_confidence_tier(
             score, models_consulted=models, architecture_families=archs,
             source_anchor=anchor, validation_count=vc,
         )
         if tier == "verified":
             assert score >= 0.85
-            # Conditions Lean : models ≥ 3 OR anchor non-nul
-            assert models >= 3 or (anchor is not None)
+            # Conditions Lean (P1 cumulativity) :
+            #   verified ⇔ score ≥ 8500/10000 ∧ models ≥ 3
+            #             ∧ (anchor=true ∨ validation_count ≥ 3)
+            assert models >= 3
+            assert (anchor is not None) or vc >= 3
 
     @_HYP
     @given(

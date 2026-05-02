@@ -237,7 +237,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 | ADR-017 | Réseau de Clusters Épistémiques — architecture multi-opérateurs | Proposé |
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
 | ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
-| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4. Inventaire post-audit P1–P4 (cf. `docs/audit/`) : 5 théorèmes structurels (4 `iff` sur tiers + 1 corollaire) + 7 regression tests + 2 invariants au niveau du type (B5 fermé par `Option SourceAnchor`). Gap modèle↔code documenté. | Actif |
+| ADR-020 | Architecture Dual-Trust — invariants formels Lean 4. Inventaire post-audit P1–P4 + correction P1 cumulativity (cf. `docs/audit/`) : 6 théorèmes substantifs (4 `iff` sur tiers + 2 cumulativité de stratification) + 7 regression tests + 2 contrats au niveau du type (B5 fermé par `Option SourceAnchor`) + 1 corollaire historique + 1 lemme définitionnel. Gap modèle↔code documenté. | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 
@@ -273,12 +273,12 @@ run_pipeline() [is_verify=True]
 
 Couche Lean 4 auditée ligne par ligne en quatre phases (P1 hygiène, P2 nettoyage tautologies, P3 correction structurelle, P4 alignement Python ↔ Lean). Rapports détaillés sous `docs/audit/SESSION_AUDIT_FORMAL_*`.
 
-**Compte honnête post-audit** : **5 théorèmes structurels** (4 `iff` complets sur les tiers + 1 corollaire derived) + **7 regression tests** + **2 invariants au niveau du type** (typage strict `Option SourceAnchor` qui ferme le biais B5 « drapeau Bool qui peut mentir »). Total : **14 énoncés Lean compilés** (`lake build` retourne **16 jobs**).
+**Compte honnête post-audit** : **6 théorèmes substantifs** (4 `iff` complets sur les tiers + 2 cumulativité de stratification, P1 2026-05-01) + **7 regression tests** (5 tier + 2 hash) + **2 contrats au niveau du type** (typage strict `Option SourceAnchor`, B5 fermé) + 1 corollaire historique + 1 lemme définitionnel = **17 énoncés Lean compilés** (`lake build` retourne **16 jobs**, `assignTier` prend désormais 4 paramètres incluant `validationCount` pour aligner sur Python).
 
 | Fichier | Rôle | Énoncés | État |
 |---------|------|---------|------|
 | `Formal/Formal/Basic.lean` | Types de base : `EpistemicType`, `ConfidenceTier`, `Score`, `SourceAnchor` (non-construible avec hash vide — ajouté P3.A), `Attestation` (10 champs métier dont `source_anchor : Option SourceAnchor`) | — | ✅ Actif |
-| `Formal/Formal/TierBoundary.lean` | INV-4 : caractérisation `iff` complète des 4 tiers (`verified`/`validated`/`proposition`/`sandbox`) — ferme le biais B4 (asymétrie soundness/complétude) ; ancien théorème directionnel conservé en corollaire pour traçabilité | **5** structurels | ✅ Prouvés (P3.B) |
+| `Formal/Formal/TierBoundary.lean` | INV-4 : caractérisation `iff` complète des 4 tiers + 2 théorèmes de cumulativité (`verified ⇒ validated`, `validated ⇒ proposition`) qui ferment le biais B4 (asymétrie soundness/complétude) **et** corrigent le bug de stratification pré-P1 (`assignTier 8500 1 true = verified` était possible avec 1 modèle + anchor, violant l'ordre cumulatif suggéré par les noms). 4ème paramètre `validationCount` aligné sur Python. Ancien théorème directionnel conservé en corollaire. | **6** substantifs + 1 corollaire | ✅ Prouvés (P3.B + P1) |
 | `Formal/Formal/ClaimHash.lean` | INV-2 : `claim_hash_purity` — regression test sur la projection `toClaimCore`. Doublons textuels (`claim_hash_timestamp_independent`, `claim_hash_submitter_independent`) supprimés en P1.2 (commentaire de traçabilité préservé). | **1** regression | ✅ Prouvé |
 | `Formal/Formal/SourceAnchor.lean` | INV-6 : `wellFormed` adapté à `Option.isSome` (P3.A) ; les deux théorèmes restent tautologiques *en preuve* mais l'invariant qu'ils expriment est désormais porté par le système de types Lean (B5 fermé par construction). | **2** type-level | ✅ Prouvés |
 | `Formal/Formal/RedTests.lean` | 6 regression tests : 4 tier red/green + 2 hash red (hypothèses fantômes B7 retirées en P2.6) | **6** regression | ✅ Exercés |

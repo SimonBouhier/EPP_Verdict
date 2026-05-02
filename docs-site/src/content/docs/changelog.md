@@ -1,8 +1,34 @@
 ---
 title: "CHANGELOG.md — EPP_Verdict"
-description: "Ajout d'un pattern=r\"^[0-9a-f]{64}$\" au champ Pydantic EpistemicAttestation.source_anchor (services/esmm/attestation.py:89-100) pour aligner le runtime Python sur le contrat Lean SourceAnchor intro…"
+description: "Correction d'un bug de design Lean ↔ Python rendu visible par revue critique externe : assignTier permettait verified avec 1 modèle + anchor (violation de la stratification suggérée par les noms sa…"
 ---
 > Journal factuel des modifications. Format : date, titre court, 2-3 lignes de faits.
+
+---
+
+## [2026-05-01] Audit Lean P1 cumulativity + P0 recalibrage doc
+
+Correction d'un bug de design Lean ↔ Python rendu visible par revue critique externe : `assignTier` permettait `verified` avec 1 modèle + anchor (violation de la stratification suggérée par les noms `sandbox < proposition < validated < verified`). Refonte parallèle du WHITEPAPER §"Formal Verification — Dual-Trust" pour aligner le langage public sur l'état réel post-audit (suppression du compte obsolète "11 theorems", suppression de la référence `Encoding.lean` retirée en P2, adoucissement des phrases falsifiables, ajout d'une sous-section "What Lean does *not* prove").
+
+### P1 — Cumulativity (`Formal/Formal/TierBoundary.lean`)
+
+- `assignTier` prend désormais 4 paramètres : `(score, models, hasAnchor, validationCount)`. Condition `verified` corrigée en `score ≥ 8500 ∧ models ≥ 3 ∧ (hasAnchor = true ∨ validationCount ≥ 3)` — alignement strict sur Python `derive_confidence_tier` (`attestation.py:259-264`).
+- Deux nouveaux théorèmes substantifs : `tier_verified_implies_validated_conditions` et `tier_validated_implies_proposition_conditions`. Prouvent la stratification complète (verified ⇒ conditions de validated ⇒ conditions de proposition).
+- Les 4 théorèmes `iff` (P3.B) adaptés au 4ème paramètre. Le corollaire `tier_verified_implies_conditions` conservé pour traçabilité.
+- `RedTests.lean` adapté : 5 cas tier (3 RED + 2 GREEN, dont nouveau `red_tier_3_cumulativity_one_model_not_verified` qui documente la fermeture du bug pré-P1).
+
+### P0 — Recalibrage doc
+
+- WHITEPAPER §"Formal Verification" refondue en 4 sous-sections : (1) ce que Lean spécifie, par catégorie épistémique distincte (substantive characterization / type-level contracts / regression tests) ; (2) "What Lean does *not* prove" (gap spec/code humain non-mécanisé, SHA-256 modélisé comme concaténation, programme Rust hors scope) ; (3) ce que la couche formelle est censée garantir (chaos honnêtement mesurable, pas chaos éliminé) ; (4) implementation. Suppression de "11 theorems mechanically proven", "formally verified epistemic oracle", "Zero AI inference pipelines formally verified anywhere", "5,400+ projects only 3 touch FV".
+- Compteurs synchronisés sur **6 théorèmes substantifs** + 7 regression + 2 type-level + 1 corollaire + 1 lemme définitionnel = **17 énoncés Lean compilés** total. README/PITCH/WHITEPAPER closing line/ARCHITECTURE alignés.
+
+### Validation
+
+`lake clean && lake build` : 16 jobs GREEN. `pytest tests/` : 905 passed, 14 skipped (venv) / 908 passed, 11 skipped (Python système). `HYPOTHESIS_MAX_EXAMPLES=10000 pytest tests/test_lean_conformance_property.py` : 16 passed (≈ 160 000 inputs).
+
+### Test conformance Python actualisé
+
+`tests/test_lean_conformance_property.py::TestInv4TierBoundaryProperty::test_python_verified_implies_lean_conditions` — assertion renforcée pour refléter la nouvelle condition Lean cumulative `models ≥ 3 ∧ (anchor ∨ vc ≥ 3)` au lieu de la projection partielle pré-P1 `models ≥ 3 ∨ anchor`.
 
 ---
 

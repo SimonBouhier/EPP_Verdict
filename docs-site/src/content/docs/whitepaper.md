@@ -283,22 +283,35 @@ The **5-dimensional epistemic signature** captures: agreement (how strongly the 
 
 EPP maintains a strict architectural boundary between the probabilistic nature of AI deliberations (empirical, measurable, inherently fallible) and the deterministic nature of the cryptographic infrastructure that anchors them. These are two distinct, non-substitutable layers of trust: one empirical (the AI verdict), one mathematical (the protocol itself).
 
-Eleven theorems on the abstract epistemic protocol are mechanically proven in Lean 4 under `Formal/`, across four modules:
+### What Lean 4 specifies (and what it doesn't)
 
-| Module | Invariant | Theorems |
-|:-------|:----------|:--------:|
-| `Encoding.lean` | INV-1 — float ↔ u16 round-trip, bound preservation (ADR-001) | 4 |
-| `TierBoundary.lean` | INV-4 — `verified` tier implies score ≥ 8500 ∧ (models ≥ 3 ∨ anchor) (ADR-005) | 1 |
-| `SourceAnchor.lean` | INV-6 — `deterministic` attestations require a non-zero source anchor (ADR-012) | 2 |
-| `ClaimHash.lean` | INV-2 — claim identity depends only on `(subject, predicate, object, frame)` ; timestamp- and submitter-independence (condition of possibility for ADR-017 cross-cluster queries) | 3 |
+The `Formal/` directory contains a Lean 4 specification of the on-chain attestation contract — confidence tier assignment, claim hash identity, source anchor well-formedness — audited line-by-line over four phases between 2026-04-30 and 2026-05-01 (full reports under [`docs/audit/`](docs/audit/), original review in [`docs/To_do_list/Formal_Review_EPP.md`](docs/To_do_list/Formal_Review_EPP.md)). The specification distinguishes three categories of statements with deliberately distinct epistemic weights:
 
-`Formal/Formal/RedTests.lean` verifies non-tautology via six red tests (falsification protocol C6: each invariant must fail compilation when its underlying property is broken). `Main.lean` imports the library so `lake build` (run by `leanprover/lean-action@v1` in CI) compiles all 18 jobs on every push.
+**1. Substantive characterization (6 theorems, `Formal/Formal/TierBoundary.lean`).** The function `assignTier` mapping `(score, models, hasAnchor, validationCount)` to one of four confidence tiers is fully characterized by **four `iff` theorems** (one per tier — `verified`, `validated`, `proposition`, `sandbox`). These close the soundness/completeness asymmetry that an earlier directional version left open: a trivial implementation that never returned `verified` would have satisfied the directional theorem vacuously. Two additional theorems prove **stratification cumulativity** — `assignTier = verified ⇒ conditions of validated hold ⇒ conditions of proposition hold` — which corrects a real design bug in the pre-2026-05-01 code (`verified` was reachable with one model + anchor, breaking the cumulative ordering that the tier names suggest).
 
-**The formal layer is honest about its own limitations.** It cannot prove that 0.85 is the *right* threshold. Only that the threshold is *enforced*. The rightness comes from the empirical layer — from thousands of attestations, from Brier scores against ground truth, from the evolutionary pressure of competing clusters. The formal and empirical layers verify each other without either being sufficient alone.
+**2. Type-level contracts (2 theorems, `Formal/Formal/SourceAnchor.lean`).** The Lean type `SourceAnchor` is non-constructible with an empty hash (P3.A refactor). The two theorems on `wellFormed` for `deterministic` attestations are tautologies in proof — they unfold the definition — but the *invariant* they document is enforced by the type system, not by a runtime check on a Boolean flag. The same contract is enforced in Python via a Pydantic regex `^[0-9a-f]{64}$` aligned with the Lean type definition (P4.2 alignment, `services/esmm/attestation.py:89-100`).
 
-**Why this matters — the landscape data.** Across the entire Colosseum hackathon corpus (5,400+ projects), only 3 touch formal verification — making it the rarest technical primitive in the ecosystem. Zero oracle protocols (Pyth, Switchboard, Chainlink) have published formal proofs of their aggregation logic. Zero AI inference pipelines have been formally verified anywhere. A formally verified epistemic oracle is genuinely novel. (See [`docs/positioning/formal_methods_landscape.md`](/positioning/formal-methods-landscape/) for the full panorama.)
+**3. Regression tests (7 unit-style theorems, `Formal/Formal/RedTests.lean`).** Five tier-boundary cases (3 RED + 2 GREEN, exercising both the anchor and validation-count paths and an anti-cumulativity case) and two claim hash invariance checks (timestamp-independence and submitter-independence — the latter being the structural condition for cross-cluster comparability of the same claim, ADR-017). Each red test is designed to fail compilation if the underlying definition is mutated (falsification protocol C6).
 
-The gap between the Lean specification and the Python/Rust runtime is human-maintained and explicitly documented in ADR-020. Conformity checks for INV-1 and INV-2 are completed; INV-3 (PDA uniqueness), INV-5 (regression cut isolation), INV-7 (Brier proper scoring), and INV-8 (consensus convergence) remain on the roadmap.
+A single definitional lemma, `claim_hash_purity` in `Formal/Formal/ClaimHash.lean`, documents that the claim hash projection touches only the canonical four-tuple `(subject, predicate, object, frame)`. Its proof is `unfold; rw`; its function is regression protection on the `toClaimCore` projection, not the demonstration of an emergent invariant.
+
+### What Lean does *not* prove
+
+Honesty about scope is part of the architecture, not a footnote:
+
+1. **The bridge between the Lean specification and the Python/Rust runtime is human-maintained, not mechanically extracted.** When `services/esmm/attestation.py::derive_confidence_tier` evolves, the corresponding Lean `assignTier` definition does not follow automatically. A conformance suite (`tests/test_lean_conformance.py` + `tests/test_lean_conformance_property.py` — 26 unit tests + 16 property-based tests, configurable up to 10 000 random inputs per property) bridges the gap empirically but does not replace mechanical correspondence. This is documented as `TD-005` in `TECH_DEBT.md`. The candidate resolution is a Hypothesis-based differential fuzzer that runs `assignTier` Python against a Python oracle that mirrors the Lean spec — planned, not yet implemented.
+
+2. **SHA-256 is modeled as canonical concatenation.** The Lean definition `claimHashCore (c : ClaimCore) : String := c.subject ++ "|" ++ c.predicate ++ "|" ++ c.object ++ "|" ++ c.frame` is a structural placeholder. Cryptographic properties of SHA-256 (preimage resistance, collision resistance) are assumed by external trust, not derived inside Lean.
+
+3. **The Anchor program (Rust) is not in scope for the current Lean layer.** `programs/epp/src/lib.rs` enforces `epistemic_type ≤ 2` at the byte level (ADR-019) but has no formal verification harness. Cross-field invariants (e.g. `epistemic_type = 1 ⇒ source_anchor ≠ [0; 32]` on-chain) are documented in ADR-019 §3 but not enforced by Lean nor by `require!` clauses. Eventual paths — Rust→Lean extraction (Aeneas, hax) and Certora — are not production-ready for Anchor 0.32 as of May 2026.
+
+### What the formal layer is for
+
+The formal layer's job is to make the chaos inside the frame *measurable honestly*, not to eliminate it. It guarantees that a `verified` tier published on Solana satisfies a precisely characterized condition (cumulativity included), that two independent operators producing the same claim hash queried the same canonical four-tuple, and that a `deterministic` attestation cannot be constructed without a non-empty source hash. None of this proves the underlying claim is *true*. Truth comes from the empirical layer — Brier scores against ground truth, divergence between architecturally heterogeneous models, source-anchor concordance — and remains permanently fallible. The formal and empirical layers verify each other without either being sufficient alone.
+
+### Implementation
+
+Lean 4 `v4.29.1`, no `mathlib` dependency. `lake clean && lake build` compiles 16 jobs with zero warnings. CI runs on each push via `leanprover/lean-action@v1` (`.github/workflows/lean_action_ci.yml`). Position relative to peers: a publicly-traceable Lean 4 specification of an oracle protocol's on-chain contract is uncommon in the current crypto ecosystem, but the comparison field is moving and we make no claim to be the first or only — readers interested in the broader landscape can consult [`docs/positioning/formal_methods_landscape.md`](/positioning/formal-methods-landscape/).
 
 ---
 
@@ -444,7 +457,7 @@ These decisions should be made by the open-source community, not by the founding
 
 Before a single line of EPP-specific Python was written, the kernel concepts — divergence as signal, multi-agent deliberation under epistemic isolation, bidirectional knowledge transfer between models — had been explored over months of casual LLM-orchestration tinkering, with no project, no codebase, no architecture. EPP itself begins on **2026-02-13** with commit [`f12a922`](https://github.com/SimonBouhier/EPP_Verdict/commit/f12a922) (*"Phase 0.1-4.6: provider layer, ESMM pipeline, Solana bridge, 470 tests"*), forking that prior exploration into a Solana-anchored protocol within the Colosseum sprint eligibility window.
 
-The path from that commit to today — 908 tests, 20 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta, five operational domains, 12 attestations live on-chain, a Lean 4 spec audited line-by-line over four phases (5 structural theorems, 7 regression tests, 2 type-level invariants) — was walked by one person with no formal CS or math background, on a consumer GPU, with a logical mind, scientific transparency, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
+The path from that commit to today — 908 tests, 20 ADRs, 6 AI models deliberating on Solana devnet, a measurable +0.46 flywheel delta, five operational domains, 12 attestations live on-chain, a Lean 4 spec audited line-by-line over four phases (6 substantive theorems including tier cumulativity, 7 regression tests, 2 type-level invariants) — was walked by one person with no formal CS or math background, on a consumer GPU, with a logical mind, scientific transparency, and a belief that making AI models disagree on purpose would produce something more honest than making them agree.
 
 This is what one person built during a hackathon sprint, on top of a prior personal exploration of LLM orchestration. The protocol is proven within its declared window — the commit history is the record. The architecture scales. The question is no longer whether it works. The question is what becomes possible when a team carries it forward.
 
