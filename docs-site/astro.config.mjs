@@ -71,7 +71,7 @@ export default defineConfig({
         },
       ],
       components: {
-        // Default Starlight components — override here if needed later.
+        Head: './src/components/Head.astro',
       },
     }),
   ],
