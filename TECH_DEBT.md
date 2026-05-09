@@ -4,7 +4,7 @@ This file centralizes deliberate, conscious technical debts taken during
 the Colosseum sprint. Each item is a compromise, not a bug. Each item has
 a planned resolution.
 
-Last updated: 2026-05-01
+Last updated: 2026-05-09
 
 ---
 
@@ -47,31 +47,46 @@ absent from the build context.
 
 ## TD-002 — `graph_seeder_blockchain` scenario without UI adapter
 
-**Status:** active, slated W4
+**Status:** resolved
 **Since:** 2026-03-02 (JSON exists, no adapter wired)
+**Resolved:** 2026-05-09
 
-### What
-`ui/public/data/graph_seeder_blockchain_20260302_143728.json` is
+### What (original)
+`ui/public/data/graph_seeder_blockchain_20260302_143728.json` was
 referenced in `ui/src/config/families.ts` (family `pipeline`) but
-no entry exists in the `ADAPTERS` registry. Clicking it in the
-dashboard surfaces an explicit error:
+no entry existed in the `ADAPTERS` registry. Clicking it in the
+dashboard surfaced an explicit error:
 `No adapter registered for scenario "graph_seeder_blockchain".`
 
-5 of the 12 on-chain attestations matching a benchmark JSON come
+5 of the 12 on-chain attestations matching a benchmark JSON came
 exclusively from this file.
 
-### Why this is debt
-The /onchain page lists those 5 attestations without a corresponding
-claim viewer. The error is visible, not silent — but the UX is incomplete.
+### Resolution applied (2026-05-09)
+- New adapter `ui/src/data/adapters/graph-seeder-blockchain.ts`. The
+  seeder JSON publishes claims with `verdict: null` (verdicts are
+  produced later, when claims are pushed on-chain), so the adapter
+  joins the seeder payload with `devnet_pushed.json` by `question`
+  text and surfaces only the claims that have a matching
+  attestation — picking up the verdict from there. The 5 on-chain
+  attestations now have a corresponding claim viewer entry.
+- `Adapter` type extended with an optional second parameter
+  (`onchain?: OnChainManifest`) so adapters that need on-chain
+  context can join it in. Existing adapters ignore the parameter
+  and remain source-compatible.
+- `loadRun` (`ui/src/data/loader.ts`) fetches the run payload and
+  the on-chain manifest in parallel and forwards both to the
+  selected adapter.
+- `ClaimTypeSchema` extended to include `'foundational'` and
+  `'security_audit'` — both already present in on-chain
+  attestations (`epistemic_type` u8=0 and u8=2 respectively, see
+  `programs/epp/src/state.rs::epistemic_type_to_u8`).
+- Vitest test `ui/src/data/adapters/graph-seeder-blockchain.test.ts`
+  (4 cases, RED-GREEN-FIX): joins by question text, drops claims
+  without a matching attestation, returns zero claims when no
+  on-chain manifest is provided, preserves the raw payload.
 
-### Why it was accepted
-Scenario was a graph-seeding test, not a presentation deliverable.
-Decision (2026-04-26 audit): adapter to be written in W4, not now.
-
-### Planned resolution
-W4: write `graph_seeder_blockchain` adapter following the pattern of
-the 4 existing adapters (`flywheel_v2_baseline`, `scenario_6_1_*`,
-`scenario_6_2_*`, `scenario_jiang`).
+### Validation
+`vitest run` → 4 / 4 passed. `tsc --noEmit` → clean.
 
 ---
 
