@@ -1,11 +1,18 @@
-import type { ScenarioRun } from '@/domain';
+import type { OnChainManifest, ScenarioRun } from '@/domain';
 import { deterministicSourcesAdapter } from './deterministic-sources';
 import { flywheelBaselineAdapter } from './flywheel-baseline';
 import { flywheelV2Adapter } from './flywheel-v2';
+import { graphSeederBlockchainAdapter } from './graph-seeder-blockchain';
 import { jiangAdapter } from './jiang';
 import { scenario6Adapter } from './scenario6';
 
-export type Adapter = (raw: unknown) => ScenarioRun;
+/**
+ * An adapter normalises a raw scenario JSON into a `ScenarioRun`.
+ * The optional `onchain` parameter lets adapters that need verdicts
+ * from on-chain attestations join them in (see graph-seeder-blockchain).
+ * Adapters that don't need it simply ignore the second argument.
+ */
+export type Adapter = (raw: unknown, onchain?: OnChainManifest) => ScenarioRun;
 
 /**
  * Registry: scenario name (from JSON `scenario` field) → normalizing adapter.
@@ -20,6 +27,7 @@ const ADAPTERS: Record<string, Adapter> = {
   scenario_6_2_qualifier_sensitivity: scenario6Adapter,
   scenario_6_2b_qualifier_sensitivity_big_models: scenario6Adapter,
   scenario_deterministic_sources: deterministicSourcesAdapter,
+  graph_seeder_blockchain: graphSeederBlockchainAdapter,
 };
 
 export function detectAdapter(raw: unknown): Adapter {
@@ -45,6 +53,7 @@ export {
   deterministicSourcesAdapter,
   flywheelBaselineAdapter,
   flywheelV2Adapter,
+  graphSeederBlockchainAdapter,
   jiangAdapter,
   scenario6Adapter,
 };

@@ -31,9 +31,15 @@ export async function loadRun(filename: string): Promise<ScenarioRun> {
   if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
     throw new Error(`Invalid run filename: ${filename}`);
   }
-  const raw = await fetchJson(`/data/${encodeURIComponent(filename)}`);
+  // Fetch the run payload and the on-chain manifest in parallel. Adapters
+  // that don't need the on-chain context (most of them) simply ignore the
+  // second argument; only `graph_seeder_blockchain` joins the two today.
+  const [raw, onchain] = await Promise.all([
+    fetchJson(`/data/${encodeURIComponent(filename)}`),
+    loadOnChainManifest(),
+  ]);
   const adapter = detectAdapter(raw);
-  return adapter(raw);
+  return adapter(raw, onchain);
 }
 
 /**

@@ -1,9 +1,21 @@
-# ADR-020 : Architecture Dual-Trust — Invariants formels Lean 4
+# ADR-020 : Couche de spécification formelle — Invariants Lean 4 pour le contrat d'attestation on-chain
 
 **Date** : 2026-04-17
-**Statut** : Actif (v1 — clôture de la première session Lean)
+**Statut** : Actif (v1 — clôture de la première session Lean) ; périmètre clarifié 2026-05-02
 **Dépendances** : ADR-001 (encodage float↔u16), ADR-005 (tiers multi-critères), ADR-006 (claim hash déterministe), ADR-012 (bifurcation déterministe), ADR-017 (réseau de clusters), ADR-019 (Enum V2 on-chain)
 **Axiomes mobilisés** : 3 (transparence des coupures), 4 (computation locale, preuve on-chain)
+
+> **Clarification de périmètre — 2026-05-02.** Le cadrage public courant —
+> « Couche de spécification formelle » (Formal Specification Layer) —
+> remplace l'ancienne formulation « Dual-Trust » conservée dans le corps
+> de cet ADR par exactitude historique. La couche formelle documente
+> le contrat d'attestation on-chain ; la couche empirique mesure la
+> calibration de l'IA. Le pont entre les deux est humain, pas mécanique :
+> voir WHITEPAPER §"Formal Specification Layer (ADR-020)" pour le cadrage
+> courant, et `TECH_DEBT.md::TD-005` pour le pont mécanique Python ↔ Lean
+> planifié. Cette note n'amende pas les décisions prises le 2026-04-17 ;
+> elle documente comment ces décisions ont été reformulées une fois la
+> modestie réelle du livrable évaluée.
 
 ---
 
@@ -37,7 +49,7 @@ Cette découverte donne sa force à ce qui suit : les exigences de cet ADR ne so
 
 ---
 
-## 2. Décision — Architecture Dual-Trust
+## 2. Décision — Couche de spécification formelle (formulé initialement « Architecture Dual-Trust », voir clarification de périmètre ci-dessus)
 
 ### 2.1 — Deux couches de confiance complémentaires
 
@@ -206,12 +218,13 @@ Cette limitation est acceptée et documentée. Elle sera levée lorsque :
 - Certora ajoutera un support stable d'Anchor 0.32, **ou**
 - Les invariants concernés seront portés manuellement en `require!` avec test RED on-chain (comme fait pour l'Enum V2 dans ADR-019).
 
-### 5.5 — Tests de conformité : le deuxième pilier du Dual-Trust
+### 5.5 — Tests de conformité : le pont empirique entre spécification et runtime
 
-L'architecture Dual-Trust (§2.1) décrivait deux couches : empirique (runtime)
-et mathématique (Lean). La session du 2026-04-18 a formalisé le **lien
-observable** entre les deux, via la suite `tests/test_lean_conformance.py` :
-26 tests qui exercent le code Python contre les règles prouvées en Lean.
+L'architecture (§2.1) décrit deux couches : empirique (runtime)
+et la spécification formelle (Lean). La session du 2026-04-18 a formalisé
+le **lien observable** entre les deux, via la suite
+`tests/test_lean_conformance.py` : 26 tests qui exercent le code Python
+contre les règles spécifiées en Lean.
 
 Ces tests ne sont pas une extraction mécanique (Rust↔Lean reste hors portée
 des outils 2026), mais un **garde-fou observable** : si le code runtime

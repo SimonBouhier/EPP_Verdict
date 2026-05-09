@@ -4,6 +4,29 @@
 
 ---
 
+## [2026-05-09] TD-002 résolue — adapter UI `graph_seeder_blockchain`
+
+Le scénario `graph_seeder_blockchain` (référencé dans `ui/src/config/families.ts` famille `pipeline`) n'avait aucune entrée dans le registry `ADAPTERS` depuis 2026-03-02 — cliquer dessus produisait l'erreur `No adapter registered for scenario "graph_seeder_blockchain"`. Les 5 attestations on-chain issues exclusivement de ce fichier (sur 12 dans `devnet_pushed.json`) n'avaient donc pas de claim viewer associé.
+
+### Adapter joint seeder ↔ on-chain (option A + α)
+- Nouvel adapter `ui/src/data/adapters/graph-seeder-blockchain.ts`. Le seeder JSON publie des claims avec `verdict: null` (les verdicts sont matérialisés plus tard, au push on-chain). L'adapter joint donc le payload seeder avec `devnet_pushed.json` par texte de claim (`claim` côté seeder ↔ `question` côté on-chain) et ne surface que les claims ayant une attestation matchante — en récupérant le verdict depuis l'attestation.
+- Type `Adapter` étendu avec un 2ème paramètre optionnel (`onchain?: OnChainManifest`). Les 5 adapters existants ignorent ce paramètre et restent source-compatibles.
+- `loadRun` (`ui/src/data/loader.ts`) fetch le payload et le manifeste on-chain en parallèle (`Promise.all`) et forwarde les deux à l'adapter sélectionné.
+- `ClaimTypeSchema` étendu : ajout de `'foundational'` et `'security_audit'`. Tous deux déjà présents on-chain (`epistemic_type` u8=0 et u8=2 respectivement, voir `programs/epp/src/state.rs::epistemic_type_to_u8`).
+
+### Validation
+`npx vitest run` → 4 / 4 passed (test RED-GREEN-FIX dans `ui/src/data/adapters/graph-seeder-blockchain.test.ts` : join par question, drop des claims sans attestation, zéro claim si pas de manifeste on-chain, préservation du `raw`). `npx tsc --noEmit` → clean. Signature étendue rétro-compatible (covariance fonctionnelle TS).
+
+### Documents impactés
+- `ui/src/data/adapters/graph-seeder-blockchain.ts` (nouveau, adapter)
+- `ui/src/data/adapters/graph-seeder-blockchain.test.ts` (nouveau, 4 tests vitest)
+- `ui/src/data/adapters/index.ts` (signature étendue + entrée registry)
+- `ui/src/data/loader.ts` (fetch parallèle on-chain manifest)
+- `ui/src/domain/claim.ts` (extension `ClaimTypeSchema`)
+- `TECH_DEBT.md` (TD-002 resolved)
+
+---
+
 ## [2026-05-01] Audit Lean P1 cumulativity + P0 recalibrage doc
 
 Correction d'un bug de design Lean ↔ Python rendu visible par revue critique externe : `assignTier` permettait `verified` avec 1 modèle + anchor (violation de la stratification suggérée par les noms `sandbox < proposition < validated < verified`). Refonte parallèle du WHITEPAPER §"Formal Verification — Dual-Trust" pour aligner le langage public sur l'état réel post-audit (suppression du compte obsolète "11 theorems", suppression de la référence `Encoding.lean` retirée en P2, adoucissement des phrases falsifiables, ajout d'une sous-section "What Lean does *not* prove").
