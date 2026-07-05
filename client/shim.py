@@ -107,9 +107,13 @@ class Shim:
         self.rotator = MultiProviderRotator(providers={"ollama": provider})
 
         health = await provider.health_check()
-        if not health.get("healthy", health.get("available", False)):
+        if not health.get("connected", False):
             print("⚠ Ollama ne répond pas sur localhost:11434 — la conversation")
             print("  et l'escalade échoueront tant que le serveur n'est pas lancé.")
+        elif not health.get("default_model_available", True):
+            avail = ", ".join(health.get("models", [])[:6]) or "(aucun)"
+            print(f"⚠ Modèle « {self.params.chat_model} » absent d'Ollama. Disponibles : {avail}")
+            print("  → /model <nom> pour en choisir un.")
 
     # ----------------------------------------------------------------- chat
     async def chat_turn(self, user_text: str) -> None:
