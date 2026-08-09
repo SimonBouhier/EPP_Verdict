@@ -76,6 +76,54 @@ distinctes de son apparence textuelle.
 - Conséquence EPP : le sidecar ne peut fournir qu'un avis de quarantaine. La
   future promotion Lyra devra contrôler séparément provenance et autorité.
 
+### Prompt Attack Detection with LLM-as-a-Judge and Mixture-of-Models — Le et al. (2026)
+
+- Source : [arXiv:2603.25176](https://arxiv.org/abs/2603.25176)
+- Méthode : 929 cas (770 bénins issus de chatbots publics et 159 attaques
+  produites par red teaming), juges LLM à raisonnement structuré, puis mélange
+  pondéré dont poids et seuil sont optimisés par grille.
+- Résultat utile : les juges généralistes structurés peuvent être compétitifs,
+  mais le mélange de plusieurs juges n'apporte que des gains modestes et peut
+  se dégrader quand on ajoute des modèles.
+- Conséquence EPP : l'ensemble n'est pas présumé supérieur. La campagne V1
+  conserve l'unanimité gelée, publie les votes individuels et exige un gain
+  conjoint de sécurité et d'utilité plutôt qu'un simple F1 agrégé.
+
+### When Benchmarks Lie — Fomin (2026)
+
+- Source : [arXiv:2602.14161](https://arxiv.org/abs/2602.14161)
+- Méthode : 18 jeux de données, quatre familles de modèles et comparaison entre
+  validation croisée standard et Leave-One-Dataset-Out (LODO).
+- Résultat utile : la validation standard surestime l'AUC de 8 à 16,5 points
+  selon le modèle ; 28 à 44 % des principales features SAE sont dépendantes du
+  jeu de données, et les écarts par source peuvent atteindre 25 points.
+- Conséquence EPP : V1 doit être interprétée par source et par transformation,
+  jamais comme preuve hors distribution. Une V2 devra tenir au moins une source
+  et une famille d'attaque entièrement hors conception (LODO/LOTO).
+
+### Measuring Real-World Prompt Injection Attacks in Resume Screening — Zhang et al. (2026)
+
+- Source : [arXiv:2605.28999](https://arxiv.org/abs/2605.28999)
+- Méthode : environ 200 000 CV réels, deux détecteurs complémentaires, accord
+  inter-méthodes et validation humaine stratifiée des positifs et négatifs.
+- Résultat utile : les auteurs estiment environ 1 % de CV injectés et observent
+  que plus de 90 % des injections détectées n'emploient pas d'instruction
+  explicite ; l'accord de détecteurs ne remplace pas l'audit humain ciblé.
+- Conséquence EPP : les trois payloads synthétiques figés de V1 qualifient
+  l'instrument mais ne couvrent pas la prévalence naturelle. Avant S1, une V2
+  devra inclure des baits naturels, une localisation de l'indice et un audit
+  humain stratifié des consensus positifs comme négatifs.
+
+### A Critical Evaluation of Defenses against Prompt Injection Attacks — Jia et al. (2025)
+
+- Source : [arXiv:2505.18333](https://arxiv.org/abs/2505.18333)
+- Méthode : cadre d'évaluation séparant utilité générale et efficacité, avec
+  attaques existantes et adaptatives, appliqué à plusieurs défenses publiées.
+- Résultat utile : les revendications de robustesse chutent lorsque les deux
+  axes sont mesurés avec des attaques et tâches diversifiées.
+- Conséquence EPP : les portes `UER` et `BRR` de V1 restent conjointes ; un
+  filtre qui bloque tout ne peut pas confirmer l'hypothèse.
+
 ## Format des prochaines entrées
 
 Chaque entrée doit contenir : référence stable, méthode réellement lue,
