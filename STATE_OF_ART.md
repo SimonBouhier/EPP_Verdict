@@ -1,6 +1,6 @@
 # State of the art — quarantaine de contenus non fiables
 
-Dernière revue : 2026-08-09.
+Dernière revue : 2026-08-10.
 
 ## Position du projet
 
@@ -162,6 +162,76 @@ distinctes de son apparence textuelle.
   `silver_source` dans chaque artefact et chaque tableau. Les 60 cas bénins non
   intégralement audités interdisent de présenter V2 comme benchmark gold ou
   comme autorisation de déploiement S1.
+
+### When JSON Is Not Enough — Li (2026)
+
+- Source : [arXiv:2607.18261](https://arxiv.org/abs/2607.18261)
+- Méthode : OrderBench compare, sur les mêmes 300 cas et quatre modèles, une
+  sortie JSON demandée par prompt et une sortie contrainte par schéma. Un oracle
+  déterministe sépare validité JSON, validité du schéma, statut, exactitude
+  sémantique et acceptation dangereuse.
+- Résultat utile : une sortie parfaitement conforme au schéma peut rester
+  sémantiquement fausse ou dangereuse ; l'article journalise réponse brute,
+  parsing et vérification métier comme artefacts appariés.
+- Conséquence EPP : la conformité au schéma Ollama ne doit pas être confondue
+  avec la cohérence du verdict. Le sidecar doit rendre des codes distincts pour
+  transport, enveloppe Ollama, JSON modèle, schéma modèle et contraintes
+  sémantiques, sans faire franchir le texte libre à la frontière Lyra.
+
+### The Constraint Tax — Ray (2026)
+
+- Source : [arXiv:2605.26128](https://arxiv.org/abs/2605.26128)
+- Méthode : 15 000 générations sur petits modèles comparent sorties libres,
+  JSON demandé par prompt et décodage contraint, à instances et modèles fixes ;
+  la mesure sépare validité, exactitude, exécutabilité, latence et sorties
+  fausses mais valides.
+- Résultat utile : la contrainte de format peut modifier la réponse elle-même,
+  pas seulement son emballage ; le coût dépend aussi du backend de service.
+- Conséquence EPP : une future campagne ne devra pas traiter `format=schema`
+  comme un détail neutre. Elle devra conserver l'identité du backend et séparer
+  échec de format, incohérence sémantique et décision de sécurité ; toute
+  comparaison de mode exigera des cas appariés et un nouveau pré-enregistrement.
+
+### Prompt Injection Detection is Regime-Dependent — Akinrele et Gowda (2026)
+
+- Source : [arXiv:2605.26999](https://arxiv.org/abs/2605.26999)
+- Méthode : comparaison de détecteurs lexicaux, sémantiques, structurels et
+  transformers sous plusieurs décalages hors distribution, splits répétés et
+  métriques de classement comme de déploiement à seuil fixé.
+- Résultat utile : aucun détecteur ne domine tous les régimes et le classement
+  global masque le comportement au faible taux de faux positifs ; les signaux
+  structurels interprétables apportent des gains modestes mais auditables.
+- Conséquence EPP : publier les résultats par source et construction, conserver
+  les règles ou codes ayant déclenché le verdict et figer tout seuil avant la
+  mesure. Un score agrégé ne suffit pas à choisir une politique exploitable.
+
+### Confidently Wrong — Biswas (2026)
+
+- Source : [arXiv:2606.22659](https://arxiv.org/abs/2606.22659)
+- Méthode : trois détecteurs publiés sont calibrés sur une source puis évalués
+  à seuil gelé sur cinq décalages, avec une mesure spécifique de la confiance
+  accordée aux attaques manquées.
+- Résultat utile : les attaques manquées peuvent l'être avec une confiance
+  presque maximale, tandis qu'une erreur de calibration agrégée paraît faible ;
+  les attaques indirectes de détournement constituent un angle mort commun.
+- Conséquence EPP : la confiance déclarée par les jurys n'est pas un substitut
+  à la calibration par strate. V3 devra rapporter séparément la confiance des
+  faux négatifs et ne pourra pas utiliser l'abstention ou le consensus comme
+  preuve de sûreté.
+
+### CourtGuard — Wu et Maslowski (2025)
+
+- Source : [arXiv:2510.19844](https://arxiv.org/abs/2510.19844)
+- Méthode : un débat local défense/prosecution/jugement est comparé à un juge
+  direct sur 5 000 attaques indirectes stratifiées, des prompts bénins riches
+  en mots déclencheurs et un benchmark mixte, avec trois petits modèles locaux.
+- Résultat utile : le montage multi-agent réduit généralement les faux positifs
+  mais détecte moins bien les attaques ; davantage d'agents ne produit donc pas
+  gratuitement un meilleur compromis.
+- Conséquence EPP : le jury à deux modèles reste une hypothèse empirique, pas
+  une architecture privilégiée. Toute nouvelle fusion devra battre un juge
+  direct sur sécurité et utilité, avec les échecs techniques inclus au
+  dénominateur.
 
 ## Format des prochaines entrées
 
