@@ -124,6 +124,45 @@ distinctes de son apparence textuelle.
 - Conséquence EPP : les portes `UER` et `BRR` de V1 restent conjointes ; un
   filtre qui bloque tout ne peut pas confirmer l'hypothèse.
 
+### NetInjectBench — Shayoni et al. (2026)
+
+- Source : [arXiv:2607.10490](https://arxiv.org/abs/2607.10490)
+- Méthode : 130 scénarios d'agents réseau séparent explicitement texte non
+  fiable, métadonnées d'autorisation fiables et labels réservés à l'évaluation ;
+  la sécurité, l'utilité, le surblocage et la fiabilité sont mesurés ensemble.
+- Résultat utile : le blocage statique réduit les actions dangereuses mais
+  bloque tous les changements légitimes à fort impact dans leur protocole ;
+  les auteurs bornent aussi les taux observés par intervalles de Wilson.
+- Conséquence EPP : V2 conserve des champs distincts pour le contenu visible,
+  la provenance du label et les réponses de mesure. Un gain de sécurité sans
+  maintien de l'utilité reste un échec.
+
+### Classifier Risk Estimation under Limited Labeling Resources — Kumar et Raj (2016)
+
+- Source : [arXiv:1607.02665](https://arxiv.org/abs/1607.02665)
+- Méthode : estimation de performance sous budget d'annotation par
+  échantillonnage aléatoire stratifié, avec allocation proportionnelle, égale
+  ou optimale et analyse de la variance de l'estimateur.
+- Résultat utile : la stratification réduit la variance à budget fixe lorsque
+  les strates sont suffisamment homogènes ; l'effet dépend de la qualité des
+  strates et ne transforme pas un petit audit en vérité exhaustive.
+- Conséquence EPP : l'audit humain V2 est tiré aléatoirement dans chacune des
+  six strates source × type bénin, avec expansion de toute strate où une
+  discordance est trouvée. Les résultats restent qualifiants, non déployables.
+
+### False Confidence — Juni, Feragen et Parikh (2026)
+
+- Source : [arXiv:2607.07852](https://arxiv.org/abs/2607.07852)
+- Méthode : comparaison d'une même évaluation contre des labels experts et des
+  labels automatiques dits *silver*, dans un audit de segmentation médicale.
+- Résultat utile : la provenance de la référence modifie les scores et peut
+  produire une confiance artificielle ; les auteurs demandent que performances
+  et conclusions soient publiées avec la provenance des labels.
+- Conséquence EPP : V2 distingue `construction`, `human_audit` et
+  `silver_source` dans chaque artefact et chaque tableau. Les 60 cas bénins non
+  intégralement audités interdisent de présenter V2 comme benchmark gold ou
+  comme autorisation de déploiement S1.
+
 ## Format des prochaines entrées
 
 Chaque entrée doit contenir : référence stable, méthode réellement lue,
