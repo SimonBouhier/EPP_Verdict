@@ -286,4 +286,19 @@ def main() -> None:
     db_path = resolve_db_path(args.db)
     if not db_path.exists():
         print(f"Base introuvable : {db_path}", file=sys.stderr)
-        sy
+        sys.exit(1)
+
+    Handler.db_path = db_path
+    server = HTTPServer(("127.0.0.1", args.port), Handler)
+    url = f"http://127.0.0.1:{args.port}/"
+    print(f"Graphe épistémique : {url}  (base {db_path.name}, lecture seule — Ctrl+C pour arrêter)")
+    if not args.no_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\narrêt.")
+
+
+if __name__ == "__main__":
+    main()
