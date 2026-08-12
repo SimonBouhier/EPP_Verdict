@@ -167,7 +167,7 @@ async def _run_deterministic_pipeline(
     )[:64]
     frame_id = spec.frame_id or config.metrological_frame
     # P1 : predicate = metric du frame (pas "sanctions_status" hardcodé)
-    from services.solana.metrological_frame import PREDEFINED_FRAMES as _FRAMES
+    from services.metrology import PREDEFINED_FRAMES as _FRAMES
     _frame_factory = _FRAMES.get(frame_id)
     predicate = _frame_factory().metric if _frame_factory else "rwa_status"
 

@@ -1,0 +1,5 @@
+# Reproducible CI surface for the Python governance gate.
+-r requirements.txt
+
+# Property-based conformance tests are part of the merge gate.
+hypothesis>=6.0

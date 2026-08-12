@@ -44,7 +44,7 @@ from database.engine import ISpaceDB
 from services.esmm.attestation import EpistemicAttestation
 from services.solana.client import EppSolanaClient, derive_attestation_pda
 from services.solana.config import SolanaCluster, SolanaConfig
-from services.solana.metrological_frame import PREDEFINED_FRAMES
+from services.metrology import PREDEFINED_FRAMES
 
 logger = logging.getLogger("push_to_devnet")
 
