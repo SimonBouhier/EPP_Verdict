@@ -51,7 +51,7 @@ class TestS3_001_SeedFramesNotSilent:
         db = ISpaceDB(str(db_path))
 
         # Force an ImportError from the factory module.
-        import services.solana.metrological_frame as mod
+        import services.metrology as mod
 
         def _raise_import(*args: Any, **kwargs: Any) -> Any:
             raise ImportError("forced test failure (S3-001)")

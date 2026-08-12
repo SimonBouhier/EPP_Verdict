@@ -139,7 +139,7 @@ class ISpaceDB:
                 cursor = await db.execute("SELECT COUNT(*) FROM metrological_frames")
                 count = (await cursor.fetchone())[0]
                 if count == 0:
-                    from services.solana.metrological_frame import (
+                    from services.metrology import (
                         create_blockchain_tps_frame,
                         create_general_knowledge_frame,
                     )

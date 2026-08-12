@@ -1,11 +1,11 @@
 # EPP — Epistemic Proof Program
 
-**Verifiable AI Consensus on Solana.**
+**Reviewable multi-model deliberation for evidence-backed decisions.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-908%20passed-brightgreen)](tests/)
-[![ADRs](https://img.shields.io/badge/ADRs-20-blue)](docs/adr/)
+[![Tests](https://img.shields.io/badge/tests-936%20passed-brightgreen)](tests/)
+[![ADRs](https://img.shields.io/badge/ADRs-21-blue)](docs/adr/)
 [![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://epp-verdict.vercel.app/onchain)
 [![Dashboard](https://img.shields.io/badge/dashboard-live-06b6d4)](https://epp-verdict.vercel.app)
 
@@ -34,9 +34,11 @@ The full liability framing — and the alignment with UNESCO §3/§5/§11 plus t
 
 ## What is EPP?
 
-EPP is a consensus protocol for knowledge claims, anchored on Solana. Multiple architecturally distinct AI models deliberate through structured adversarial cycles, and the protocol produces a cryptographic attestation recording *what* was concluded, *how*, *by whom*, *under what methodology*, and *with what degree of agreement*.
+EPP is a deliberation and attestation protocol for knowledge claims. Multiple architecturally distinct AI models deliberate through structured adversarial cycles, and the protocol produces a portable cryptographic attestation recording *what* was concluded, *how*, *by whom*, *under what methodology*, and *with what degree of agreement*.
 
-Every attestation carries a **5-dimensional epistemic signature** (agreement, consistency, centrality, stability, diversity) produced under a versioned **metrological frame** and stored as a **462-byte PDA** on Solana devnet. Same kernel, same on-chain format, regardless of domain — what changes per domain is an adapter (fetches external data) and a frame (defines the measurement methodology).
+Every attestation carries a **5-dimensional epistemic signature** (agreement, consistency, centrality, stability, diversity) produced under a versioned **metrological frame**. EPP keeps execution state in SQLite and promotes reviewable proposal artifacts through Git branches, pull requests, checks, and an authorized merge. Solana devnet remains an optional publication adapter; 12 historical attestations demonstrate that projection without making it a core dependency.
+
+The merge records acceptance into the project registry, not truth. The epistemic tier stays distinct from GitHub's promotion authority. See [ADR-021](docs/adr/ADR-021-gouvernance-github.md).
 
 Three operational paths:
 
@@ -122,10 +124,11 @@ cd ui && npm install && npm run dev
 ### Tests
 
 ```bash
-pytest tests/ -v                              # Full suite (908 tests)
+pytest tests/ -v                              # Full suite (936 tests)
 pytest tests/test_adr018_flywheel.py -v       # Flywheel
 pytest tests/test_adr014_audit_runner.py -v   # Smart contract audit
 pytest tests/test_adr020_*.py -v              # Lean 4 conformance
+pytest tests/test_adr021_github_governance.py -v  # Git promotion boundary
 ```
 
 ---
@@ -136,12 +139,15 @@ pytest tests/test_adr020_*.py -v              # Lean 4 conformance
 EPP_Verdict/
 ├── services/
 │   ├── esmm/             # ESMM dual-mode protocol (orchestrator, pipeline, consensus, attestation)
+│   ├── governance/       # Deterministic proposal artifacts for Git/PR promotion
+│   ├── metrology.py      # Generic versioned metrological frames
 │   ├── sources/adapters/ # OFAC, OpenSanctions, EU CFSP, Verra VCS, ACLED, Wikidata, NIST
 │   ├── providers/        # Ollama, OpenAI-compat, Anthropic
-│   ├── solana/           # Bridge, client, metrological frames
+│   ├── solana/           # Optional devnet publication bridge and client
 │   └── audit/            # Smart contract audit kernel (ADR-014)
 ├── programs/epp/         # Anchor/Rust on-chain program (submit_attestation, state, errors)
 ├── database/             # ISpaceDB (async SQLite, WAL, ~100 methods)
+├── governance/proposals/ # Canonical proposal artifacts reviewed by PR
 ├── Formal/               # Lean 4 formal verification (6 substantive theorems + 7 regression tests + 2 type-level invariants — audit P1–P4, ADR-020)
 ├── cli/epp_cli.py        # CLI surface (ask, query, frame, audit, verify-rwa)
 ├── scripts/
@@ -152,11 +158,11 @@ EPP_Verdict/
 │   └── scripts/copy-data.mjs
 ├── demos/                # Scenario scripts + benchmark_runs/ (timestamped JSON)
 ├── docs/
-│   ├── adr/              # 20 ADRs
+│   ├── adr/              # 21 ADRs
 │   ├── ARCHITECTURE.md   # Living structural document
 │   ├── positioning/      # Internal strategic material (NOT public vitrine)
 │   └── fr/CHANGELOG.md   # Chronological journal
-└── tests/                # 908 tests — RED-GREEN-FIX strict protocol
+└── tests/                # 936 tests — RED-GREEN-FIX strict protocol
 ```
 
 **Full component-by-component map** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -167,12 +173,12 @@ EPP_Verdict/
 
 | Metric | Value |
 |:-------|:------|
-| Tests | **908 passed**, 11 skipped, 0 failed |
-| Architecture decisions | **20 ADRs** |
+| Tests | **936 passed**, 11 skipped, 0 failed |
+| Architecture decisions | **21 ADRs** |
 | AI models tested | 6 (Mistral, Llama 3.1, Gemma 3, DeepSeek-R1, phi4-reasoning, gpt-oss:20b) |
 | Deterministic sources | 7 integrated |
 | Pipeline modes | EXPLORE + VERIFY + DETERMINISTIC + FLYWHEEL |
-| Solana program | `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166) |
+| Optional Solana adapter | Program `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (devnet, slot 450099166) |
 | On-chain attestations | **12** pushed ([data/devnet_pushed.json](data/devnet_pushed.json)) |
 | Flywheel delta demonstrated | **+0.46** (0.43 → 0.89) |
 | Formal verification | Lean 4 — **6 substantive theorems** (4 tier `iff` characterization + 2 stratification cumulativity) + 7 regression tests + 2 type-level invariants (`Option SourceAnchor`) — see ADR-020 + audit P1–P4 in [`docs/audit/`](docs/audit/) |
@@ -199,7 +205,7 @@ EPP_Verdict/
 - **[`WHITEPAPER.md`](WHITEPAPER.md)** — Full architectural and epistemological narrative: ESMM deliberation, metrological frames, flywheel, formal verification, cluster vision, references.
 - **[`PITCH.md`](PITCH.md)** — 3-minute pitch: three acts, three primitives nobody implements, the five axioms, the verdict that survives the counterpoint stress-test.
 - **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** — Living component-by-component map.
-- **[`docs/adr/`](docs/adr/)** — 20 Architecture Decision Records.
+- **[`docs/adr/`](docs/adr/)** — 21 Architecture Decision Records.
 - **[`docs/positioning/`](docs/positioning/)** — Internal strategic material (competitive scan, counterpoint responses, formal methods landscape, track strategy, *the negative space* essay). Not public vitrine — source material informing the public docs.
 - **[`docs/fr/CHANGELOG.md`](docs/fr/CHANGELOG.md)** — Chronological journal of significant changes.
 
