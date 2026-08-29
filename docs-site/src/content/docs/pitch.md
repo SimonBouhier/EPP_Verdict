@@ -6,6 +6,11 @@ description: "Blockchains can verify that a transaction happened. They cannot ve
 > epistemological and architectural narrative see [`WHITEPAPER.md`](/whitepaper/).
 > For the live dashboard: [epp-verdict.vercel.app](https://epp-verdict.vercel.app).
 
+> **Historical pitch notice — 2026-08-12.** This document retains the original
+> Colosseum/Solana pitch. ADR-021 supersedes its architectural centrality:
+> GitHub now governs proposal and promotion, while Solana remains an optional
+> devnet publication adapter. See the README and ADR-021 for current design.
+
 ---
 
 ## The Problem No One Has Solved
