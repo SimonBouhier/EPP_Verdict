@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-936%20passed-brightgreen)](tests/)
-[![ADRs](https://img.shields.io/badge/ADRs-21-blue)](docs/adr/)
+[![ADRs](https://img.shields.io/badge/ADRs-22-blue)](docs/adr/)
 [![Solana Devnet](https://img.shields.io/badge/Solana-devnet-9945FF)](https://epp-verdict.vercel.app/onchain)
 [![Dashboard](https://img.shields.io/badge/dashboard-live-06b6d4)](https://epp-verdict.vercel.app)
 

@@ -13,6 +13,13 @@ description: "EPP outputs proofs of process, not verdicts on truth. Each attesta
 > responses, formal methods panorama, track positioning) see
 > [`docs/positioning/`](/positioning/).
 
+> **Architecture update — 2026-08-12 (ADR-021).** This whitepaper preserves
+> the original Colosseum/on-chain positioning as historical design context.
+> GitHub pull requests and protected merges are now EPP's internal governance
+> and promotion boundary. Solana is an optional devnet publication adapter,
+> not a dependency or authority of the deliberation core. Statements below
+> about on-chain storage describe that optional path and the existing demo.
+
 ---
 
 ## Liability & Scope
