@@ -4,8 +4,8 @@ Epistemic Attestation — Output cristallisé du pipeline ESMM.
 Une attestation est un triplet validé par consensus multi-modèles,
 portant une signature épistémique 5D et un hash SHA-256 déterministe.
 
-C'est le contrat d'interface entre le moteur ESMM (off-chain) et
-la couche Solana (on-chain, Phase 1).
+C'est le contrat de sortie du moteur ESMM. Il peut être persisté dans
+SQLite, promu par Git/PR ou projeté par un adaptateur externe tel que Solana.
 """
 
 import hashlib
@@ -48,7 +48,8 @@ class EpistemicAttestation(BaseModel):
     Attestation épistémique cristallisée.
 
     Produite par le pipeline ESMM, stockable en DB, sérialisable en JSON
-    portable, hashable de manière déterministe. Prête pour l'ancrage on-chain.
+    portable et hashable de manière déterministe. Les backends de promotion
+    et de publication restent extérieurs au modèle.
 
     Grain : un triplet canonique (subject, predicate, object).
     Un run ESMM sur une question produit potentiellement N attestations.
@@ -167,7 +168,8 @@ class EpistemicAttestation(BaseModel):
         """
         Sérialise en JSON déterministe (clés triées, floats à 6 décimales).
 
-        Ce format est le contrat d'interface avec la couche Solana.
+        Ce format est le contrat d'interface neutre avec la persistance,
+        la gouvernance Git et les adaptateurs de publication.
         Deux attestations identiques produisent le même JSON.
         """
         data = self.model_dump()

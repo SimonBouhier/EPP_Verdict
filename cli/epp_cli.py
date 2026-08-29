@@ -23,9 +23,7 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from services.solana.config import SolanaConfig, SolanaCluster
-from services.solana.client import EppSolanaClient
-from services.solana.metrological_frame import (
+from services.metrology import (
     MetrologicalFrame,
     PREDEFINED_FRAMES,
 )

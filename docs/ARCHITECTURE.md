@@ -3,7 +3,7 @@
 > **Fichier vivant.** Mis à jour par Claude Code uniquement quand la structure du code change.
 > Ne documente que ce qui EXISTE. Pas de spéculations.
 
-**Dernière mise à jour** : 2026-05-01
+**Dernière mise à jour** : 2026-08-12
 **Base** : Fork Lyra ACE → EPP_Verdict
 
 ---
@@ -73,6 +73,21 @@ Système de cristallisation des attestations épistémiques, produisant des obje
 - `get_attestation_by_hash()` — Récupère par claim_hash SHA-256
 - `get_attestations_by_subject()` — Filtre par sujet + min_consensus
 - `get_attestation_history()` — Historique de revalidation d'un claim
+
+### Métrologie et gouvernance Git (ADR-021 — fonctionnel)
+
+La métrologie appartient au noyau EPP. La promotion est une décision externe
+portée par GitHub ; elle ne modifie ni le contenu de l'attestation ni son tier
+épistémique.
+
+| Fichier | Rôle | État |
+|---------|------|------|
+| `services/metrology.py` | Modèles `MetrologicalFrame` / `FrameGovernance`, hash canonique et registre des 7 frames prédéfinis. Aucun import Solana. | ✅ Fonctionnel |
+| `services/governance/proposal.py` | Enveloppe `AttestationProposal` : frame hash obligatoire, preuves adressées par SHA-256, hash de proposition déterministe, rejet des altérations. `decision` est limité à `proposed`; le merge porte l'acceptation. | ✅ Fonctionnel |
+| `governance/proposals/` | Surface canonique des artefacts JSON proposés à la revue Git. Les corpus bruts en sont exclus. | ✅ Créé |
+| `scripts/validate_proposals.py` | Validation hors réseau des artefacts et vérification byte-for-byte des preuves locales ; les références HTTPS sont déclarées mais jamais téléchargées en CI. | ✅ Fonctionnel |
+| `services/solana/metrological_frame.py` | Shim d'import historique réexportant `services.metrology` sans dupliquer la logique. | ✅ Compatible |
+| `.github/workflows/python_governance_ci.yml` | Suite Python + validation des propositions, sans secrets, permissions `contents: read`, destinée à devenir un check de merge obligatoire. | ✅ Créé |
 
 ### End-to-End Pipeline (Phase 3 — fonctionnel)
 
@@ -185,14 +200,14 @@ Système de stockage multi-version des embeddings permettant le changement de mo
 | `populate_graph.py` | Population initiale graphe | ✅ Fonctionnel |
 | `hydrate_embeddings.py` | Hydratation vecteurs | ✅ Fonctionnel |
 
-### Couche Solana (Phase 1 — MVP)
+### Couche Solana (Phase 1 — publication optionnelle)
 
 Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_id!`, keypair `target/deploy/epp-keypair.json`, et `Anchor.toml` localnet + devnet après fix `86539e7`)
 
 | Fichier | Rôle | État |
 |---------|------|------|
 | `services/solana/config.py` | Config cluster, devnet guard, DEFAULT_PROGRAM_ID, keypair path | ✅ Fonctionnel |
-| `services/solana/metrological_frame.py` | MetrologicalFrame Pydantic, compute_frame_hash() SHA-256. 7 frames : `blockchain_tps_v1.0`, `general_knowledge_v1.0`, `compliance_sanctions_v1.0`, `carbon_credits_vcs_v1.0`, `rwa_identity_v1.0`, `smartcontract_audit_v1.0` (ADR-014), `geopolitical_forecast_v1.0` (ADR-016). | ✅ Fonctionnel |
+| `services/solana/metrological_frame.py` | Shim de compatibilité vers le noyau `services/metrology.py`. | ✅ Compatible |
 | `services/solana/bridge.py` | Sérialisation Python <-> Anchor (float↔u16, string↔bytes). `CONFIDENCE_TIER_MAP` : bijection stricte 4 clés ↔ 4 arms Rust (sandbox/proposition/validated/verified). | ✅ Fonctionnel |
 | `services/solana/client.py` | Transaction builder, PDA derivation, mock mode, account deser (Phase 4.6). CLAIM_HASH_OFFSET=41, SUBJECT_OFFSET=73 vérifiés vs state.rs layout. | ✅ Fonctionnel |
 | `programs/epp/src/lib.rs` | Instructions Anchor : submit_attestation, ping | ✅ Build OK (221 KB .so) |
@@ -214,7 +229,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 
 ### Architecture Decision Records (Phase 3.3+)
 
-20 ADR actifs dans `docs/adr/` :
+21 ADR actifs dans `docs/adr/` :
 
 | ADR | Sujet | Statut |
 |-----|-------|--------|
@@ -238,6 +253,7 @@ Programme ID : `9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD` (aligné `declare_
 | ADR-018 | Flywheel Épistémique — injection ancres déterministes dans passes LLM | Actif |
 | ADR-019 | Projection Enum V2 — taxonomie on-chain minimale pour vérification formelle (Lean 4-ready) | Actif |
 | ADR-020 | Couche de spécification formelle Lean 4 (anciennement « Architecture Dual-Trust » — périmètre clarifié 2026-05-02). Inventaire post-audit P1–P4 + correction P1 cumulativity (cf. `docs/audit/`) : 6 théorèmes substantifs (4 `iff` sur tiers + 2 cumulativité de stratification) + 7 regression tests + 2 contrats au niveau du type (B5 fermé par `Option SourceAnchor`) + 1 corollaire historique + 1 lemme définitionnel. Pont spec/code humain non-mécanisé (TD-005). | Actif |
+| ADR-021 | GitHub comme frontière de gouvernance et de promotion ; Solana devient un adaptateur de publication optionnel. | Actif |
 
 ### ADR-018 — Flywheel Épistémique (2026-03-13)
 
@@ -422,7 +438,7 @@ Nouveau chemin déterministe parallèle au pipeline ESMM. L'appelant déclare `c
 | `services/sources/adapters/wikidata.py` | SPARQL endpoint public (CC-0). Source structurée du Flywheel ADR-018 ; scores plafonnés à 0.85 (éditabilité publique). | ✅ Fonctionnel |
 | `services/sources/adapters/nist_codata.py` | Constantes physiques NIST/CODATA 2022. Source autoritaire primaire (scores 1.0). | ✅ En développement |
 
-**Frames** (dans `metrological_frame.py`) :
+**Frames** (dans `services/metrology.py`) :
 
 | Frame | Domaine | `esmm_bypass` |
 |-------|---------|--------------|
@@ -504,10 +520,14 @@ cli/epp_cli.py
   ├── services/esmm/pipeline.py  ← pont ESMM → cristallisation
   │     ├── services/esmm/attestation.py
   │     └── services/esmm/run_logger.py
-  ├── services/solana/config.py
-  ├── services/solana/metrological_frame.py
-  ├── services/solana/bridge.py
-  └── services/solana/client.py
+  ├── services/metrology.py
+  └── services/governance/proposal.py
+
+publication optionnelle
+  └── services/solana/
+        ├── config.py
+        ├── bridge.py
+        ├── client.py
         └── programs/epp/ (Anchor, Rust)
 ```
 
