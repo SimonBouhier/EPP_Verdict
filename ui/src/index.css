@@ -3,75 +3,53 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
-/* Light theme — kept for completeness but the app ships dark-first.
-   Picks a neutral cool palette to mirror the dark theme structure. */
+/* Opal palette: dark is the document default; semantic verdict colors remain distinct. */
 :root {
-  --background: 220 30% 98%;
-  --foreground: 220 40% 10%;
-
-  --card: 0 0% 100%;
-  --card-foreground: 220 40% 10%;
-
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 40% 10%;
-
-  --primary: 184 78% 40%;
-  --primary-foreground: 220 40% 98%;
-
-  --secondary: 220 15% 94%;
-  --secondary-foreground: 220 40% 10%;
-
-  --muted: 220 15% 94%;
-  --muted-foreground: 220 12% 42%;
-
-  --accent: 184 60% 92%;
-  --accent-foreground: 184 78% 25%;
-
-  --destructive: 0 72% 50%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 220 20% 88%;
-  --input: 220 20% 88%;
-  --ring: 184 78% 40%;
-
-  /* Lighthouse-derived signature accents. */
-  --accent-cyan: 184 78% 56%;
-  --accent-gold: 43 78% 60%;
+  --background: 51.43 25.93% 94.71%;
+  --foreground: 138.46 11.93% 21.37%;
+  --card: 68.57 21.21% 93.53%;
+  --card-foreground: 138.46 11.93% 21.37%;
+  --popover: 51.43 25.93% 94.71%;
+  --popover-foreground: 138.46 11.93% 21.37%;
+  --primary: 136.80 19.08% 25.69%;
+  --primary-foreground: 60.00 40.00% 94.12%;
+  --secondary: 78.00 20.83% 90.59%;
+  --secondary-foreground: 138.46 11.93% 21.37%;
+  --muted: 78.00 20.83% 90.59%;
+  --muted-foreground: 115.71 6.36% 43.14%;
+  --accent: 88.00 23.81% 87.65%;
+  --accent-foreground: 136.80 19.08% 25.69%;
+  --destructive: 0.00 56.38% 47.65%;
+  --destructive-foreground: 0.00 100.00% 99.02%;
+  --border: 85.00 14.63% 83.92%;
+  --input: 85.00 14.63% 83.92%;
+  --ring: 270.00 11.81% 50.20%;
+  --accent-cyan: 122.31 13.54% 37.65%;
+  --accent-gold: 33.56 26.94% 42.94%;
 }
 
-/* Dark theme — the EPP signature look.
-   Midnight navy background, cyan beam highlights, gold lighthouse strokes. */
 .dark {
-  --background: 220 50% 7%;
-  --foreground: 220 30% 94%;
-
-  --card: 222 45% 11%;
-  --card-foreground: 220 30% 94%;
-
-  --popover: 222 50% 8%;
-  --popover-foreground: 220 30% 94%;
-
-  --primary: 184 78% 56%;
-  --primary-foreground: 222 50% 8%;
-
-  --secondary: 222 30% 18%;
-  --secondary-foreground: 220 30% 94%;
-
-  --muted: 222 30% 14%;
-  --muted-foreground: 220 15% 62%;
-
-  --accent: 222 35% 16%;
-  --accent-foreground: 184 78% 70%;
-
-  --destructive: 0 60% 45%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 220 30% 18%;
-  --input: 220 30% 18%;
-  --ring: 184 78% 56%;
-
-  --accent-cyan: 184 78% 56%;
-  --accent-gold: 43 78% 65%;
+  --background: 171.43 14.89% 9.22%;
+  --foreground: 78.00 17.86% 89.02%;
+  --card: 156.00 16.13% 12.16%;
+  --card-foreground: 78.00 17.86% 89.02%;
+  --popover: 147.27 14.67% 14.71%;
+  --popover-foreground: 78.00 17.86% 89.02%;
+  --primary: 97.50 26.23% 76.08%;
+  --primary-foreground: 151.76 19.54% 17.06%;
+  --secondary: 144.00 15.79% 18.63%;
+  --secondary-foreground: 78.00 17.86% 89.02%;
+  --muted: 147.27 14.67% 14.71%;
+  --muted-foreground: 125.00 7.50% 68.63%;
+  --accent: 138.46 11.93% 21.37%;
+  --accent-foreground: 87.50 26.67% 82.35%;
+  --destructive: 356.89 59.47% 44.51%;
+  --destructive-foreground: 0.00 100.00% 99.02%;
+  --border: 145.71 11.29% 24.31%;
+  --input: 145.71 11.29% 24.31%;
+  --ring: 260.57 31.53% 78.24%;
+  --accent-cyan: 97.50 26.23% 76.08%;
+  --accent-gold: 33.82 41.35% 73.92%;
 }
 
 @theme inline {
@@ -124,13 +102,7 @@
     color: hsl(var(--foreground));
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Subtle vertical fade — evokes the dark sky behind the lighthouse. */
-    background-image: radial-gradient(
-      ellipse 100% 60% at 50% 0%,
-      hsl(220 50% 10% / 0.6),
-      transparent 70%
-    );
-    background-attachment: fixed;
+    background-image: radial-gradient(ellipse at 82% 15%, #a99ec312, transparent 42%), radial-gradient(ellipse at 8% 0%, #9cbb9410, transparent 40%);
   }
   code,
   pre {
@@ -141,4 +113,28 @@
     background-color: hsl(var(--accent-cyan) / 0.25);
     color: hsl(var(--foreground));
   }
+}
+
+.opal-archive { color-scheme: dark; }
+.opal-archive h1:not(.font-mono), .archive-section-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400; letter-spacing: -.035em;
+}
+.archive-hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 3rem; padding: 1rem 0 2rem; border-bottom: 1px solid hsl(var(--border)); }
+.archive-eyebrow { color: hsl(var(--muted-foreground)); font-size: .64rem; letter-spacing: .16em; margin-bottom: 1.5rem; }
+.archive-hero h1 { font-size: clamp(2.6rem, 5.5vw, 4.4rem); line-height: 1.08; }
+.archive-hero h1 em { color: #c2b6d9; font-weight: 400; }
+.archive-hero figure { max-width: 24rem; justify-self: end; }
+.archive-hero img { display: block; width: 100%; height: auto; }
+.archive-hero figcaption { text-align: center; font-size: .52rem; color: hsl(var(--muted-foreground)); letter-spacing: .1em; }
+.archive-project-link { display: inline-flex; gap: 2rem; padding: .7rem 1.1rem; margin-top: 1.6rem; border: 1px solid hsl(var(--border)); border-radius: 99px; font-size: .75rem; text-decoration: none; color: hsl(var(--foreground)); }
+.archive-project-link:hover { background: hsl(var(--accent)); }
+.archive-section-title { font-size: 1.75rem; margin-bottom: 1.5rem; }
+.opal-archive a:focus-visible, .opal-archive button:focus-visible { outline: 2px solid #c2b6d9; outline-offset: 4px; }
+.opal-archive main { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .archive-hero { grid-template-columns: 1fr; gap: 1rem; }
+  .archive-hero figure { justify-self: center; width: min(75%, 17rem); }
+  .archive-wordmark { display: none; }
+  .archive-nav nav { gap: .8rem; font-size: .75rem; }
 }

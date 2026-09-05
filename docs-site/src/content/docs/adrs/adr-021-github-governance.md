@@ -1,7 +1,8 @@
 ---
 title: "ADR-021 — GitHub as the governance and promotion boundary"
-description: "Dependencies: ADR-006 (claim hash), ADR-007 (append-only), ADR-012 (deterministic sources), ADR-020 (formal specification)"
+editUrl: false
 ---
+
 **Date**: 2026-08-12
 **Status**: Active
 **Dependencies**: ADR-006 (claim hash), ADR-007 (append-only), ADR-012 (deterministic sources), ADR-020 (formal specification)

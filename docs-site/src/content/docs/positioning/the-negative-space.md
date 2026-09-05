@@ -1,7 +1,10 @@
 ---
 title: "The Negative Space of Machine Knowledge"
-description: "Conventional AI systems optimize for convergent answers. EPP measures the"
+editUrl: false
 ---
+
+> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).
+
 > Conceptual essay on EPP as a measurement of the *negative* of knowledge —
 > the topology of disagreement.
 >

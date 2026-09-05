@@ -1,7 +1,8 @@
 ---
 title: "ADR-022 — Post-blockchain refocus: EPP as a personal attestation organ"
-description: "Dependencies: ADR-007 (append-only), ADR-021 (GitHub governance)"
+editUrl: false
 ---
+
 **Date**: 2026-08-29
 **Status**: Active
 **Dependencies**: ADR-007 (append-only), ADR-021 (GitHub governance)

@@ -1,0 +1,44 @@
+name: Documentation and archive checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            docs-site/package-lock.json
+            ui/package-lock.json
+      - name: Check source and generated portal parity
+        working-directory: docs-site
+        run: npm run check:sync
+      - name: Exercise synchronization failure modes
+        working-directory: docs-site
+        run: npm test
+      - name: Install portal dependencies
+        working-directory: docs-site
+        run: npm ci
+      - name: Build portal
+        working-directory: docs-site
+        run: npm run build
+      - name: Install archive viewer dependencies
+        working-directory: ui
+        run: npm ci
+      - name: Test archive viewer
+        working-directory: ui
+        run: npm test
+      - name: Build archive viewer and verify fixed data
+        working-directory: ui
+        run: npm run build

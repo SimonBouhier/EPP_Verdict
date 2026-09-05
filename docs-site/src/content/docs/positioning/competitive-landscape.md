@@ -1,7 +1,10 @@
 ---
 title: "Competitive Landscape"
-description: "Every AI oracle treats consensus as binary — threshold reached or not."
+editUrl: false
 ---
+
+> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).
+
 > **Verdict**: nobody is building exactly this. Several projects occupy
 > adjacent territory; EPP's specific combination is a genuine gap.
 >

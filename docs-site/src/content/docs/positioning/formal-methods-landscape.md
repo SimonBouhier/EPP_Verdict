@@ -1,7 +1,10 @@
 ---
 title: "State of Formal Methods in Crypto Smart Contracts (2025-2026)"
-description: "Certora Prover — The 800-pound gorilla. Open-sourced Feb 2025."
+editUrl: false
 ---
+
+> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).
+
 > Justifies the rarity of EPP's Lean 4 layer (3 / 5,400 Colosseum projects).
 >
 > *Originally compiled in the sprint working dir. Migrated 2026-04-23.*

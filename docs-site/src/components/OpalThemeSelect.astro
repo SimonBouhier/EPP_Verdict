@@ -1,0 +1,37 @@
+<label class="opal-theme-picker">
+  <span aria-hidden="true">◐</span>
+  <select aria-label="Theme" data-opal-theme-select>
+    <option value="dark" selected>Dark</option>
+    <option value="light">Light</option>
+    <option value="auto">System</option>
+  </select>
+</label>
+<script is:inline>window.StarlightThemeProvider.updatePickers();</script>
+<script>
+  type Preference = 'dark' | 'light' | 'auto';
+  const pickers = document.querySelectorAll<HTMLSelectElement>('[data-opal-theme-select]');
+  const system = matchMedia('(prefers-color-scheme: light)');
+  const currentPreference = (): Preference => {
+    const value = pickers[0]?.value;
+    return value === 'light' || value === 'auto' ? value : 'dark';
+  };
+  const apply = (preference: Preference) => {
+    document.documentElement.dataset.theme = preference === 'auto'
+      ? (system.matches ? 'light' : 'dark') : preference;
+    pickers.forEach((picker) => { picker.value = preference; });
+  };
+  pickers.forEach((picker) => picker.addEventListener('change', () => {
+    const preference = picker.value === 'light' || picker.value === 'auto' ? picker.value : 'dark';
+    apply(preference);
+    try { localStorage.setItem('starlight-theme', preference); }
+    catch { /* Theme selection still works for this page when storage is blocked. */ }
+  }));
+  system.addEventListener('change', () => {
+    if (currentPreference() === 'auto') apply('auto');
+  });
+</script>
+<style>
+  .opal-theme-picker { display: inline-flex; align-items: center; gap: .25rem; color: var(--opal-muted); }
+  select { min-height: 40px; background: transparent; color: inherit; border: 0; padding: .4rem; font: inherit; font-size: .78rem; cursor: pointer; }
+  option { background: var(--opal-paper); color: var(--opal-ink); }
+</style>

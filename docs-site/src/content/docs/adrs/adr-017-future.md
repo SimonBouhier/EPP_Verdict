@@ -1,7 +1,10 @@
 ---
 title: "ADR-017: Epistemic Cluster Network — Multi-Operator Architecture"
-description: "Status: Proposed (v1 — architectural vision)"
+editUrl: false
 ---
+
+> **Decision record in its original context.** The local governance and maintained scope are now defined by [ADR-021](/adrs/adr-021-github-governance/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/). Earlier blockchain provisions are historical; this record is preserved.
+
 **Date**: 2026-03-11
 **Status**: Proposed (v1 — architectural vision)
 **Dependencies**: ADR-005 (multi-criteria tiers), ADR-006 (claim hash), ADR-008 (submitter authentication), ADR-010 (methodology traceability), ADR-012 (deterministic bifurcation)

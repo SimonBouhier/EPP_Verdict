@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 
 interface Props {
   attestation: OnChainAttestation;
-  /** Override label (default: "on-chain"). */
+  /** Override label (default: "devnet archive"). */
   label?: string;
   className?: string;
 }
@@ -15,7 +15,7 @@ interface Props {
  * Click stops propagation so the badge can sit inside a Link without
  * triggering the parent navigation.
  */
-export function OnChainBadge({ attestation, label = 'on-chain', className }: Props) {
+export function OnChainBadge({ attestation, label = 'devnet archive', className }: Props) {
   if (!attestation.explorer_url) {
     return (
       <span

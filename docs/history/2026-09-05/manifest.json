@@ -1,0 +1,22 @@
+[
+  {
+    "source": "README.md",
+    "archive": "README.md",
+    "sha256": "389926e864973bd7ddaf1b619fadf691148a1373eff2edf8edbd6e823ac5efd5"
+  },
+  {
+    "source": "PITCH.md",
+    "archive": "PITCH.md",
+    "sha256": "e4259c754f05337e977fbbe6f0b4557446f1b1d16ef0247159b9fcf595100313"
+  },
+  {
+    "source": "WHITEPAPER.md",
+    "archive": "WHITEPAPER.md",
+    "sha256": "f6d9c3ed500c05f0aaa548b3c7ec4557ea0cb2a83d05eb4c7d490c7a2e6f0ff5"
+  },
+  {
+    "source": "docs\\ARCHITECTURE.md",
+    "archive": "ARCHITECTURE.md",
+    "sha256": "3bba22b7c2b6e0577de26c71770c32bceedceb618c956a950215ea12c537fd2e"
+  }
+]
