@@ -1,7 +1,10 @@
 ---
 title: "ADR-015: The Great Decoupling — Tripartite Kernel / Adapters / Domains architecture"
-description: "Status: Deferred (post-Colosseum hackathon)"
+editUrl: false
 ---
+
+> **Decision record in its original context.** The local governance and maintained scope are now defined by [ADR-021](/adrs/adr-021-github-governance/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/). Earlier blockchain provisions are historical; this record is preserved.
+
 **Date**: 2026-03-09
 **Status**: Deferred (post-Colosseum hackathon)
 **Author**: Sim (architect) + Opus (gatekeeper)

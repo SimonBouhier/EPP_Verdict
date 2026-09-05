@@ -1,7 +1,10 @@
 ---
 title: "ADR-020: Formal Specification Layer — Lean 4 invariants for the on-chain attestation contract"
-description: "Status: Active (v1 — closing the first Lean session) ; scope clarified 2026-05-02"
+editUrl: false
 ---
+
+> **Decision record in its original context.** The local governance and maintained scope are now defined by [ADR-021](/adrs/adr-021-github-governance/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/). Earlier blockchain provisions are historical; this record is preserved.
+
 **Date**: 2026-04-17
 **Status**: Active (v1 — closing the first Lean session) ; scope clarified 2026-05-02
 **Dependencies**: ADR-001 (float↔u16 encoding), ADR-005 (multi-criteria tiers), ADR-006 (deterministic claim hash), ADR-012 (deterministic bifurcation), ADR-017 (cluster network), ADR-019 (on-chain Enum V2)

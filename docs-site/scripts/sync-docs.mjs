@@ -1,323 +1,179 @@
 #!/usr/bin/env node
-/**
- * Syncs source-of-truth Markdown into docs-site/src/content/docs/.
- *
- * Sources (relative to repo root):
- *   PITCH.md                 → src/content/docs/pitch.md
- *   WHITEPAPER.md            → src/content/docs/whitepaper.md
- *   docs/ARCHITECTURE.md     → src/content/docs/architecture.md
- *   docs/fr/CHANGELOG.md     → src/content/docs/changelog.md
- *   docs/positioning/*.md    → src/content/docs/positioning/
- *   docs/adr/ADR-*.md        → src/content/docs/adrs/
- *
- * For each copied file the script prepends a Starlight frontmatter block
- * derived from the first H1 (title) so Starlight indexes it correctly.
- *
- * On Vercel (Root Directory = docs-site/ — siblings of docs-site/ are
- * not in the build sandbox) the sources may be absent. In that case the
- * script no-ops and relies on the committed contents of src/content/docs/.
- * Same pattern as ui/scripts/copy-data.mjs.
- *
- * Runs as predev / prebuild npm hook.
- */
-import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+/** Generate the portal from repository sources; verify committed copies with --check. */
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { dirname, join, posix, resolve, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, '..', '..');
-const DOCS_DIR = resolve(__dirname, '..', 'src', 'content', 'docs');
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(HERE, '../..');
+const CONTENT = resolve(HERE, '../src/content/docs');
+const MANIFEST = resolve(HERE, '../content-manifest.json');
+const sha = (value) => createHash('sha256').update(value).digest('hex');
+const canonicalText = (value) => value.replace(/\r\n/g, '\n');
+const github = 'https://github.com/SimonBouhier/EPP_Verdict/blob/main/';
 
-async function pathExists(p) {
-  try {
-    await stat(p);
-    return true;
-  } catch (err) {
-    if (err.code === 'ENOENT') return false;
-    throw err;
+async function readOptional(path) {
+  try { return canonicalText(await readFile(path, 'utf8')); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+}
+async function markdownFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await markdownFiles(path));
+    else if (entry.isFile() && /\.mdx?$/.test(entry.name)) files.push(path);
   }
+  return files;
 }
-
-function deriveTitle(raw, fallback) {
-  const h1 = raw.match(/^#\s+(.+?)\s*$/m);
-  if (!h1) return fallback;
-  // Strip trailing markdown emphasis / em-dashes.
-  return h1[1].replace(/^[\s—–-]+|[\s—–-]+$/g, '').trim();
+function route(dest) {
+  const slug = dest.replace(/\.mdx?$/, '').replace(/(^|\/)index$/, '$1').replace(/\/$/, '');
+  return slug ? '/' + slug + '/' : '/';
 }
-
-function deriveDescription(raw) {
-  // First non-heading, non-blockquote paragraph, truncated to 200 chars.
-  const lines = raw.split(/\r?\n/);
-  for (const line of lines) {
-    const t = line.trim();
-    if (!t) continue;
-    if (t.startsWith('#')) continue;
-    if (t.startsWith('>')) continue;
-    if (t.startsWith('---')) continue;
-    if (t.startsWith('[!')) continue;
-    if (t.startsWith('|')) continue;
-    // Clean markdown emphasis for description.
-    const cleaned = t
-      .replace(/\*\*/g, '')
-      .replace(/\*/g, '')
-      .replace(/`/g, '')
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    if (cleaned.length > 20) {
-      return cleaned.length > 200 ? `${cleaned.slice(0, 197)}…` : cleaned;
+function title(raw, fallback) {
+  return raw.match(/^#\s+(.+)$/m)?.[1]?.trim() || fallback;
+}
+function inside(directory, name) {
+  const target = resolve(directory, name);
+  const rel = relative(directory, target);
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw new Error('Unsafe generated path: ' + name);
+  return target;
+}
+export function rewriteLinks(raw, source, routes) {
+  const resolveHref = (href) => {
+    if (/^(?:[a-z]+:|\/|#)/i.test(href)) return href;
+    const [path, hash = ''] = href.split('#', 2);
+    const target = posix.normalize(posix.join(posix.dirname(source), path));
+    const destination = routes.get(target);
+    if (destination) return (hash ? destination.split('#')[0] + '#' + hash : destination);
+    // Keep historical links inspectable in their repository context.
+    const base = path.endsWith('/') ? github.replace('/blob/', '/tree/') : github;
+    return base + target + (hash ? '#' + hash : '');
+  };
+  return raw
+    .replace(/(\[!\[[^\]]*\]\([^)]+\)\])\(([^)\s]+)\)/g,
+      (_whole, badge, href) => badge + '(' + resolveHref(href) + ')')
+    .replace(/(!?\[[^\]]*\])\(([^)\s]+)(\s+"[^"]*")?\)/g,
+      (_whole, label, href, title = '') => label + '(' + resolveHref(href) + title + ')')
+    .replace(/(<a\b[^>]*\bhref=)(["'])([^"']+)\2/gi,
+      (_whole, prefix, quote, href) => prefix + quote + resolveHref(href) + quote);
+}
+export async function buildPages(root) {
+  const entries = [
+    ['docs/PORTAL_INDEX.mdx', 'index.mdx', 'raw'],
+    ['docs/CURRENT_STATUS.md', 'current-status.md'],
+    ['PITCH.md', 'pitch.md'], ['WHITEPAPER.md', 'whitepaper.md'],
+    ['docs/ARCHITECTURE.md', 'architecture.md'],
+    ['docs/PUBLISHING.md', 'publishing.md'], ['TECH_DEBT.md', 'tech-debt.md'],
+    ['docs/fr/CHANGELOG.md', 'changelog.md'],
+  ].map(([src, dest, kind]) => ({ src, dest, kind }));
+  for (const [folder, destRoot, kind] of [
+    ['docs/adr-en', 'adrs', 'adr'],
+    ['docs/positioning', 'positioning', 'history'],
+    ['docs/history', 'history', 'history'],
+  ]) {
+    for (const path of await markdownFiles(join(root, folder))) {
+      const src = relative(root, path).split('\\').join('/');
+      const suffix = relative(join(root, folder), path).split('\\').join('/');
+      const dest = destRoot + '/' + suffix.toLowerCase().replace(/_/g, '-').replace(/(^|\/)readme\.md$/, '$1index.md');
+      entries.push({ src, dest, kind });
     }
   }
-  return undefined;
-}
-
-function makeFrontmatter({ title, description, editUrl }) {
-  const lines = ['---'];
-  lines.push(`title: ${JSON.stringify(title)}`);
-  if (description) lines.push(`description: ${JSON.stringify(description)}`);
-  if (editUrl === false) lines.push('editUrl: false');
-  lines.push('---', '');
-  return lines.join('\n');
-}
-
-/**
- * Strip an existing top H1 so Starlight's page title (from frontmatter)
- * doesn't duplicate with a body H1 of the same text.
- */
-function stripLeadingH1(body) {
-  return body.replace(/^#\s+.+?\r?\n\r?\n?/, '');
-}
-
-/**
- * Rewrites internal markdown links from their source-tree paths to their
- * Starlight URLs. Examples:
- *   [Whitepaper](WHITEPAPER.md)                    → [Whitepaper](/whitepaper/)
- *   [§scope](WHITEPAPER.md#liability--scope)       → [§scope](/whitepaper/#liability--scope)
- *   [essay](docs/positioning/the_negative_space.md)→ [essay](/positioning/the-negative-space/)
- *   [ADR-020](docs/adr/ADR-020.md)                 → [ADR-020](/adrs/adr-020/)
- *   [ARCH](docs/ARCHITECTURE.md)                   → [ARCH](/architecture/)
- *   [positioning](docs/positioning/)               → [positioning](/positioning/)
- *   [README](README.md)                            → [README] on GitHub (no docs portal page)
- *
- * External links (http/https) and in-page anchors (starting with #) pass
- * through untouched.
- */
-function rewriteLinks(body) {
-  return (
-    body
-      // README.md → point back to GitHub (no README in the docs portal).
-      .replace(
-        /\]\(\.?\/?README\.md(#[^)]*)?\)/g,
-        '](https://github.com/SimonBouhier/EPP_Verdict#readme)',
-      )
-      // Root-level docs.
-      .replace(/\]\(\.?\/?WHITEPAPER\.md(#[^)]*)?\)/g, '](/whitepaper/$1)')
-      .replace(/\]\(\.?\/?PITCH\.md(#[^)]*)?\)/g, '](/pitch/$1)')
-      // docs/ subtree.
-      .replace(/\]\(\.?\/?docs\/ARCHITECTURE\.md(#[^)]*)?\)/g, '](/architecture/$1)')
-      .replace(/\]\(\.?\/?docs\/fr\/CHANGELOG\.md(#[^)]*)?\)/g, '](/changelog/$1)')
-      // positioning files (underscores → hyphens).
-      .replace(
-        /\]\(\.?\/?docs\/positioning\/([a-zA-Z0-9_-]+)\.md(#[^)]*)?\)/g,
-        (_m, slug, hash) =>
-          `](/positioning/${slug.toLowerCase().replace(/_/g, '-')}/${hash || ''})`,
-      )
-      // positioning README.md → section landing.
-      .replace(
-        /\]\(\.?\/?docs\/positioning\/(README\.md)?(#[^)]*)?\)/g,
-        '](/positioning/$2)',
-      )
-      // ADRs (lowercase slug, preserve any English suffix like "-deferred" / "-future").
-      // Both French (docs/adr/) and English (docs/adr-en/) source paths are
-      // remapped to the same /adrs/<slug>/ portal route.
-      .replace(
-        /\]\(\.?\/?docs\/adr(?:-en)?\/(ADR-[\wàâéèêëîïôûùüÿñæœ-]+)\.md(#[^)]*)?\)/gi,
-        (_m, adr, hash) => `](/adrs/${adr.toLowerCase()}/${hash || ''})`,
-      )
-  );
-}
-
-async function copyOne(srcPath, destPath, fallbackTitle, { editUrl = true } = {}) {
-  const raw = await readFile(srcPath, 'utf8');
-  const title = deriveTitle(raw, fallbackTitle);
-  const description = deriveDescription(raw);
-  const body = rewriteLinks(stripLeadingH1(raw));
-  const content = makeFrontmatter({ title, description, editUrl: editUrl ? undefined : false }) + body;
-  await mkdir(dirname(destPath), { recursive: true });
-  await writeFile(destPath, content);
-  return { title, destPath };
-}
-
-async function copyDir(srcDir, destDir, { flattenNames = null } = {}) {
-  if (!(await pathExists(srcDir))) return [];
-  await mkdir(destDir, { recursive: true });
-  const entries = await readdir(srcDir, { withFileTypes: true });
-  const results = [];
-  for (const entry of entries) {
-    if (!entry.isFile()) continue;
-    if (!entry.name.endsWith('.md')) continue;
-    if (entry.name.toLowerCase() === 'readme.md') continue; // handled separately
-    const destName = flattenNames ? flattenNames(entry.name) : entry.name.toLowerCase();
-    const out = await copyOne(
-      join(srcDir, entry.name),
-      join(destDir, destName),
-      entry.name.replace(/\.md$/i, ''),
-    );
-    results.push(out);
+  const routes = new Map(entries.map(({ src, dest }) => [src, route(dest)]));
+  routes.set('README.md', 'https://github.com/SimonBouhier/EPP_Verdict#readme');
+  for (const name of await readdir(join(root, 'docs/adr'))) {
+    const number = name.match(/^ADR-(\d+)/)?.[1];
+    const english = entries.find((entry) => entry.src.startsWith('docs/adr-en/ADR-' + number + '-')
+      || entry.src === 'docs/adr-en/ADR-' + number + '.md');
+    if (english) routes.set('docs/adr/' + name, route(english.dest));
   }
-  return results;
+  const pages = new Map();
+  const sources = {};
+  for (const entry of entries) {
+    const raw = canonicalText(await readFile(join(root, entry.src), 'utf8'));
+    sources[entry.src] = sha(raw);
+    if (entry.kind === 'raw') {
+      pages.set(entry.dest, raw);
+      continue;
+    }
+    const headline = title(raw, entry.dest);
+    const frontmatter = '---\ntitle: ' + JSON.stringify(headline) +
+      '\neditUrl: false\n---\n\n';
+    let notice = '';
+    if (entry.kind === 'history') {
+      notice = '> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).\n\n';
+    } else if (entry.kind === 'adr' && Number(entry.src.match(/ADR-(\d+)/)[1]) < 21) {
+      notice = '> **Decision record in its original context.** The local governance and maintained scope are now defined by [ADR-021](/adrs/adr-021-github-governance/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/). Earlier blockchain provisions are historical; this record is preserved.\n\n';
+    }
+    // Archived copies retain the original source directory for relative links.
+    const sourceContext = entry.src.startsWith('docs/history/2026-09-05/')
+      ? (entry.src.endsWith('/ARCHITECTURE.md') ? 'docs/ARCHITECTURE.md' : posix.basename(entry.src))
+      : entry.src;
+    const body = rewriteLinks(raw.replace(/^#\s+.+\r?\n\r?\n?/, ''), sourceContext, routes);
+    pages.set(entry.dest, frontmatter + notice + body);
+  }
+  const manifest = {
+    schemaVersion: 1,
+    textNormalization: 'LF',
+    sources,
+    outputs: Object.fromEntries([...pages].map(([name, content]) => [name, sha(content)])),
+  };
+  return { pages, manifest };
 }
-
-async function main() {
-  // Gatekeeper: if the root is not accessible (Vercel monorepo isolation),
-  // preserve whatever is already committed in src/content/docs/.
-  if (!(await pathExists(join(REPO_ROOT, 'WHITEPAPER.md')))) {
-    console.log(
-      '[sync-docs] Source .md files not accessible at REPO_ROOT — skipping sync, using committed src/content/docs/.',
-    );
+export async function verifySnapshot(contentDir, manifestPath) {
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  if (manifest.schemaVersion !== 1 || manifest.textNormalization !== 'LF' || !manifest.outputs || Object.keys(manifest.outputs).length === 0) {
+    throw new Error('Missing or empty content manifest');
+  }
+  for (const [name, expected] of Object.entries(manifest.outputs)) {
+    const content = canonicalText(await readFile(inside(contentDir, name), 'utf8'));
+    if (sha(content) !== expected) throw new Error('Generated page hash mismatch: ' + name);
+  }
+  const actual = (await markdownFiles(contentDir)).map((p) => relative(contentDir, p).split('\\').join('/'));
+  if (actual.some((name) => !(name in manifest.outputs))) throw new Error('Unlisted generated page');
+}
+export async function sync({ root = ROOT, contentDir = CONTENT, manifestPath = MANIFEST, check = false } = {}) {
+  if (await readOptional(join(root, 'WHITEPAPER.md')) === null) {
+    if (await readOptional(join(root, 'docs/PORTAL_INDEX.mdx')) !== null) {
+      throw new Error('Required source missing: WHITEPAPER.md');
+    }
+    if (check) throw new Error('Source verification requires the repository root');
+    await verifySnapshot(contentDir, manifestPath);
+    console.log('[sync-docs] Parent sources unavailable; committed snapshot integrity verified.');
     return;
   }
-
-  // Clean dest (we know sources are accessible, full refresh is safe).
-  await rm(DOCS_DIR, { recursive: true, force: true });
-  await mkdir(DOCS_DIR, { recursive: true });
-
-  // index.mdx is hand-written and not synced — write it once below.
-  await writeIndexMdx();
-
-  // Core project docs.
-  const copied = [];
-  copied.push(
-    await copyOne(
-      join(REPO_ROOT, 'PITCH.md'),
-      join(DOCS_DIR, 'pitch.md'),
-      'Pitch',
-    ),
-  );
-  copied.push(
-    await copyOne(
-      join(REPO_ROOT, 'WHITEPAPER.md'),
-      join(DOCS_DIR, 'whitepaper.md'),
-      'Whitepaper',
-    ),
-  );
-  copied.push(
-    await copyOne(
-      join(REPO_ROOT, 'docs', 'ARCHITECTURE.md'),
-      join(DOCS_DIR, 'architecture.md'),
-      'Architecture',
-    ),
-  );
-  copied.push(
-    await copyOne(
-      join(REPO_ROOT, 'docs', 'fr', 'CHANGELOG.md'),
-      join(DOCS_DIR, 'changelog.md'),
-      'Changelog',
-    ),
-  );
-
-  // Positioning section — includes its own README as the section landing.
-  const positioningSrc = join(REPO_ROOT, 'docs', 'positioning');
-  const positioningDest = join(DOCS_DIR, 'positioning');
-  if (await pathExists(positioningSrc)) {
-    await mkdir(positioningDest, { recursive: true });
-    if (await pathExists(join(positioningSrc, 'README.md'))) {
-      copied.push(
-        await copyOne(
-          join(positioningSrc, 'README.md'),
-          join(positioningDest, 'index.md'),
-          'Positioning — working material',
-        ),
-      );
+  // Read all sources and render all output before any mutation.
+  const { pages, manifest } = await buildPages(root);
+  const manifestText = JSON.stringify(manifest, null, 2) + '\n';
+  const existing = await readOptional(manifestPath);
+  let actual = [];
+  try { actual = await markdownFiles(contentDir); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const stale = actual.filter((p) => !pages.has(relative(contentDir, p).split('\\').join('/')));
+  const changed = [];
+  for (const [name, content] of pages) {
+    if (await readOptional(inside(contentDir, name)) !== content) changed.push(name);
+  }
+  if (check) {
+    if (changed.length || stale.length || existing !== manifestText) {
+      throw new Error('Portal differs from sources. Run npm run sync and include generated output. Changed: ' + changed.join(', '));
     }
-    // Normalize underscores in filenames to hyphens for prettier URLs.
-    const positioningResults = await copyDir(positioningSrc, positioningDest, {
-      flattenNames: (name) => name.toLowerCase().replace(/_/g, '-'),
-    });
-    copied.push(...positioningResults);
+    console.log('[sync-docs] ' + pages.size + ' pages match their sources.');
+    return;
   }
-
-  // ADRs — public English versions live at docs/adr-en/ (FR originals at
-  // docs/adr/ stay private to the maintainer). 20 files, flat. Sort
-  // numerically in sidebar via filename.
-  const adrSrc = join(REPO_ROOT, 'docs', 'adr-en');
-  const adrDest = join(DOCS_DIR, 'adrs');
-  if (await pathExists(adrSrc)) {
-    const adrResults = await copyDir(adrSrc, adrDest);
-    copied.push(...adrResults);
+  for (const [name, content] of pages) {
+    const path = inside(contentDir, name);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, content);
   }
-
-  console.log(`[sync-docs] synced ${copied.length} files into ${DOCS_DIR}`);
+  for (const path of stale) await unlink(inside(contentDir, relative(contentDir, path)));
+  await writeFile(manifestPath, manifestText);
+  console.log('[sync-docs] Generated ' + pages.size + ' pages and integrity manifest.');
 }
-
-async function writeIndexMdx() {
-  // Landing page. Hand-written, not derived from any source .md.
-  const indexPath = join(DOCS_DIR, 'index.mdx');
-  const content = `---
-title: "EPP — Epistemic Proof Program"
-description: "Verifiable AI consensus on Solana. Multiple architecturally distinct LLMs deliberate under structured adversarial cycles; the result is a cryptographic attestation with methodology traceability."
-template: splash
-hero:
-  tagline: "The oracle that doesn't trust itself."
-  actions:
-    - text: Read the pitch (3 min)
-      link: /pitch/
-      icon: right-arrow
-      variant: primary
-    - text: Open the live dashboard ↗
-      link: https://epp-verdict.vercel.app
-      icon: external
-      variant: secondary
-    - text: See the code on GitHub ↗
-      link: https://github.com/SimonBouhier/EPP_Verdict
-      icon: external
-      variant: minimal
----
-
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
-
-## What this portal contains
-
-<CardGrid>
-  <LinkCard
-    title="Pitch (3 minutes)"
-    description="Three acts, three primitives nobody implements, the defensible thesis that survives the counterpoint stress-test."
-    href="/pitch/"
-  />
-  <LinkCard
-    title="Whitepaper"
-    description="The long-form architectural and epistemological narrative. ESMM deliberation, metrological frames, the flywheel, formal verification, why blockchain, cluster vision."
-    href="/whitepaper/"
-  />
-  <LinkCard
-    title="Architecture (living)"
-    description="Component-by-component map of the codebase. Updated whenever the structure changes."
-    href="/architecture/"
-  />
-  <LinkCard
-    title="ADRs"
-    description="20 Architecture Decision Records covering encoding, schema, consensus, flywheel, formal invariants, and open governance."
-    href="/adrs/adr-001/"
-  />
-</CardGrid>
-
-## How to read this
-
-> **⚠ Proofs of process, not verdicts on truth.** EPP produces cryptographic measurements of multi-LLM deliberation under specified metrological frames. These attestations record *what was deliberated, by whom, and how* — they are **not** legal verdicts, regulatory decisions, or substitutes for human or institutional adjudication. Per the [UNESCO Recommendation on the Ethics of AI](https://en.unesco.org/artificial-intelligence/ethics) (193 Member States, 2021), ultimate responsibility for any decision based on an AI output remains with the natural or legal persons consuming it. Full framing in the [Whitepaper — Liability & Scope](/whitepaper/#liability--scope).
-
-EPP is a **solo open-source build**, formally started at commit [\`f12a922\`](https://github.com/SimonBouhier/EPP_Verdict/commit/f12a922) (2026-02-13) within the Colosseum sprint eligibility window, MIT-licensed. The public narrative (Pitch, Whitepaper, Architecture) is the official project position. The [Positioning section](/positioning/) exposes the working material behind that narrative — competitive scans, counterpoint stress-tests, formal methods landscape, Colosseum track strategy, and the conceptual essay *The Negative Space of Machine Knowledge*. It's public because the reasoning leading to the public claims is itself part of the record.
-
-## Current state (verifiable)
-
-- **908 passing tests** · **20 ADRs** · **12 attestations live on Solana devnet**
-- Program ID \`9QtybfyZQFhra1D6S3NtD6jD4z2Z3wcYmf4YXETq8bSD\` (devnet, deployed at slot 450099166)
-- **6 substantive Lean 4 theorems** (4 \`iff\` characterising the four confidence tiers + 2 stratification cumulativity) + 7 regression tests + 2 type-level invariants — see audit P1–P4 under [\`docs/audit/\`](https://github.com/SimonBouhier/EPP_Verdict/tree/main/docs/audit)
-- **+0.46 flywheel delta** demonstrated end-to-end (0.43 → 0.89 on the 2024 election claim)
-- Live dashboard at [epp-verdict.vercel.app](https://epp-verdict.vercel.app) — auto-redeploy on each \`git push\` to main
-`;
-  await mkdir(dirname(indexPath), { recursive: true });
-  await writeFile(indexPath, content);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  sync({ check: process.argv.includes('--check') }).catch((error) => {
+    console.error('[sync-docs] failed:', error.message);
+    process.exitCode = 1;
+  });
 }
-
-main().catch((err) => {
-  console.error('[sync-docs] failed:', err);
-  process.exit(1);
-});

@@ -1,7 +1,10 @@
 ---
 title: "Colosseum Track and Prize Strategy"
-description: "The pattern is clear: technical primitives win in Infrastructure. AI products win in AI. EPP is a primitive, not a product."
+editUrl: false
 ---
+
+> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).
+
 > Track and prize positioning: Infrastructure primary + Public Goods Award secondary,
 > framing per audience.
 >

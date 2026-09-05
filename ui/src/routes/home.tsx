@@ -10,6 +10,7 @@ import {
   filterRunsByFamily,
 } from '@/services/families';
 import { Card, CardContent } from '@/ui/Card';
+import opalGarden from '@/assets/opal-garden.svg';
 
 function formatTimestamp(iso: string): string {
   if (!iso) return '—';
@@ -36,12 +37,20 @@ export default function HomePage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Epistemic Proof Program</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Verifiable AI consensus on Solana. Browse benchmark runs from{' '}
-          <code className="font-mono text-xs">demos/benchmark_runs/</code>.
+      <header className="archive-hero mb-10">
+        <div>
+        <p className="archive-eyebrow">EPP · THE EXPERIMENT NOTEBOOK</p>
+        <h1>The traces<br /><em>that remain.</em></h1>
+        <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
+          Browse recorded experiments with their original dates, claims and results.
+          These observations belong to their original conditions.
         </p>
+        <a href="https://epp-verdict-docs.vercel.app/current-status/" className="archive-project-link">Read the project today <span aria-hidden="true">↗</span></a>
+        </div>
+        <figure>
+          <img src={opalGarden} alt="" width="620" height="570" />
+          <figcaption>OPAL / 01 · A MATERIAL STUDY, NOT A MEASUREMENT</figcaption>
+        </figure>
       </header>
 
       {isLoading ? <p className="text-sm text-muted-foreground">Loading manifest…</p> : null}
@@ -55,6 +64,7 @@ export default function HomePage() {
 
       {data ? (
         <>
+          <h2 className="archive-section-title">Historical benchmark runs</h2>
           <FamilyTabs runs={data.runs} />
 
           <div className="mb-3 flex items-baseline justify-between">
@@ -91,8 +101,8 @@ function RunCard({ run }: RunCardProps) {
       to={`/claims?run=${encodeURIComponent(run.filename)}`}
       className="block rounded-md border border-border bg-card px-4 py-3 transition-colors hover:border-cyan/40 hover:bg-accent/30"
     >
-      <div className="flex items-baseline justify-between gap-4">
-        <span className="font-mono text-sm">{run.scenario}</span>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <span className="break-words font-mono text-sm">{run.scenario}</span>
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
           {formatTimestamp(run.timestamp)}
         </span>

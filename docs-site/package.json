@@ -5,6 +5,9 @@
   "private": true,
   "description": "Public documentation portal for EPP — Astro + Starlight, deployed to Vercel.",
   "scripts": {
+    "sync": "node scripts/sync-docs.mjs",
+    "check:sync": "node scripts/sync-docs.mjs --check",
+    "test": "node --test scripts/sync-docs.test.mjs",
     "predev": "node scripts/sync-docs.mjs",
     "dev": "astro dev",
     "prebuild": "node scripts/sync-docs.mjs",

@@ -4,44 +4,29 @@ This file centralizes deliberate, conscious technical debts taken during
 the Colosseum sprint. Each item is a compromise, not a bug. Each item has
 a planned resolution.
 
-Last updated: 2026-05-09
+Last reviewed: 2026-09-05 (TD-001 updated; later entries retain their original dates).
+
+Blockchain, cluster and publication references in older entries are historical
+under ADR-022. The current maintained scope is in [CURRENT_STATUS](docs/CURRENT_STATUS.md).
 
 ---
 
-## TD-001 — Benchmark JSONs duplicated under `ui/public/data/`
+## TD-001 — Historical dashboard snapshot
 
-**Status:** active
-**Since:** 2026-04-23 (commits `fix(ui): commit public/data/...`)
-**Scope:** `ui/public/data/*.json` mirrors `demos/benchmark_runs/*.json`
+**Status:** resolved by scope reduction in source, 2026-09-05 (ADR-022).
+Public deployment is a separate promotion step.
 
-### What
-The Vite/React dashboard reads benchmark JSONs from `ui/public/data/`,
-which are committed to the repo and bundled by Vercel at build time.
-The canonical source remains `demos/benchmark_runs/`. A `copy-data`
-script keeps them in sync at build time but tolerates `demos/` being
-absent from the build context.
+The dashboard now preserves the committed `ui/public/data/` snapshot.
+Build and development commands verify its hashes without refreshing it from
+`demos/benchmark_runs/`. The legacy copy script refuses execution.
 
-### Why this is debt
-- Two sources of truth that must be kept aligned.
-- A run produced locally is not visible on the live dashboard until
-  the JSON is committed and pushed.
-- Storage duplication (~24 JSONs as of 2026-04-26).
+No new read-only API is planned. The former requirement to synchronize a live
+benchmark feed is closed. Historical files remain in both locations as evidence;
+this is a fixed archive, not two competing current datasets.
 
-### Why it was accepted
-- Vercel build context cannot read `../demos/` outside the `ui/` root.
-- Solo sprint, hackathon timeline. A backend reading runs at runtime
-  was out of scope for Phase 2.
-- Files are small (< 1 MB total).
-
-### Planned resolution
-- Post-hackathon: move benchmark runs to a small read-only API
-  (S3, Cloudflare R2, or a tiny FastAPI endpoint) and remove
-  `ui/public/data/` from version control.
-- Until then: enforce parity in CI (script that fails if any JSON
-  diverges between `demos/benchmark_runs/` and `ui/public/data/`).
-
-### Verified parity (2026-04-26 audit)
-24 / 24 JSONs identical between the two locations.
+`ui/archive-manifest.json` binds the archived text with LF-normalized line endings. An intentional future
+archive update would require a separately reviewed change of this manifest.
+Original TD-001 discussion remains in Git at `84879d2`.
 
 ---
 

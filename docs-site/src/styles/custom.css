@@ -1,93 +1,168 @@
-/**
- * EPP lighthouse palette — overrides Starlight's default theme colors to
- * match the dashboard at epp-verdict.vercel.app.
- *
- * Base: midnight navy HSL(220, 50%, 7%).
- * Primary accent: cyan beam HSL(184, 78%, 56%).
- * Secondary accent: gold lighthouse HSL(43, 78%, 65%) — used sparingly.
- * Verdict colors (emerald/amber/rose/zinc) are kept as-is in the body.
- */
-
+/* Opal / 01. The illustration is independent of project evidence. */
 :root {
-  /* Starlight accent — cyan beam */
-  --sl-color-accent-low: hsl(184 78% 18%);
-  --sl-color-accent: hsl(184 78% 56%);
-  --sl-color-accent-high: hsl(184 78% 78%);
-
-  /* Light theme (default Starlight — we don't actively polish this).
-     The repo ships dark-first, matching the dashboard. */
-  --sl-color-white: hsl(220 30% 98%);
-  --sl-color-gray-1: hsl(220 25% 95%);
-  --sl-color-gray-2: hsl(220 20% 88%);
-  --sl-color-gray-3: hsl(220 15% 70%);
-  --sl-color-gray-4: hsl(220 10% 50%);
-  --sl-color-gray-5: hsl(220 15% 30%);
-  --sl-color-gray-6: hsl(220 25% 15%);
-  --sl-color-black: hsl(220 50% 7%);
+  --opal-paper: #141b1a; --opal-ink: #e5e8de; --opal-muted: #a9b5aa; --opal-line: #37453d;
+  --opal-wash: #202b25; --opal-sage: #bed2b2; --opal-purple: #c2b6d9;
+  --opal-button: #bed2b2; --opal-button-ink: #23342c;
+  --sl-font: 'Segoe UI', system-ui, sans-serif;
+  --sl-color-white: #edf0e7; --sl-color-gray-1: #e5e8de; --sl-color-gray-2: #cbd3c6;
+  --sl-color-gray-3: #a9b5aa; --sl-color-gray-4: #77877c; --sl-color-gray-5: #37453d;
+  --sl-color-gray-6: #202b25; --sl-color-black: #141b1a;
+  --sl-color-accent-low: #303d34; --sl-color-accent: #9cae8b; --sl-color-accent-high: #d3dec6;
+  --sl-color-bg: var(--opal-paper); --sl-color-bg-nav: #141b1aee; --sl-color-bg-sidebar: #17201c;
+  --sl-color-bg-inline-code: #253229; --sl-color-text: var(--opal-ink);
+  --sl-color-text-accent: #c2b6d9; --sl-color-text-invert: #23342c;
+  --sl-color-hairline: var(--opal-line); --sl-color-hairline-light: var(--opal-line); --sl-color-hairline-shade: #141b1a;
 }
-
-:root[data-theme='dark'] {
-  /* Midnight navy surface */
-  --sl-color-bg: hsl(220 50% 7%);
-  --sl-color-bg-nav: hsl(222 50% 6%);
-  --sl-color-bg-sidebar: hsl(222 45% 8%);
-  --sl-color-bg-inline-code: hsl(222 40% 14%);
-  --sl-color-bg-accent: hsl(184 78% 18%);
-
-  /* Text */
-  --sl-color-text: hsl(220 30% 94%);
-  --sl-color-text-accent: hsl(184 78% 70%);
-  --sl-color-text-invert: hsl(220 50% 7%);
-
-  /* Borders */
-  --sl-color-hairline-light: hsl(220 30% 18%);
-  --sl-color-hairline: hsl(220 30% 14%);
-  --sl-color-hairline-shade: hsl(220 30% 10%);
-
-  /* Cyan beam accent */
-  --sl-color-accent-low: hsl(184 78% 18%);
-  --sl-color-accent: hsl(184 78% 56%);
-  --sl-color-accent-high: hsl(184 78% 78%);
+:root[data-theme='light'] {
+  --opal-paper: #f5f4ee; --opal-ink: #303d34; --opal-muted: #687567; --opal-line: #d7dcd0;
+  --opal-wash: #e9ece2; --opal-sage: #536d54; --opal-purple: #80718f;
+  --opal-button: #354e3c; --opal-button-ink: #f6f6ea;
+  --sl-color-white: #27372d; --sl-color-gray-1: #344337; --sl-color-gray-2: #4e5f4f;
+  --sl-color-gray-3: #687567; --sl-color-gray-4: #879581; --sl-color-gray-5: #d7dcd0;
+  --sl-color-gray-6: #edf0e7; --sl-color-gray-7: #f1f2eb; --sl-color-black: #fafaf4;
+  --sl-color-accent-low: #e0e7d8; --sl-color-accent: #596e52; --sl-color-accent-high: #354e3c;
+  --sl-color-bg: var(--opal-paper); --sl-color-bg-nav: #f5f4eeee; --sl-color-bg-sidebar: #f0f1e9;
+  --sl-color-bg-inline-code: #e9ece2; --sl-color-text-accent: #5f6e50;
+  --sl-color-text-invert: #f6f6ea; --sl-color-hairline-shade: #ebeee5;
 }
-
-/* Subtle radial fade behind the header — evokes the sky around the lighthouse */
 body {
-  background-image: radial-gradient(
-    ellipse 100% 60% at 50% 0%,
-    hsl(220 50% 10% / 0.7),
-    transparent 70%
-  );
-  background-attachment: fixed;
+  background-color: var(--opal-paper);
+  background-image: radial-gradient(ellipse at 82% 15%, #a99ec312, transparent 42%), radial-gradient(ellipse at 8% 0%, #9cbb9410, transparent 40%);
 }
+::selection { background: #aca2c54d; color: inherit; }
+a, button, summary { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--opal-purple); outline-offset: 5px; }
+.header { font-size: .82rem; }
+header.header { backdrop-filter: blur(12px); }
+.site-title { gap: .7rem; color: var(--opal-ink); font-size: 1.15rem; letter-spacing: .15em; font-weight: 500; }
+.site-title img { width: 35px; height: 35px; }
+site-search button { border-radius: 2rem; border-color: var(--opal-line); background: transparent; }
+.sidebar-pane ul { --sl-sidebar-item-padding-inline: .7rem; }
+.sidebar-pane { font-size: .86rem; }
+.sidebar-content a[aria-current='page'] { background: var(--opal-wash); color: var(--opal-ink); border-radius: .25rem; }
+.right-sidebar-panel { font-size: .8rem; }
+h1, h2, h3 { letter-spacing: -.035em; }
+main h1, .sl-markdown-content h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
+main h1 { line-height: 1.12; }
+.sl-markdown-content { line-height: 1.85; }
+.sl-markdown-content :is(h2, h3) { margin-top: 2.8rem; }
+.sl-markdown-content a { text-underline-offset: .22em; }
+.sl-markdown-content blockquote { border-inline-start: 2px solid var(--opal-purple); background: var(--opal-wash); padding: 1rem 1.3rem; }
+.sl-markdown-content table { font-size: .88rem; }
+.sl-markdown-content th { font-weight: 600; }
+.sl-markdown-content :not(pre) > code { border: 1px solid var(--opal-line); border-radius: 3px; padding: .1em .32em; color: var(--sl-color-text-accent); background: var(--sl-color-bg-inline-code); font-size: .87em; }
+.pagination-links a { border-radius: .6rem; box-shadow: none; }
+.gold { color: var(--opal-purple); }
 
-/* Selection uses the cyan beam */
-::selection {
-  background-color: hsl(184 78% 56% / 0.28);
-  color: inherit;
+/* The homepage has a wider canvas; reference pages retain their reading width. */
+:root[data-has-hero] { --sl-content-width: 76rem; }
+[data-has-hero] .content-panel { padding-top: 1.5rem; }
+[data-has-hero] .pagination-links { display: none; }
+.opal-hero { color: var(--opal-ink); }
+.opal-edition { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0 1.3rem; border-bottom: 1px solid var(--opal-line); font-size: .63rem; letter-spacing: .15em; color: var(--opal-muted); }
+.opal-edition > span:first-child { display: inline-flex; align-items: center; gap: .7rem; }
+.opal-edition i { display: block; height: 6px; width: 6px; background: var(--opal-sage); border-radius: 50%; }
+.opal-hero-grid { display: grid; grid-template-columns: 1fr 1.05fr; align-items: center; gap: 1.5rem; padding: 1.6rem 0 1.2rem; }
+.opal-copy { padding: 1.5rem 0 2rem; }
+.opal-eyebrow { color: var(--opal-muted); font-size: .71rem; letter-spacing: .12em; margin-bottom: 1.8rem; }
+.opal-copy h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(2.8rem, 5.3vw, 4.7rem); font-weight: 400; line-height: 1.08; letter-spacing: -.058em; margin: 0; }
+.opal-copy h1 span, .opal-copy h1 em { display: block; }
+.opal-copy h1 em { color: var(--opal-purple); font-weight: 400; margin-top: .08em; }
+.opal-intro { max-width: 27rem; margin: 1.7rem 0 2rem; font-size: .98rem; line-height: 1.85; color: var(--opal-muted); }
+.opal-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.opal-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 1.4rem; min-height: 46px; padding: .8rem 1.2rem; color: var(--opal-ink); border: 1px solid var(--opal-line); border-radius: 100px; font-size: .8rem; text-decoration: none; transition: background .2s, transform .2s; }
+.opal-link:hover { background: var(--opal-wash); transform: translateY(-2px); }
+.opal-link-primary { background: var(--opal-button); color: var(--opal-button-ink); border-color: var(--opal-button); }
+.opal-link-primary:hover { background: var(--opal-button); opacity: .9; }
+.opal-link span { font-size: 1rem; }
+.opal-footnote { display: flex; align-items: center; gap: .65rem; margin-top: 2.7rem; font-size: .7rem; color: var(--opal-muted); }
+.opal-fine-line { width: 22px; height: 1px; background: var(--opal-muted); flex-shrink: 0; }
+.opal-world { min-width: 0; position: relative; }
+.opal-world-label { display: flex; align-items: center; gap: .5rem; position: relative; z-index: 1; font-size: .6rem; letter-spacing: .14em; color: var(--opal-muted); padding-top: .6rem; }
+.opal-world-label > span:last-child { margin-left: auto; }
+.opal-small-orbit { width: 12px; height: 12px; border: 1px solid var(--opal-muted); border-radius: 50%; transform: scaleY(.65) rotate(-30deg); }
+.opal-world svg { display: block; margin: -1rem 0 -1.5rem; }
+.opal-world-caption { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: .6rem; color: var(--opal-muted); }
+.opal-world-caption button { border: none; background: none; padding: .6rem 0; cursor: pointer; color: var(--opal-muted); font: inherit; }
+.opal-world-caption button:disabled { cursor: default; }
+.opal-world-caption button:hover:not(:disabled) { color: var(--opal-ink); }
+.opal-study-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 2.1rem; border-block: 1px solid var(--opal-line); padding: 1.25rem 0; }
+.opal-study-switch { display: flex; gap: .2rem; padding: 4px; background: var(--opal-wash); border-radius: 100px; }
+.opal-study-switch button { display: flex; align-items: center; gap: .5rem; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 100px; padding: .62rem .8rem; font: inherit; font-size: .73rem; color: var(--opal-muted); }
+.opal-study-switch button > span { font-size: .56rem; opacity: .7; }
+.opal-study-switch button[aria-pressed='true'] { background: var(--opal-paper); color: var(--opal-ink); border-color: var(--opal-line); box-shadow: 0 2px 4px #1b302408; }
+.opal-study-switch button:hover { color: var(--opal-ink); }
+.opal-study-bar > p { font-size: .76rem; line-height: 1.7; color: var(--opal-muted); max-width: 30rem; margin: 0; }
+.opal-inspector { position: relative; font-size: .72rem; }
+.opal-inspector summary { cursor: pointer; list-style: none; padding: .7rem 0; white-space: nowrap; }
+.opal-inspector summary::-webkit-details-marker { display: none; }
+.opal-inspector summary span { margin-left: 1rem; }
+.opal-inspector[open] summary span { display: inline-block; transform: rotate(45deg); }
+.opal-inspector > div { position: absolute; width: min(310px, 82vw); z-index: 4; right: 0; top: 100%; border: 1px solid var(--opal-line); border-radius: .5rem; padding: 1.2rem; background: var(--opal-paper); box-shadow: 0 12px 40px #142d1815; }
+.opal-inspector p { line-height: 1.8; color: var(--opal-muted); margin: .7rem 0; }
+.opal-inspector a { color: var(--sl-color-text-accent); text-underline-offset: 3px; }
+.opal-study-switch button, .opal-world-caption button, .opal-inspector summary { min-height: 44px; }
+
+/* Field notes give the documentary content an editorial rhythm. */
+.opal-section-top { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; padding: 3.6rem 0 1.7rem; }
+.opal-section-top .opal-eyebrow { margin: 0 0 .6rem; }
+.sl-markdown-content .opal-section-top h2 { margin: 0; font-size: 2.1rem; }
+.opal-section-top > p { font-size: .8rem; line-height: 1.8; color: var(--opal-muted); max-width: 22rem; margin: 0; }
+.opal-field-notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+.sl-markdown-content .opal-note { display: block; margin: 0; padding: 1.5rem 0 1.2rem; border-top: 1px solid var(--opal-line); color: var(--opal-ink); text-decoration: none; }
+.opal-note-number { display: flex; justify-content: space-between; align-items: center; color: var(--opal-muted); font-size: .6rem; letter-spacing: .12em; }
+.opal-note-number > span:last-child { font-size: 1.1rem; transition: transform .2s; }
+.opal-note:hover .opal-note-number > span:last-child { transform: translate(3px, -3px); }
+.sl-markdown-content .opal-note h3 { font: 400 1.6rem Georgia, serif; color: var(--opal-ink); margin: .85rem 0 .6rem; letter-spacing: -.03em; }
+.sl-markdown-content .opal-note p { font-size: .83rem; line-height: 1.8; color: var(--opal-muted); margin: 0; }
+.opal-current-note { display: flex; gap: .9rem; align-items: baseline; border-block: 1px solid var(--opal-line); padding: 1.1rem 0; margin-top: 1.8rem; font-size: .74rem; color: var(--opal-muted); }
+.opal-current-note strong { color: var(--opal-ink); font-weight: 500; white-space: nowrap; }
+.opal-current-note p { margin: 0; }
+.opal-reading-room { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; padding: 2rem 0; }
+.sl-markdown-content .opal-reading-room h2 { margin-top: 1rem; font-size: 1.65rem; }
+.opal-reading-room p { font-size: .85rem; color: var(--opal-muted); }
+.opal-reading-links { display: flex; flex-wrap: wrap; gap: .7rem 1.5rem; font-size: .75rem; }
+.opal-colophon { border-top: 1px solid var(--opal-line); padding: 1.2rem 0; display: flex; justify-content: space-between; gap: 1rem; color: var(--opal-muted); font-size: .6rem; letter-spacing: .08em; }
+@media (max-width: 65rem) {
+  .opal-study-bar { gap: 1.1rem; }
+  .opal-study-switch button { padding-inline: .65rem; }
+  .opal-inspector summary { font-size: .66rem; }
 }
-
-/* Hero on the landing page — slightly tighten for longform feel */
-.hero > h1 {
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: -0.02em;
+@media (max-width: 50rem) {
+  [data-has-hero] .header .right-group { display: flex; }
+  [data-has-hero] .header .social-icons { display: none; }
+  [data-has-hero] .header { gap: .6rem; }
+  .opal-edition { font-size: .54rem; letter-spacing: .1em; }
+  .opal-hero-grid { grid-template-columns: 1fr; gap: 0; padding-top: 1.5rem; }
+  .opal-copy { padding-bottom: .6rem; }
+  .opal-copy h1 { font-size: clamp(3rem, 9vw, 4.2rem); }
+  .opal-eyebrow { margin-bottom: 1.4rem; }
+  .opal-intro { max-width: 31rem; margin-block: 1.3rem 1.5rem; font-size: .94rem; }
+  .opal-footnote { margin-top: 1.6rem; }
+  .opal-world { width: min(100%, 32rem); margin: 1.6rem auto 0; }
+  .opal-study-bar { grid-template-columns: 1fr auto; gap: 1rem; }
+  .opal-study-switch { width: fit-content; }
+  .opal-study-bar > p { grid-row: 2; grid-column: 1 / -1; min-height: 2.6rem; }
+  .opal-inspector { grid-row: 1; grid-column: 2; }
+  .opal-section-top { display: block; padding-top: 2.5rem; }
+  .opal-section-top > p { margin-top: .9rem; max-width: 100%; }
+  .opal-field-notes { gap: 1.2rem; }
+  .opal-reading-room { gap: 2rem; }
 }
-
-/* Emphasize inline code so file paths in prose stand out */
-:not(pre) > code {
-  color: hsl(184 78% 70%);
-  background-color: hsl(222 40% 14%);
-  border: 1px solid hsl(220 30% 18%);
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
-  font-size: 0.92em;
+@media (max-width: 34rem) {
+  .opal-edition > span:last-child { font-size: .5rem; letter-spacing: .02em; }
+  .opal-link { font-size: .75rem; padding-inline: 1rem; }
+  .opal-world-label { font-size: .54rem; }
+  .opal-world-caption { font-size: .53rem; }
+  .opal-study-bar { grid-template-columns: 1fr; }
+  .opal-inspector { grid-row: 3; grid-column: 1; width: fit-content; }
+  .opal-inspector > div { right: auto; left: 0; }
+  .opal-field-notes, .opal-reading-room { grid-template-columns: 1fr; gap: .6rem; }
+  .opal-current-note { display: block; }
+  .opal-current-note p { margin-top: .5rem; }
+  .opal-colophon { flex-direction: column; gap: .4rem; }
 }
-
-/* Gold accent for the "NEW" / "tag" style callouts — rarely used, but ready */
-.gold {
-  color: hsl(43 78% 65%);
-}
-
-/* Slightly denser sidebar spacing (more items visible on first screen) */
-.sidebar-pane ul {
-  --sl-sidebar-item-padding-inline: 0.5rem;
+@media (prefers-reduced-motion: reduce) {
+  .opal-link, .opal-note-number > span:last-child { transition: none; }
+  .opal-link:hover { transform: none; }
 }

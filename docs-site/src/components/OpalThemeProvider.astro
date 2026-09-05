@@ -1,0 +1,21 @@
+<!-- Set the first paint before styles load; an explicit visitor choice wins. -->
+<script is:inline>
+  window.StarlightThemeProvider = (() => {
+    let preference = 'dark';
+    try {
+      const stored = localStorage.getItem('starlight-theme');
+      if (stored === 'light' || stored === 'dark') preference = stored;
+      else if (stored === 'auto' || stored === '') preference = 'auto';
+    } catch { /* Storage is optional; the documented default remains dark. */ }
+    document.documentElement.dataset.theme = preference === 'auto'
+      ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : preference;
+    return {
+      updatePickers(theme = preference) {
+        document.querySelectorAll('[data-opal-theme-select]').forEach((select) => {
+          select.value = theme;
+        });
+      },
+    };
+  })();
+</script>

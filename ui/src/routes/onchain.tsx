@@ -19,12 +19,11 @@ export default function OnChainPage() {
             aria-hidden="true"
             className="size-2 rounded-full bg-cyan shadow-[0_0_12px_var(--color-cyan)]"
           />
-          <h1 className="text-2xl font-semibold tracking-tight">On-chain attestations</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Historical devnet records</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          EPP attestations submitted to Solana devnet via{' '}
-          <code className="font-mono text-xs">scripts/push_to_devnet.py</code>. Click any
-          row to open the transaction on Solana Explorer.
+          Former Solana devnet submissions, preserved from the recorded manifest.
+          Explorer links identify historical transactions; this page does not revalidate them live.
         </p>
       </header>
 
@@ -54,9 +53,8 @@ function ManifestView({ manifest }: ManifestViewProps) {
       <Card>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No attestations on-chain yet. Run{' '}
-            <code className="font-mono">python scripts/push_to_devnet.py</code> from the
-            project root to populate this view.
+            No historical attestations are available in this archive snapshot.
+            Blockchain publication is retired.
           </p>
         </CardContent>
       </Card>
@@ -91,7 +89,7 @@ function ProgramSummary({ manifest, okCount }: ProgramSummaryProps) {
       <SummaryCard label="Cluster" value={manifest.cluster} mono />
       <SummaryCard label="Program ID" value={manifest.programId} mono truncate />
       <SummaryCard label="Submitter" value={manifest.submitter} mono truncate />
-      <SummaryCard label="Pushed" value={`${okCount} / ${manifest.summary.total_entries}`} accent />
+      <SummaryCard label="Recorded submissions" value={`${okCount} / ${manifest.summary.total_entries}`} accent />
       <SummaryCard label="Failed" value={manifest.summary.failed.toString()} />
       <SummaryCard label="Generated at" value={formatTimestamp(manifest.generatedAt)} />
     </dl>

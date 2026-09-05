@@ -1,7 +1,10 @@
 ---
 title: "Counterpoints and Surviving Thesis"
-description: "Every Pyth price feed includes a confidence interval — not just a price,"
+editUrl: false
 ---
+
+> **Historical material.** Preserved in its original context. Former blockchain, cluster and sprint claims do not define the current project. Read the [current scope](/current-status/) and [ADR-022](/adrs/adr-022-post-blockchain-refocus/).
+
 > Stress-test of the EPP positioning against the strongest counter-arguments.
 > The five points that survive the challenge constitute the defensible thesis.
 >

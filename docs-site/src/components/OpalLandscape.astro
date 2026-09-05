@@ -1,0 +1,142 @@
+---
+// A deterministic illustration. These shapes encode no project measurements.
+const motes = Array.from({ length: 23 }, (_, i) => ({
+  x: 62 + ((i * 137) % 488), y: 45 + ((i * 71) % 395), r: i % 4 === 0 ? 2 : 1,
+}));
+const roots = Array.from({ length: 11 }, (_, i) => {
+  const x = 165 + i * 27;
+  return `M 310 375 C ${x} 416, ${x + 55} 425, ${x} 467 S ${x - 20} 510, ${x + 26} 525`;
+});
+---
+
+<svg class="opal-landscape" viewBox="0 0 620 570" fill="none" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="opal-halo">
+      <stop stop-color="#d5d5f1" stop-opacity=".54" />
+      <stop offset=".55" stop-color="#c5dacb" stop-opacity=".14" />
+      <stop offset="1" stop-color="#d4c8e6" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="opal-glass" cx=".27" cy=".22" r=".84">
+      <stop stop-color="#fffdf7" stop-opacity=".9" />
+      <stop offset=".24" stop-color="#d5e6d8" stop-opacity=".58" />
+      <stop offset=".53" stop-color="#e2d4f0" stop-opacity=".34" />
+      <stop offset=".78" stop-color="#9aabb7" stop-opacity=".24" />
+      <stop offset=".92" stop-color="#edcfbd" stop-opacity=".65" />
+      <stop offset="1" stop-color="#f9f6ed" stop-opacity=".82" />
+    </radialGradient>
+    <linearGradient id="opal-edge" x1="130" y1="110" x2="435" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffff8" /><stop offset=".35" stop-color="#94aeaa" stop-opacity=".25" />
+      <stop offset=".67" stop-color="#a19aba" /><stop offset="1" stop-color="#fff2d7" />
+    </linearGradient>
+    <linearGradient id="opal-facet" x1="235" y1="150" x2="380" y2="395" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fbfff0" /><stop offset=".35" stop-color="#bbd8cb" />
+      <stop offset=".66" stop-color="#c1b4dc" /><stop offset="1" stop-color="#ecd2bd" />
+    </linearGradient>
+    <linearGradient id="opal-leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#b1c7a7" /><stop offset="1" stop-color="#446f63" />
+    </linearGradient>
+    <linearGradient id="opal-strata" x1="310" y1="375" x2="310" y2="530" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#728579" stop-opacity=".5" /><stop offset="1" stop-color="#928073" stop-opacity=".06" />
+    </linearGradient>
+    <radialGradient id="opal-shadow">
+      <stop stop-color="#4c6050" stop-opacity=".24" /><stop offset="1" stop-color="#4c6050" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="310" cy="264" r="275" fill="url(#opal-halo)" />
+  <g class="orbital-lines" stroke="currentColor" stroke-width=".7" opacity=".2">
+    <ellipse cx="310" cy="289" rx="251" ry="157" transform="rotate(-27 310 289)" stroke-dasharray="2 8" />
+    <ellipse cx="310" cy="296" rx="221" ry="111" transform="rotate(28 310 296)" />
+    <path d="M69 353H113M507 353H551M310 39V68M310 504V533" />
+    <circle cx="310" cy="291" r="232" stroke-dasharray=".5 13" />
+  </g>
+  <g class="motes" fill="currentColor">
+    {motes.map(({ x, y, r }) => <circle cx={x} cy={y} r={r} opacity=".3" />)}
+  </g>
+
+  <ellipse cx="310" cy="453" rx="209" ry="70" fill="url(#opal-shadow)" />
+  <g class="substrate">
+    <path d="M117 417C143 365 225 389 270 368C329 341 441 361 506 418L462 459L334 488L180 465Z" fill="url(#opal-strata)" />
+    <g stroke="currentColor" stroke-width=".7" opacity=".23">
+      <path d="M117 417C205 439 267 402 321 421S443 444 506 418" />
+      <path d="M135 432C218 457 274 422 328 437S437 465 491 435" />
+      <path d="M155 450C238 473 285 443 336 456S411 473 462 459" />
+      <path d="M180 465C239 487 287 467 334 488" />
+      {roots.map((d) => <path d={d} />)}
+    </g>
+    <ellipse cx="310" cy="409" rx="151" ry="35" stroke="currentColor" stroke-width=".7" opacity=".25" />
+    <ellipse cx="310" cy="409" rx="121" ry="26" stroke="currentColor" stroke-width=".7" opacity=".2" />
+  </g>
+
+  <g class="phase phase-crystal ambient-float">
+    <circle cx="308" cy="244" r="151" fill="url(#opal-glass)" stroke="url(#opal-edge)" stroke-width="1.3" />
+    <ellipse cx="301" cy="232" rx="132" ry="146" transform="rotate(-24 301 232)" stroke="#f8fff7" opacity=".37" />
+    <path d="M200 167C217 134 252 111 288 107" stroke="#fffef8" stroke-width="3" stroke-linecap="round" opacity=".8" />
+    <path d="M326 107C388 118 430 165 443 211" stroke="#f5e6cc" stroke-width="1.5" stroke-linecap="round" opacity=".7" />
+    <g class="crystal-core" stroke="#f9fff8" stroke-width=".8" stroke-linejoin="round">
+      <path d="M297 155L350 207L375 317L310 380L254 311L263 215Z" fill="url(#opal-facet)" opacity=".92" />
+      <path d="M297 155L312 247L350 207Z" fill="#f4ffe9" opacity=".58" />
+      <path d="M297 155L263 215L312 247Z" fill="#b8cbb8" opacity=".6" />
+      <path d="M263 215L254 311L312 247Z" fill="#d1d8ea" opacity=".6" />
+      <path d="M312 247L375 317L350 207Z" fill="#a1c4bd" opacity=".64" />
+      <path d="M312 247L310 380L375 317Z" fill="#d6badd" opacity=".72" />
+      <path d="M254 311L310 380L312 247Z" fill="#e8e3d0" opacity=".65" />
+      <path d="M231 268L255 233L267 317L244 340L219 311Z" fill="url(#opal-facet)" opacity=".82" />
+      <path d="M375 285L395 258L410 321L383 346L365 330Z" fill="url(#opal-facet)" opacity=".85" />
+    </g>
+    <ellipse cx="302" cy="352" rx="105" ry="29" transform="rotate(-15 302 352)" stroke="#e6cce9" stroke-width="1.2" opacity=".8" />
+  </g>
+
+  <g class="phase phase-gas ambient-float">
+    <circle cx="278" cy="234" r="114" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="369" cy="273" r="91" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="337" cy="150" r="55" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="205" cy="323" r="51" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="431" cy="177" r="24" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <path d="M202 190Q247 153 283 162M313 124Q332 112 350 120M326 254Q357 224 391 240" stroke="#fffdf1" stroke-width="2" stroke-linecap="round" opacity=".8" />
+  </g>
+
+  <g class="phase phase-humus">
+    <path d="M196 391L226 346L266 329L307 350L354 318L396 349L436 407L377 431L280 441L214 420Z" fill="url(#opal-strata)" stroke="url(#opal-edge)" />
+    <path d="M226 346L251 402L307 350L280 441M354 318L366 388L436 407M196 391L251 402L214 420M366 388L307 350" stroke="#7a8c78" opacity=".5" />
+    <g fill="url(#opal-leaf)" opacity=".8">
+      <ellipse cx="251" cy="386" rx="25" ry="9" transform="rotate(-18 251 386)" />
+      <ellipse cx="278" cy="373" rx="18" ry="8" transform="rotate(18 278 373)" />
+      <ellipse cx="369" cy="391" rx="25" ry="10" transform="rotate(-12 369 391)" />
+    </g>
+    <path d="M311 385C309 342 336 308 321 272" stroke="#6e9078" stroke-width="2" />
+    <path d="M321 307C290 304 285 280 290 267C320 270 327 284 321 307Z" fill="url(#opal-leaf)" />
+    <path d="M325 325C352 324 366 304 359 293C335 292 327 307 325 325Z" fill="url(#opal-leaf)" />
+    <circle cx="291" cy="224" r="22" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+  </g>
+
+  <g class="garden-stems" stroke="#6d8d79" stroke-width="1.2" stroke-linecap="round">
+    <path d="M193 417C202 366 175 345 181 297M202 394C221 369 225 352 218 332M428 419C403 378 443 351 441 315" />
+    <g fill="url(#opal-leaf)" stroke="none" opacity=".8">
+      <path d="M188 359C163 357 154 337 159 325C181 327 192 344 188 359Z" />
+      <path d="M190 376C215 371 226 354 222 343C202 347 193 357 190 376Z" />
+      <path d="M182 322C164 315 164 293 173 285C187 296 190 306 182 322Z" />
+      <path d="M425 380C447 378 465 359 458 346C438 349 426 364 425 380Z" />
+      <path d="M431 356C410 349 405 333 412 324C432 328 436 342 431 356Z" />
+      <path d="M441 329C454 323 461 303 454 297C441 305 436 316 441 329Z" />
+    </g>
+  </g>
+  <g class="satellite ambient-float">
+    <circle cx="121" cy="265" r="25" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="469" cy="113" r="14" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
+    <circle cx="482" cy="328" r="7" fill="#c6b5d4" opacity=".6" />
+  </g>
+</svg>
+
+<style>
+  .opal-landscape { width: 100%; height: auto; overflow: visible; color: var(--opal-ink); }
+  .phase { opacity: 0; transform-origin: 310px 340px; transition: opacity .65s ease, scale .65s ease; scale: .93; }
+  :global([data-matter='crystal']) .phase-crystal,
+  :global([data-matter='gas']) .phase-gas,
+  :global([data-matter='humus']) .phase-humus { opacity: 1; scale: 1; }
+  .ambient-float { animation: opal-drift 13s ease-in-out infinite alternate; }
+  .satellite { animation-duration: 18s; animation-delay: -8s; }
+  @keyframes opal-drift { to { transform: translateY(-9px); } }
+  :global([data-paused='true']) .ambient-float { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) { .ambient-float { animation: none; } .phase { transition: none; } }
+</style>

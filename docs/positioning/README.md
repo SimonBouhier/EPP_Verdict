@@ -1,4 +1,9 @@
-# docs/positioning/ — Strategic reasoning behind the public docs
+# Historical positioning material
+
+> **Historical context, classified 2026-09-05.** These sprint-era documents
+> retain their original arguments and comparisons. Their blockchain, cluster
+> and Colosseum assumptions are not the current roadmap. Read
+> [CURRENT_STATUS](../CURRENT_STATUS.md) and ADR-021/022 for the maintained scope.
 
 These documents are the **working material** behind the project's
 public narrative (`README.md`, `PITCH.md`, `WHITEPAPER.md`). They are

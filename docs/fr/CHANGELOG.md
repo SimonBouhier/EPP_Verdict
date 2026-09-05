@@ -4,6 +4,21 @@
 
 ---
 
+## [2026-09-05] Réalignement documentaire post-blockchain
+
+Présentation actuelle réécrite ; README, pitch, whitepaper et architecture
+antérieurs conservés à l'identique avec empreintes dans `docs/history/2026-09-05/`.
+Le portail est généré depuis les sources, avec contrôle de parité et manifeste
+d'intégrité. Les anciennes décisions et le positionnement reçoivent leur
+contexte historique dans le portail, sans modification des ADR sources.
+
+Le dashboard devient une archive explicite : pas de recopie automatique de
+nouvelles mesures ; les JSON antérieurs sont conservés et vérifiés par hash.
+TD-001 est résolue dans les sources par cette réduction de périmètre.
+Ce journal ne constate aucun déploiement public, push ou merge de cette mise à jour.
+
+---
+
 ## [2026-05-09] TD-002 résolue — adapter UI `graph_seeder_blockchain`
 
 Le scénario `graph_seeder_blockchain` (référencé dans `ui/src/config/families.ts` famille `pipeline`) n'avait aucune entrée dans le registry `ADAPTERS` depuis 2026-03-02 — cliquer dessus produisait l'erreur `No adapter registered for scenario "graph_seeder_blockchain"`. Les 5 attestations on-chain issues exclusivement de ce fichier (sur 12 dans `devnet_pushed.json`) n'avaient donc pas de claim viewer associé.

@@ -7,12 +7,12 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'EPP',
-      tagline: 'Epistemic Proof Program · Verifiable AI Consensus on Solana',
+      tagline: 'Local deliberation · Portable attestations · Provenance',
       description:
-        'Public documentation for EPP — pitch, whitepaper, architecture, ADRs, and positioning material.',
+        'Current scope and evidence for EPP, with clearly labelled historical records.',
       logo: {
-        src: './src/assets/lighthouse.svg',
-        alt: 'EPP lighthouse emblem',
+        src: './src/assets/opal.svg',
+        alt: 'EPP — opal emblem',
         replacesTitle: false,
       },
       customCss: ['./src/styles/custom.css'],
@@ -23,23 +23,25 @@ export default defineConfig({
           href: 'https://github.com/SimonBouhier/EPP_Verdict',
         },
       ],
-      editLink: {
-        baseUrl: 'https://github.com/SimonBouhier/EPP_Verdict/edit/main/',
-      },
-      lastUpdated: true,
+      // Generated pages must not offer edits to generated paths or infer a
+      // review date from the last commit touching their earlier content.
+      lastUpdated: false,
       pagination: true,
       sidebar: [
         {
           label: 'Overview',
-          items: [{ label: 'Introduction', slug: 'index' }],
+          items: [
+            { label: 'Introduction', slug: 'index' },
+            { label: 'Current scope & evidence', slug: 'current-status' },
+          ],
         },
         {
           label: 'The project',
           items: [
-            { label: 'Pitch (3 min)', slug: 'pitch' },
+            { label: 'Project overview', slug: 'pitch' },
             { label: 'Whitepaper', slug: 'whitepaper' },
             {
-              label: 'Live dashboard ↗',
+              label: 'Historical benchmark archive ↗',
               link: 'https://epp-verdict.vercel.app',
               attrs: { target: '_blank', rel: 'noopener noreferrer' },
             },
@@ -50,6 +52,8 @@ export default defineConfig({
           items: [
             { label: 'Architecture', slug: 'architecture' },
             { label: 'Changelog', slug: 'changelog' },
+            { label: 'Publishing & maintenance', slug: 'publishing' },
+            { label: 'Technical debt', slug: 'tech-debt' },
             {
               label: 'Architecture Decision Records',
               autogenerate: { directory: 'adrs' },
@@ -58,7 +62,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Positioning (working material)',
+          label: 'Historical positioning',
           collapsed: true,
           items: [
             { label: 'About this section', slug: 'positioning' },
@@ -69,9 +73,17 @@ export default defineConfig({
             { label: 'The negative space', slug: 'positioning/the-negative-space' },
           ],
         },
+        {
+          label: 'Earlier project documents',
+          autogenerate: { directory: 'history' },
+          collapsed: true,
+        },
       ],
       components: {
         Head: './src/components/Head.astro',
+        Hero: './src/components/OpalHero.astro',
+        ThemeProvider: './src/components/OpalThemeProvider.astro',
+        ThemeSelect: './src/components/OpalThemeSelect.astro',
       },
     }),
   ],
