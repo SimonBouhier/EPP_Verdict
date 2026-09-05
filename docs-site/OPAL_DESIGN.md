@@ -11,25 +11,24 @@ and no live WorldState adapter or agent instrumentation has been added.
 - Dark is the first-visit default, independent of the system theme. An explicit
   Light or System choice remains available and is preserved across visits.
 - System typography and Georgia: no font request to a third-party service.
-- An inline SVG landscape with glass, faceted crystal, roots and plant matter.
+- An inline SVG Brume landscape with transparent forms, roots and plant matter.
 - The same palette and reading typography on the documentation pages.
 - Original project facts remain in the source documents and dated status page.
 
 ## Meaning and interaction
 
-The three buttons select illustrations, not measured system states. Brume shows
-dispersed transparent forms; Cristal combines facets; Humus replaces the large
-structure with fragments and a shoot. Humus supplies a visual degradation and
-reuse scenario, without claiming that a project or memory actually died.
+Brume is the sole illustration, following Simon's final design choice.
+It shows dispersed transparent forms. There is no material selector and no
+mapping to measured system states.
 
 There is no numerical mapping to Opal's six dimensions, because this static
 portal has no corresponding measurements. No OpalEvent is fabricated or logged.
 The inspector explains this boundary and links to the actual project status.
 
-Switches crossfade in 650 ms. Two groups drift slowly as decorative ambience.
+Two groups drift slowly as decorative ambience.
 The pause control stops that drift. Reduced-motion preferences disable both
-drift and transitions, and disable the redundant pause control. Without
-JavaScript, the crystal illustration, content and links remain available.
+drift, and disable the redundant pause control. Without
+JavaScript, the Brume illustration, content and links remain available.
 
 ## Files and reuse
 
@@ -44,5 +43,5 @@ renderer, but any real state projection needs a separately defined and validated
 mapping. Nothing in this study authorizes deployment or a research campaign.
 
 The historical dashboard uses the same dark palette and emblem, plus a static
-export of the approved crystal illustration in `../ui/src/assets/opal-garden.svg`.
+export of the Brume illustration in `../ui/src/assets/opal-garden.svg`.
 Its recorded data and semantic verdict colors retain their original meaning.

@@ -2,14 +2,9 @@
 import OpalLandscape from './OpalLandscape.astro';
 const { hero, title } = Astro.locals.starlightRoute.entry.data;
 const lines = (hero?.title || title).split('\n');
-const studies = [
-  { id: 'gas', label: 'Brume', number: '01', description: 'Des formes ouvertes, légères, encore dispersées. Une étude de transparence et de mouvement.' },
-  { id: 'crystal', label: 'Cristal', number: '02', description: 'Une forme se rassemble. Ses facettes gardent les nuances de la lumière qui les traverse.' },
-  { id: 'humus', label: 'Humus', number: '03', description: 'La forme se défait, une pousse apparaît. La disparition laisse un sol, plutôt qu’un vide.' },
-];
 ---
 
-<section class="opal-hero" data-opal-study data-matter="crystal" data-paused="false" lang="fr">
+<section class="opal-hero" data-opal-study data-paused="false" lang="fr">
   <div class="opal-edition"><span><i></i> UN ATELIER ÉPISTÉMIQUE</span><span>EPP · ÉDITION OPAL / 01</span></div>
   <div class="opal-hero-grid">
     <div class="opal-copy">
@@ -28,26 +23,17 @@ const studies = [
     </div>
   </div>
   <div class="opal-study-bar">
-    <div class="opal-study-switch" role="group" aria-label="Choisir une matière pour l’illustration">
-      {studies.map((study) => <button type="button" data-study={study.id} data-description={study.description} aria-pressed={study.id === 'crystal'}><span>{study.number}</span>{study.label}</button>)}
-    </div>
-    <p data-study-description aria-live="polite">{studies[1].description}</p>
+    <span class="opal-study-name">Brume</span>
+    <p>Des formes ouvertes, légères, encore dispersées. Une étude de transparence et de mouvement.</p>
     <details class="opal-inspector">
       <summary>Lire le paysage <span aria-hidden="true">+</span></summary>
-      <div><strong>Une exploration graphique</strong><p>Brume, cristal et humus sont trois compositions que vous choisissez. Les flottements sont décoratifs. Aucune mesure d’EPP ou de Lyra n’alimente cette illustration.</p><a href="/current-status/">Consulter l’état documenté du projet ↗</a></div>
+      <div><strong>Une exploration graphique</strong><p>Brume est une composition de formes transparentes. Les flottements sont décoratifs. Aucune mesure d’EPP ou de Lyra n’alimente cette illustration.</p><a href="/current-status/">Consulter l’état documenté du projet ↗</a></div>
     </details>
   </div>
 </section>
 
 <script>
   document.querySelectorAll<HTMLElement>('[data-opal-study]').forEach((study) => {
-    const buttons = study.querySelectorAll<HTMLButtonElement>('[data-study]');
-    buttons.forEach((button) => button.addEventListener('click', () => {
-      study.dataset.matter = button.dataset.study;
-      buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
-      const description = study.querySelector('[data-study-description]');
-      if (description) description.textContent = button.dataset.description || '';
-    }));
     const toggle = study.querySelector<HTMLButtonElement>('[data-ambient-toggle]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let userPaused = false;

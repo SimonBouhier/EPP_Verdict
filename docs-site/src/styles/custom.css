@@ -87,11 +87,7 @@ main h1 { line-height: 1.12; }
 .opal-world-caption button:disabled { cursor: default; }
 .opal-world-caption button:hover:not(:disabled) { color: var(--opal-ink); }
 .opal-study-bar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 2.1rem; border-block: 1px solid var(--opal-line); padding: 1.25rem 0; }
-.opal-study-switch { display: flex; gap: .2rem; padding: 4px; background: var(--opal-wash); border-radius: 100px; }
-.opal-study-switch button { display: flex; align-items: center; gap: .5rem; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 100px; padding: .62rem .8rem; font: inherit; font-size: .73rem; color: var(--opal-muted); }
-.opal-study-switch button > span { font-size: .56rem; opacity: .7; }
-.opal-study-switch button[aria-pressed='true'] { background: var(--opal-paper); color: var(--opal-ink); border-color: var(--opal-line); box-shadow: 0 2px 4px #1b302408; }
-.opal-study-switch button:hover { color: var(--opal-ink); }
+.opal-study-name { font-family: Georgia, 'Times New Roman', serif; font-size: 1.15rem; color: var(--opal-ink); }
 .opal-study-bar > p { font-size: .76rem; line-height: 1.7; color: var(--opal-muted); max-width: 30rem; margin: 0; }
 .opal-inspector { position: relative; font-size: .72rem; }
 .opal-inspector summary { cursor: pointer; list-style: none; padding: .7rem 0; white-space: nowrap; }
@@ -101,7 +97,7 @@ main h1 { line-height: 1.12; }
 .opal-inspector > div { position: absolute; width: min(310px, 82vw); z-index: 4; right: 0; top: 100%; border: 1px solid var(--opal-line); border-radius: .5rem; padding: 1.2rem; background: var(--opal-paper); box-shadow: 0 12px 40px #142d1815; }
 .opal-inspector p { line-height: 1.8; color: var(--opal-muted); margin: .7rem 0; }
 .opal-inspector a { color: var(--sl-color-text-accent); text-underline-offset: 3px; }
-.opal-study-switch button, .opal-world-caption button, .opal-inspector summary { min-height: 44px; }
+.opal-world-caption button, .opal-inspector summary { min-height: 44px; }
 
 /* Field notes give the documentary content an editorial rhythm. */
 .opal-section-top { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; padding: 3.6rem 0 1.7rem; }
@@ -125,7 +121,6 @@ main h1 { line-height: 1.12; }
 .opal-colophon { border-top: 1px solid var(--opal-line); padding: 1.2rem 0; display: flex; justify-content: space-between; gap: 1rem; color: var(--opal-muted); font-size: .6rem; letter-spacing: .08em; }
 @media (max-width: 65rem) {
   .opal-study-bar { gap: 1.1rem; }
-  .opal-study-switch button { padding-inline: .65rem; }
   .opal-inspector summary { font-size: .66rem; }
 }
 @media (max-width: 50rem) {
@@ -141,7 +136,6 @@ main h1 { line-height: 1.12; }
   .opal-footnote { margin-top: 1.6rem; }
   .opal-world { width: min(100%, 32rem); margin: 1.6rem auto 0; }
   .opal-study-bar { grid-template-columns: 1fr auto; gap: 1rem; }
-  .opal-study-switch { width: fit-content; }
   .opal-study-bar > p { grid-row: 2; grid-column: 1 / -1; min-height: 2.6rem; }
   .opal-inspector { grid-row: 1; grid-column: 2; }
   .opal-section-top { display: block; padding-top: 2.5rem; }

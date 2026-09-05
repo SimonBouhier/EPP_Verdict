@@ -28,10 +28,6 @@ const roots = Array.from({ length: 11 }, (_, i) => {
       <stop stop-color="#fffff8" /><stop offset=".35" stop-color="#94aeaa" stop-opacity=".25" />
       <stop offset=".67" stop-color="#a19aba" /><stop offset="1" stop-color="#fff2d7" />
     </linearGradient>
-    <linearGradient id="opal-facet" x1="235" y1="150" x2="380" y2="395" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fbfff0" /><stop offset=".35" stop-color="#bbd8cb" />
-      <stop offset=".66" stop-color="#c1b4dc" /><stop offset="1" stop-color="#ecd2bd" />
-    </linearGradient>
     <linearGradient id="opal-leaf" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#b1c7a7" /><stop offset="1" stop-color="#446f63" />
     </linearGradient>
@@ -68,46 +64,13 @@ const roots = Array.from({ length: 11 }, (_, i) => {
     <ellipse cx="310" cy="409" rx="121" ry="26" stroke="currentColor" stroke-width=".7" opacity=".2" />
   </g>
 
-  <g class="phase phase-crystal ambient-float">
-    <circle cx="308" cy="244" r="151" fill="url(#opal-glass)" stroke="url(#opal-edge)" stroke-width="1.3" />
-    <ellipse cx="301" cy="232" rx="132" ry="146" transform="rotate(-24 301 232)" stroke="#f8fff7" opacity=".37" />
-    <path d="M200 167C217 134 252 111 288 107" stroke="#fffef8" stroke-width="3" stroke-linecap="round" opacity=".8" />
-    <path d="M326 107C388 118 430 165 443 211" stroke="#f5e6cc" stroke-width="1.5" stroke-linecap="round" opacity=".7" />
-    <g class="crystal-core" stroke="#f9fff8" stroke-width=".8" stroke-linejoin="round">
-      <path d="M297 155L350 207L375 317L310 380L254 311L263 215Z" fill="url(#opal-facet)" opacity=".92" />
-      <path d="M297 155L312 247L350 207Z" fill="#f4ffe9" opacity=".58" />
-      <path d="M297 155L263 215L312 247Z" fill="#b8cbb8" opacity=".6" />
-      <path d="M263 215L254 311L312 247Z" fill="#d1d8ea" opacity=".6" />
-      <path d="M312 247L375 317L350 207Z" fill="#a1c4bd" opacity=".64" />
-      <path d="M312 247L310 380L375 317Z" fill="#d6badd" opacity=".72" />
-      <path d="M254 311L310 380L312 247Z" fill="#e8e3d0" opacity=".65" />
-      <path d="M231 268L255 233L267 317L244 340L219 311Z" fill="url(#opal-facet)" opacity=".82" />
-      <path d="M375 285L395 258L410 321L383 346L365 330Z" fill="url(#opal-facet)" opacity=".85" />
-    </g>
-    <ellipse cx="302" cy="352" rx="105" ry="29" transform="rotate(-15 302 352)" stroke="#e6cce9" stroke-width="1.2" opacity=".8" />
-  </g>
-
-  <g class="phase phase-gas ambient-float">
+  <g class="brume ambient-float">
     <circle cx="278" cy="234" r="114" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
     <circle cx="369" cy="273" r="91" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
     <circle cx="337" cy="150" r="55" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
     <circle cx="205" cy="323" r="51" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
     <circle cx="431" cy="177" r="24" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
     <path d="M202 190Q247 153 283 162M313 124Q332 112 350 120M326 254Q357 224 391 240" stroke="#fffdf1" stroke-width="2" stroke-linecap="round" opacity=".8" />
-  </g>
-
-  <g class="phase phase-humus">
-    <path d="M196 391L226 346L266 329L307 350L354 318L396 349L436 407L377 431L280 441L214 420Z" fill="url(#opal-strata)" stroke="url(#opal-edge)" />
-    <path d="M226 346L251 402L307 350L280 441M354 318L366 388L436 407M196 391L251 402L214 420M366 388L307 350" stroke="#7a8c78" opacity=".5" />
-    <g fill="url(#opal-leaf)" opacity=".8">
-      <ellipse cx="251" cy="386" rx="25" ry="9" transform="rotate(-18 251 386)" />
-      <ellipse cx="278" cy="373" rx="18" ry="8" transform="rotate(18 278 373)" />
-      <ellipse cx="369" cy="391" rx="25" ry="10" transform="rotate(-12 369 391)" />
-    </g>
-    <path d="M311 385C309 342 336 308 321 272" stroke="#6e9078" stroke-width="2" />
-    <path d="M321 307C290 304 285 280 290 267C320 270 327 284 321 307Z" fill="url(#opal-leaf)" />
-    <path d="M325 325C352 324 366 304 359 293C335 292 327 307 325 325Z" fill="url(#opal-leaf)" />
-    <circle cx="291" cy="224" r="22" fill="url(#opal-glass)" stroke="url(#opal-edge)" />
   </g>
 
   <g class="garden-stems" stroke="#6d8d79" stroke-width="1.2" stroke-linecap="round">
@@ -130,13 +93,9 @@ const roots = Array.from({ length: 11 }, (_, i) => {
 
 <style>
   .opal-landscape { width: 100%; height: auto; overflow: visible; color: var(--opal-ink); }
-  .phase { opacity: 0; transform-origin: 310px 340px; transition: opacity .65s ease, scale .65s ease; scale: .93; }
-  :global([data-matter='crystal']) .phase-crystal,
-  :global([data-matter='gas']) .phase-gas,
-  :global([data-matter='humus']) .phase-humus { opacity: 1; scale: 1; }
   .ambient-float { animation: opal-drift 13s ease-in-out infinite alternate; }
   .satellite { animation-duration: 18s; animation-delay: -8s; }
   @keyframes opal-drift { to { transform: translateY(-9px); } }
   :global([data-paused='true']) .ambient-float { animation-play-state: paused; }
-  @media (prefers-reduced-motion: reduce) { .ambient-float { animation: none; } .phase { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .ambient-float { animation: none; } }
 </style>
