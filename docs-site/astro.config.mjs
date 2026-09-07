@@ -1,13 +1,16 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://epp-verdict-docs.vercel.app',
+  // Preserve the existing Markdown plugins and HTML whitespace after Astro 7.
+  markdown: { processor: unified() },
+  compressHTML: true,
   integrations: [
     starlight({
       title: 'EPP',
-      tagline: 'Local deliberation · Portable attestations · Provenance',
       description:
         'Current scope and evidence for EPP, with clearly labelled historical records.',
       logo: {
@@ -56,7 +59,7 @@ export default defineConfig({
             { label: 'Technical debt', slug: 'tech-debt' },
             {
               label: 'Architecture Decision Records',
-              autogenerate: { directory: 'adrs' },
+              items: [{ autogenerate: { directory: 'adrs', collapsed: true } }],
               collapsed: true,
             },
           ],
@@ -75,7 +78,7 @@ export default defineConfig({
         },
         {
           label: 'Earlier project documents',
-          autogenerate: { directory: 'history' },
+          items: [{ autogenerate: { directory: 'history', collapsed: true } }],
           collapsed: true,
         },
       ],
