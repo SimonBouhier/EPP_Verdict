@@ -89,7 +89,7 @@ export default function App() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-          <span className="font-mono">EPP archive · MIT</span>
+          <span className="font-mono">EPP archive · CC BY-NC 4.0</span>
           <span className="font-mono">Historical data · read only</span>
         </div>
       </footer>

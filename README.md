@@ -2,7 +2,7 @@
 
 **Local deliberation, portable attestations, traceable provenance.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](requirements.txt)
 
 EPP is a personal epistemic attestation engine. It organizes model deliberation
@@ -14,6 +14,20 @@ validated interface. Each project works independently.
 Blockchain publication is **retired** under
 [ADR-022](docs/adr/ADR-022-recentrage-post-blockchain.md).
 The existing dashboard is a **historical benchmark archive**.
+
+## Evidence available on GitHub — 18 September 2026
+
+- The [5 September status](docs/CURRENT_STATUS.md#verification-snapshot)
+  records **131 targeted Python tests passed**. This is a dated local check,
+  not a new full-suite run or a live-model performance result.
+- Deliberation, portable attestations, SQLite provenance and Git-review
+  proposals are implemented. Selected Lean invariants have Python conformance
+  tests; this is not an end-to-end proof of the runtime.
+- The Lyra attestation bridge remains pending validation. Results from sister
+  projects do not establish a performance gain for EPP.
+- The dashboard preserves historical runs; blockchain publication is retired.
+
+This summary introduces no new campaign or verification result.
 
 ## What an attestation means
 
@@ -79,5 +93,7 @@ From `ui/`, run `npm run dev` or `npm run build`. These commands read the
 committed historical dataset without refreshing it from new local runs.
 The archive executes no model and publishes no attestation.
 
-Code: **MIT**, © 2026 Simon Bouhier. Historical third-party references retain
-their original attribution.
+Code and documentation by Simon Bouhier: [**CC BY-NC 4.0**](LICENSE),
+© 2026 Simon Bouhier. Sharing and adaptations are permitted with attribution
+for noncommercial purposes under the license terms. Third-party material
+retains its own attribution and terms; historical records keep their dated context.
