@@ -2,6 +2,7 @@
   "name": "epp-ui",
   "private": true,
   "version": "0.1.0",
+  "license": "CC-BY-NC-4.0",
   "type": "module",
   "description": "Historical EPP benchmark archive — reads a fixed, committed dataset.",
   "scripts": {
