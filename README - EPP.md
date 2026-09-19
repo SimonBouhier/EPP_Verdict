@@ -2,7 +2,7 @@
 
 **Local deliberation, portable attestations, traceable provenance.**
 
-[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
+[![License: All rights reserved](https://img.shields.io/badge/License-All%20rights%20reserved-lightgrey.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](requirements.txt)
 
 EPP is a personal epistemic attestation engine. It organizes model deliberation
@@ -89,12 +89,13 @@ The archive executes no model and publishes no attestation.
 
 ## License and contributions
 
-Original project material is licensed under **[CC BY-NC 4.0](LICENSE)**,
-© 2026 Simon Bouhier. Non-commercial sharing and adaptations are permitted
-with attribution, a link to the license and an indication of changes.
-Third-party material and dependencies retain their own licenses and notices.
+Original project material is © 2026 Simon Bouhier, **all rights reserved**
+([LICENSE](LICENSE)). Reproduction, adaptation or distribution requires the
+author's prior written permission. Third-party material and dependencies
+retain their own licenses and notices.
 
-Propose changes through pull requests and describe the relevant checks.
+External contributions require the author's prior agreement. Changes are
+proposed through pull requests that describe the relevant checks.
 Attestation proposals follow the [proposal format](governance/proposals/README.md)
 and [GitHub governance boundary](docs/adr/ADR-021-gouvernance-github.md).
 Preserve historical records and distinguish project acceptance from epistemic confidence.
