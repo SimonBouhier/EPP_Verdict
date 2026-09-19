@@ -2,6 +2,7 @@
   "name": "epp-docs",
   "type": "module",
   "version": "0.1.0",
+  "license": "CC-BY-NC-4.0",
   "private": true,
   "description": "Public documentation portal for EPP — Astro + Starlight, deployed to Vercel.",
   "scripts": {

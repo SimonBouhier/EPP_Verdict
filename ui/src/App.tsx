@@ -89,7 +89,15 @@ export default function App() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-muted-foreground">
-          <span className="font-mono">EPP archive · CC BY-NC 4.0</span>
+          <span className="font-mono">
+            EPP archive ·{' '}
+            <a
+              href="https://creativecommons.org/licenses/by-nc/4.0/"
+              className="underline underline-offset-2"
+            >
+              CC BY-NC 4.0
+            </a>
+          </span>
           <span className="font-mono">Historical data · read only</span>
         </div>
       </footer>
