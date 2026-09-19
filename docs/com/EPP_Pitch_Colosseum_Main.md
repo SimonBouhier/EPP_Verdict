@@ -1,10 +1,11 @@
 # EPP — Epistemic Proof Protocol
 
-> **Historical pitch — current-license note added 18 September 2026.**
+> **Historical pitch — current-license note updated 19 September 2026.**
 > The text below records the former Colosseum/Solana positioning and its
-> licensing statements at that time. Current project material is licensed under
-> [CC BY-NC 4.0](../../LICENSE); see the [current scope](../CURRENT_STATUS.md).
-> Previously granted permissions and separately licensed material are preserved.
+> licensing statements at that time. Current project material is © 2026 Simon
+> Bouhier, all rights reserved ([LICENSE](../../LICENSE)); see the
+> [current scope](../CURRENT_STATUS.md). Separately licensed third-party
+> material keeps its own terms.
 
 
 **Colosseum Hackathon Submission — Infrastructure Track**
